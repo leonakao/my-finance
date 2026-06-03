@@ -4,3 +4,4 @@ inbox/*
 __pycache__/
 .DS_Store
 .env
+supabase/.temp/
