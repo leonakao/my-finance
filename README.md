@@ -198,6 +198,12 @@ O app calcula no cliente:
 - diferença contra a meta 50-30-20
 - total por categoria dentro de cada grupo
 
+Importação atual:
+
+- painel de importação de CSV Nubank no frontend
+- upload autenticado para a Edge Function `import-nubank-csv`
+- upsert em `transactions` por `user_id, external_id`
+
 ## Supabase versionado
 
 O repositório agora inclui `supabase/`, que é a base para a integração oficial
@@ -256,6 +262,29 @@ Depois, no dashboard do Supabase:
 - conectar o repo `leonakao/my-finance`
 - usar `Working directory = .`
 - habilitar `Automatic branching`
+
+## Edge Functions
+
+Primeira function implementada:
+
+- `supabase/functions/import-nubank-csv`
+
+Ela recebe:
+
+- `kind`: `account` ou `card`
+- `csvText`
+- `invoice` opcional
+- `filename` opcional
+
+E faz:
+
+- parsing do CSV
+- classificação com as regras atuais
+- `upsert` em `public.transactions`
+
+Arquivo compartilhado de regra:
+
+- `supabase/functions/_shared/nubank.ts`
 
 ## Campos usados no Notion
 

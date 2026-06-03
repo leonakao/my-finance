@@ -23,6 +23,11 @@ const CATEGORY_OPTIONS = [
   'Outros',
 ]
 
+const IMPORT_OPTIONS = [
+  { value: 'account', label: 'Nubank conta (CSV)' },
+  { value: 'card', label: 'Nubank cartão (CSV)' },
+]
+
 function toCurrency(value) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -314,6 +319,63 @@ function TransactionTable({ transactions, savingId, onUpdate }) {
   )
 }
 
+function ImportPanel({ onImport, loading }) {
+  const [kind, setKind] = useState('account')
+  const [invoice, setInvoice] = useState('')
+  const [file, setFile] = useState(null)
+
+  return (
+    <section className="panel">
+      <div className="panel-header compact">
+        <div>
+          <div className="eyebrow">Importar</div>
+          <h3>CSV do Nubank</h3>
+        </div>
+      </div>
+      <form
+        className="import-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          if (!file) return
+          onImport({ kind, invoice, file })
+        }}
+      >
+        <label>
+          Tipo de arquivo
+          <select value={kind} onChange={(event) => setKind(event.target.value)}>
+            {IMPORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Referência da fatura
+          <input
+            type="text"
+            value={invoice}
+            onChange={(event) => setInvoice(event.target.value)}
+            placeholder="Opcional para cartão"
+            disabled={kind !== 'card'}
+          />
+        </label>
+        <label>
+          Arquivo CSV
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          />
+        </label>
+        <button type="submit" disabled={loading || !file}>
+          {loading ? 'Importando...' : 'Importar para o Supabase'}
+        </button>
+      </form>
+    </section>
+  )
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -321,8 +383,36 @@ function App() {
   const [transactions, setTransactions] = useState([])
   const [selectedMonth, setSelectedMonth] = useState('')
   const [savingId, setSavingId] = useState('')
+  const [importLoading, setImportLoading] = useState(false)
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState('')
+
+  async function loadTransactions() {
+    if (!supabase || !session) return
+
+    setLoading(true)
+    setError('')
+
+    const { data, error: queryError } = await supabase
+      .from('transactions')
+      .select(
+        'id, date, description, amount, type, category, budget_group, account, institution, status, notes, observations',
+      )
+      .order('date', { ascending: false })
+
+    if (queryError) {
+      setError(queryError.message)
+      setLoading(false)
+      return
+    }
+
+    const normalized = (data ?? []).map(normalizeTransaction)
+    setTransactions(normalized)
+
+    const availableMonths = [...new Set(normalized.map((item) => item.date?.slice(0, 7)).filter(Boolean))].sort().reverse()
+    setSelectedMonth((current) => current || availableMonths[0] || '')
+    setLoading(false)
+  }
 
   useEffect(() => {
     if (!supabase) {
@@ -346,32 +436,6 @@ function App() {
 
   useEffect(() => {
     if (!session || !supabase) return
-
-    async function loadTransactions() {
-      setLoading(true)
-      setError('')
-
-      const { data, error: queryError } = await supabase
-        .from('transactions')
-        .select(
-          'id, date, description, amount, type, category, budget_group, account, institution, status, notes, observations',
-        )
-        .order('date', { ascending: false })
-
-      if (queryError) {
-        setError(queryError.message)
-        setLoading(false)
-        return
-      }
-
-      const normalized = (data ?? []).map(normalizeTransaction)
-      setTransactions(normalized)
-
-      const availableMonths = [...new Set(normalized.map((item) => item.date?.slice(0, 7)).filter(Boolean))].sort().reverse()
-      setSelectedMonth((current) => current || availableMonths[0] || '')
-      setLoading(false)
-    }
-
     loadTransactions()
   }, [session])
 
@@ -429,6 +493,36 @@ function App() {
     setSelectedMonth('')
   }
 
+  async function handleImport({ kind, invoice, file }) {
+    if (!supabase || !file) return
+
+    setImportLoading(true)
+    setError('')
+    setFeedback('')
+
+    const csvText = await file.text()
+    const { data, error: invokeError } = await supabase.functions.invoke('import-nubank-csv', {
+      body: {
+        kind,
+        invoice,
+        filename: file.name,
+        csvText,
+      },
+    })
+
+    if (invokeError) {
+      setError(invokeError.message)
+      setImportLoading(false)
+      return
+    }
+
+    setFeedback(
+      `Importação concluída: ${data.imported} linhas, ${data.confirmed} confirmadas, ${data.ignored} ignoradas.`,
+    )
+    setImportLoading(false)
+    await loadTransactions()
+  }
+
   if (!session) {
     return <SignIn onSignIn={handleSignIn} loading={signInLoading} error={error || feedback} />
   }
@@ -465,6 +559,9 @@ function App() {
 
       {loading ? <p className="feedback">Carregando dados...</p> : null}
       {error ? <p className="feedback error">{error}</p> : null}
+      {feedback && !error ? <p className="feedback">{feedback}</p> : null}
+
+      {!loading ? <ImportPanel onImport={handleImport} loading={importLoading} /> : null}
 
       {!loading && monthData ? (
         <>

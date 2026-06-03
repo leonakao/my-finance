@@ -7,7 +7,8 @@
 .topbar,
 .panel-header,
 .toolbar,
-.auth-form {
+.auth-form,
+.import-form {
   display: flex;
   gap: 16px;
 }
@@ -162,12 +163,23 @@
   flex-direction: column;
 }
 
-.auth-form label {
+.import-form {
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.auth-form label,
+.import-form label {
   display: flex;
   flex-direction: column;
   gap: 8px;
   color: #2a332d;
   font-weight: 600;
+}
+
+.import-form label {
+  min-width: 220px;
+  flex: 1 1 220px;
 }
 
 input,
@@ -229,6 +241,10 @@ button:disabled {
   .toolbar {
     width: 100%;
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .import-form {
     align-items: stretch;
   }
 
