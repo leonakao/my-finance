@@ -198,6 +198,65 @@ O app calcula no cliente:
 - diferença contra a meta 50-30-20
 - total por categoria dentro de cada grupo
 
+## Supabase versionado
+
+O repositório agora inclui `supabase/`, que é a base para a integração oficial
+do Supabase com GitHub.
+
+Arquivos principais:
+
+- `supabase/config.toml`
+- `supabase/migrations/20260603223000_init.sql`
+- `supabase/seed.sql`
+
+O schema inicial cria:
+
+- `public.profiles`
+- `public.transactions`
+- trigger de `updated_at`
+- trigger de criação automática de perfil em `auth.users`
+- políticas de `RLS` para cada usuário ver e editar só os próprios dados
+
+Campos principais de `transactions`:
+
+- `user_id`
+- `date`
+- `description`
+- `amount`
+- `type`
+- `category`
+- `budget_group`
+- `account`
+- `institution`
+- `status`
+- `notes`
+- `invoice`
+- `installment`
+- `external_id`
+- `source`
+
+### O que ainda preciso de você
+
+Para ligar este diretório ao projeto Supabase real e deixar a integração
+GitHub funcionando de ponta a ponta, eu preciso de:
+
+- `project ref` do projeto Supabase
+- `DB password` do projeto
+- `SUPABASE_ACCESS_TOKEN` se você quiser que eu use o CLI autenticado aqui
+
+Com isso, o fluxo fica:
+
+```sh
+supabase link --project-ref <project-ref>
+supabase db push
+```
+
+Depois, no dashboard do Supabase:
+
+- conectar o repo `leonakao/my-finance`
+- usar `Working directory = .`
+- habilitar `Automatic branching`
+
 ## Campos usados no Notion
 
 - `Descrição`

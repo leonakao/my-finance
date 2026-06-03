@@ -1,0 +1,2 @@
+-- Seed intencionalmente vazio por enquanto.
+-- Use este arquivo quando quiser popular dados iniciais locais.
