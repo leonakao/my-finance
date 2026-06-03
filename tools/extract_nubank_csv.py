@@ -30,6 +30,7 @@ class Transaction:
 def category_for(description: str) -> str:
     text = description.upper()
     rules = [
+        ("Moradia", ["DÉBITO EM CONTA", "DEBITO EM CONTA"]),
         ("Assinaturas", ["SPOTIFY", "NETFLIX", "APPLE.COM/BILL", "CHATGPT", "OPENAI", "WINDSURF", "IFOOD CLUB"]),
         ("Saúde", ["SEGURO VIDA", "SEGURO CELULAR", "YELUMSEG"]),
         ("Telefone", ["BCO C6", "BANCO C6", " C6 "]),
@@ -78,6 +79,12 @@ def budget_group_for(kind: str, status: str, category: str, description: str) ->
         return "Ignorar"
     if kind == "Receita":
         return "Receita"
+    if any(word in text for word in ["VERO", "OPENAI", "CHATGPT", "WINDSURF"]):
+        return "50 Necessidades"
+    if "LUCILENE DA SILVA NAKAO" in text:
+        return "50 Necessidades"
+    if "DÉBITO EM CONTA" in text or "DEBITO EM CONTA" in text:
+        return "50 Necessidades"
     if kind == "Transferência":
         if category == "Investimentos" or "APLICAÇÃO RDB" in text or "AVENUE" in text or "BANCO INTER" in text or "BCO INTER" in text:
             return "20 Futuro"

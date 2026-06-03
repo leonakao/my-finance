@@ -1,10 +1,10 @@
 # Finanças
 
-Este projeto guarda o fluxo local de apoio para a database `Finanças` no Notion.
+Este projeto guarda o fluxo local de apoio do sistema financeiro no Notion.
 
-Database no Notion: https://app.notion.com/p/16f280b0eba649e1802dbce74a559e1c
-
-Resumo mensal no Notion: https://app.notion.com/p/be207194f67240b4b89693508daa7916
+Bastidores financeiros no Notion: https://app.notion.com/p/374a750128c0818eaaf5dbd63cf9e32d
+Revisão de categorias no Notion: https://app.notion.com/p/374a750128c081808094f50401c8f0a0
+Arquivo financeiro no Notion: https://app.notion.com/p/374a750128c08111bb3fde54f2677d62
 
 ## Faturas Santander
 
@@ -73,14 +73,14 @@ Base atual: salário de `R$ 13.410,62`.
 
 Classificação inicial:
 
-- `50 Necessidades`: saúde, seguros essenciais, internet/serviços básicos, telefone/C6, mercado, carne, supermercado, combustível, pedágio e transporte necessário.
+- `50 Necessidades`: saúde, seguros essenciais, internet/serviços básicos, VERO, OpenAI/ChatGPT, Windsurf, anuidade, telefone/C6, mercado, carne, supermercado, combustível, pedágio e transporte necessário.
 - `30 Desejos`: restaurantes, cafés, bares, delivery, lazer, compras online, assinaturas, apps e viagens opcionais.
 - `20 Futuro`: aplicações, investimentos, Avenue, Banco Inter e aportes.
 - `Receita`: salário e entradas que compõem renda mensal.
 - `Transferência`: movimentação entre contas próprias, pagamento de fatura e resgates que não são gasto.
 - `Ignorar`: estornos, créditos técnicos e pagamentos recebidos no cartão.
 
-## Resumo mensal
+## Resumo mensal legado
 
 Para gerar a visão agregada por mês, categoria e grupo 50-30-20:
 
@@ -103,13 +103,100 @@ O resumo calcula:
 Linhas com `Status = Ignorar` são descartadas. Transferências comuns também
 ficam fora do resumo, exceto quando classificadas em `20 Futuro` ou `Receita`.
 
+Esse fluxo antigo foi arquivado no Notion e não deve mais ser usado como
+visualização principal.
+
+## Painel financeiro arquivado
+
+Para gerar a camada mais legível do Notion, separada entre resumo de grupos e
+detalhamento por categoria:
+
+```sh
+python3 tools/build_monthly_dashboard.py \
+  inbox/santander-2026-06.json \
+  inbox/nubank-conta-2026-05.json \
+  inbox/nubank-cartao-2026-06-09.json \
+  --json-out inbox/painel-mensal.json \
+  --groups-csv-out inbox/painel-grupos.csv \
+  --categories-csv-out inbox/painel-categorias.csv
+```
+
+Saídas:
+
+- `painel-grupos.csv`: uma linha por mês e grupo 50-30-20.
+- `painel-categorias.csv`: uma linha por mês, grupo e categoria.
+- `painel-mensal.json`: payload consolidado com as duas camadas.
+
+Esse fluxo foi arquivado. Ele não é mais o caminho principal de leitura nem de
+revisão.
+
+## Revisão de categorias
+
+Quando a dúvida for "o painel está certo?" ou "por que desejos está alto?",
+usar a página `Revisão de Categorias`. Ela lê diretamente do banco `Finanças`
+e reflete recategorizações na hora.
+
 ## Arquivos
 
 - `tools/extract_santander_fatura.py`: extrai lançamentos de PDFs de fatura Santander.
 - `tools/extract_nubank_csv.py`: normaliza CSVs de conta e cartão Nubank.
-- `tools/build_monthly_summary.py`: gera o resumo mensal para o banco `Resumo Mensal`.
+- `tools/build_monthly_summary.py`: gera o resumo mensal legado arquivado no Notion.
+- `tools/build_monthly_dashboard.py`: gera o painel limpo para os bancos `Resumo 50-30-20` e `Categorias Mensais`.
+- `web/`: frontend Vite + React conectado diretamente ao Supabase.
 - `notion-finance.md`: guarda IDs da database e data source do Notion.
 - `inbox/`: entrada para PDFs e arquivos extraídos.
+
+## Frontend Supabase
+
+O app em `web/` usa:
+
+- Vite + React
+- `@supabase/supabase-js`
+- autenticação por magic link
+- leitura direta da tabela `transactions`
+- atualização direta de `category` e `budget_group`
+
+Configuração:
+
+```sh
+cd web
+cp .env.example .env.local
+```
+
+Preencha:
+
+```sh
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
+
+Rodar:
+
+```sh
+npm install
+npm run dev
+```
+
+Schema mínimo esperado em `transactions`:
+
+- `id`
+- `date`
+- `description`
+- `amount`
+- `type`
+- `category`
+- `budget_group`
+- `account`
+- `institution`
+- `status`
+- `notes` ou `observations`
+
+O app calcula no cliente:
+
+- total por grupo no mês selecionado
+- `% da receita`
+- diferença contra a meta 50-30-20
+- total por categoria dentro de cada grupo
 
 ## Campos usados no Notion
 

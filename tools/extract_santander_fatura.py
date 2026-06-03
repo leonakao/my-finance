@@ -229,6 +229,10 @@ def category_for(description: str) -> str:
 
 def budget_group_for(category: str, description: str) -> str:
     text = description.upper()
+    if any(word in text for word in ["VERO", "OPENAI", "CHATGPT"]):
+        return "50 Necessidades"
+    if "ANUIDADE" in text:
+        return "50 Necessidades"
     if category in {"Saúde", "Moradia"}:
         return "50 Necessidades"
     if category == "Transporte":
