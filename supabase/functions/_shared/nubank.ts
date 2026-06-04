@@ -73,6 +73,24 @@ function csvObjects(text: string): Record<string, string>[] {
   )
 }
 
+function accountCsvObjects(text: string): Record<string, string>[] {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean)
+  if (!lines.length) return []
+  const header = ['Data', 'Valor', 'Identificador', 'Descrição']
+
+  return lines.slice(1).map((line) => {
+    const firstComma = line.indexOf(',')
+    const secondComma = line.indexOf(',', firstComma + 1)
+    const thirdComma = line.indexOf(',', secondComma + 1)
+    return {
+      [header[0]]: line.slice(0, firstComma),
+      [header[1]]: line.slice(firstComma + 1, secondComma),
+      [header[2]]: line.slice(secondComma + 1, thirdComma),
+      [header[3]]: line.slice(thirdComma + 1),
+    }
+  })
+}
+
 function isoFromBr(date: string): string {
   const [day, month, year] = date.split('/')
   return `${year}-${month}-${day}`
@@ -152,10 +170,10 @@ export function parseNubankCsv(params: {
   invoice?: string
   filename?: string
 }): ImportedTransaction[] {
-  const rows = csvObjects(params.csvText)
   const invoice = params.invoice ?? ''
 
   if (params.kind === 'card') {
+    const rows = csvObjects(params.csvText)
     return rows.map((row, index) => {
       const amount = Number(row.amount)
       const [type, status] = transactionType(amount, row.title, 'card')
@@ -180,8 +198,9 @@ export function parseNubankCsv(params: {
     })
   }
 
+  const rows = accountCsvObjects(params.csvText)
   return rows.map((row) => {
-    const amount = Number(row['Valor'].replace(/\./g, '').replace(',', '.'))
+    const amount = Number(row['Valor'])
     const description = row['Descrição']
     const [type, status] = transactionType(amount, description, 'account')
     const category = categoryFor(description)
