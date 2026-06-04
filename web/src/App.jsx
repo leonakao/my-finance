@@ -26,6 +26,7 @@ const CATEGORY_OPTIONS = [
 const IMPORT_OPTIONS = [
   { value: 'account', label: 'Nubank conta (CSV)' },
   { value: 'card', label: 'Nubank cartão (CSV)' },
+  { value: 'santander-pdf', label: 'Santander fatura (PDF)' },
 ]
 
 function toCurrency(value) {
@@ -61,6 +62,19 @@ function normalizeTransaction(row) {
     status: row.status ?? 'Confirmado',
     notes: row.notes ?? row.observations ?? '',
   }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result ?? '')
+      const [, base64 = ''] = result.split(',')
+      resolve(base64)
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('Falha ao ler arquivo'))
+    reader.readAsDataURL(file)
+  })
 }
 
 function buildMonthData(transactions) {
@@ -361,10 +375,10 @@ function ImportPanel({ onImport, loading }) {
           />
         </label>
         <label>
-          Arquivo CSV
+          Arquivo
           <input
             type="file"
-            accept=".csv,text/csv"
+            accept={kind === 'santander-pdf' ? '.pdf,application/pdf' : '.csv,text/csv'}
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
         </label>
@@ -500,15 +514,28 @@ function App() {
     setError('')
     setFeedback('')
 
-    const csvText = await file.text()
-    const { data, error: invokeError } = await supabase.functions.invoke('import-nubank-csv', {
-      body: {
-        kind,
-        invoice,
-        filename: file.name,
-        csvText,
-      },
-    })
+    let response
+    if (kind === 'santander-pdf') {
+      const pdfBase64 = await fileToBase64(file)
+      response = await supabase.functions.invoke('import-santander-pdf', {
+        body: {
+          filename: file.name,
+          pdfBase64,
+        },
+      })
+    } else {
+      const csvText = await file.text()
+      response = await supabase.functions.invoke('import-nubank-csv', {
+        body: {
+          kind,
+          invoice,
+          filename: file.name,
+          csvText,
+        },
+      })
+    }
+
+    const { data, error: invokeError } = response
 
     if (invokeError) {
       setError(invokeError.message)

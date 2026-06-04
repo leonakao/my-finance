@@ -201,7 +201,7 @@ O app calcula no cliente:
 Importação atual:
 
 - painel de importação de CSV Nubank no frontend
-- upload autenticado para a Edge Function `import-nubank-csv`
+- upload autenticado para as Edge Functions `import-nubank-csv` e `import-santander-pdf`
 - upsert em `transactions` por `user_id, external_id`
 
 ## Supabase versionado
@@ -268,6 +268,7 @@ Depois, no dashboard do Supabase:
 Primeira function implementada:
 
 - `supabase/functions/import-nubank-csv`
+- `supabase/functions/import-santander-pdf`
 
 Ela recebe:
 
@@ -282,9 +283,17 @@ E faz:
 - classificação com as regras atuais
 - `upsert` em `public.transactions`
 
+No caso do Santander:
+
+- recebe `pdfBase64`
+- extrai os lançamentos da fatura
+- classifica
+- faz `upsert` em `public.transactions`
+
 Arquivo compartilhado de regra:
 
 - `supabase/functions/_shared/nubank.ts`
+- `supabase/functions/_shared/santander.ts`
 
 ## Campos usados no Notion
 
