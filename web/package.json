@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "env:local": "sh ../tools/use_web_env.sh .env.supabase.local .env.local",
+    "env:remote": "sh ../tools/use_web_env.sh .env.supabase.remote .env.local",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",

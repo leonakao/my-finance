@@ -66,38 +66,53 @@ function AuthenticatedApp({
   )
 }
 
+function UnauthenticatedApp({
+  error,
+  feedback,
+  handlePasswordReset,
+  handlePasswordUpdate,
+  handleSignIn,
+  handleSignUp,
+  isRecoveryMode,
+  setError,
+  setFeedback,
+  setIsRecoveryMode,
+  signInLoading,
+}) {
+  return (
+    <SignIn
+      isRecoveryMode={isRecoveryMode}
+      onSignIn={handleSignIn}
+      onSignUp={handleSignUp}
+      onPasswordReset={handlePasswordReset}
+      onPasswordUpdate={(password) =>
+        handlePasswordUpdate(password, () => {
+          setIsRecoveryMode(false)
+          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+        })
+      }
+      onDismissRecovery={() => {
+        setIsRecoveryMode(false)
+        setError('')
+        setFeedback('')
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      }}
+      loading={signInLoading}
+      error={error || feedback}
+    />
+  )
+}
+
 function App() {
-  const { session, loading, setLoading } = useAuthSession()
+  const { session, loading, setLoading, isRecoveryMode, setIsRecoveryMode } = useAuthSession()
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState('')
   const [transactionFilters, setTransactionFilters] = useState({ search: '', type: 'all', category: 'all', group: 'all' })
-  const {
-    budgetGroups,
-    setBudgetGroups,
-    transactions,
-    setTransactions,
-    selectedMonth,
-    setSelectedMonth,
-    loadTransactions,
-  } = useTransactionsData(
-    session,
-    setLoading,
-    setError,
-  )
+  const { budgetGroups, setBudgetGroups, transactions, setTransactions, selectedMonth, setSelectedMonth, loadTransactions } =
+    useTransactionsData(session, setLoading, setError)
   const { savingId, handleUpdate } = useTransactionEditing(transactions, setTransactions, setError)
-  const { savingGroupId, createBudgetGroup, updateBudgetGroup, deleteBudgetGroup } = useBudgetGroupManagement(
-    setBudgetGroups,
-    setTransactions,
-    setError,
-    setFeedback,
-  )
-  const { signInLoading, handleSignIn, handleSignOut } = useAuthActions(
-    setBudgetGroups,
-    setTransactions,
-    setSelectedMonth,
-    setError,
-    setFeedback,
-  )
+  const { savingGroupId, createBudgetGroup, updateBudgetGroup, deleteBudgetGroup } = useBudgetGroupManagement(setBudgetGroups, setTransactions, setError, setFeedback)
+  const { signInLoading, handleSignIn, handleSignUp, handlePasswordReset, handlePasswordUpdate, handleSignOut } = useAuthActions(setBudgetGroups, setTransactions, setSelectedMonth, setError, setFeedback)
   const { importLoading, handleImport } = useTransactionsImport(loadTransactions, setError, setFeedback)
   const { activeMonth, monthData, filteredTransactions, months, typeOptions, categoryOptions, groupOptions } =
     useDashboardState(budgetGroups, transactions, selectedMonth, transactionFilters)
@@ -106,8 +121,22 @@ function App() {
     return <MissingConfig />
   }
 
-  if (!session) {
-    return <SignIn onSignIn={handleSignIn} loading={signInLoading} error={error || feedback} />
+  if (isRecoveryMode || !session) {
+    return (
+      <UnauthenticatedApp
+        error={error}
+        feedback={feedback}
+        handlePasswordReset={handlePasswordReset}
+        handlePasswordUpdate={handlePasswordUpdate}
+        handleSignIn={handleSignIn}
+        handleSignUp={handleSignUp}
+        isRecoveryMode={isRecoveryMode}
+        setError={setError}
+        setFeedback={setFeedback}
+        setIsRecoveryMode={setIsRecoveryMode}
+        signInLoading={signInLoading}
+      />
+    )
   }
 
   return (

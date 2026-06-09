@@ -51,7 +51,7 @@ function TransactionFilters({ filters, onFiltersChange, typeOptions, categoryOpt
 }
 
 function GroupCell({ budgetGroups, isSaving, transaction, onUpdate }) {
-  if (transaction.type === 'Receita') {
+  if (transaction.type === 'Receita' || transaction.type === 'Transferência') {
     return <span className="muted">Sem grupo</span>
   }
 

@@ -5,7 +5,7 @@ export function matchesFilter(value, filter) {
 }
 
 export function nextBudgetGroupIdForType(type, currentBudgetGroupId) {
-  if (type === 'Receita') {
+  if (type === 'Receita' || type === 'Transferência') {
     return null
   }
 
@@ -45,7 +45,7 @@ export function decorateTransactions(transactions, budgetGroups) {
     return {
       ...transaction,
       budgetGroupName: budgetGroup?.name ?? null,
-      needsReclassification: transaction.type !== 'Receita' && transaction.budgetGroupId === null,
+      needsReclassification: transaction.type === 'Despesa' && transaction.budgetGroupId === null,
     }
   })
 }
@@ -103,6 +103,10 @@ export function buildMonthData(transactions, budgetGroups) {
 
     if (transaction.type === 'Receita') {
       bucket.revenue += transaction.amount
+      continue
+    }
+
+    if (transaction.type === 'Transferência') {
       continue
     }
 

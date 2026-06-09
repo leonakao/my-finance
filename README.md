@@ -153,8 +153,8 @@ O app em `web/` usa:
 - Vite + React
 - `@supabase/supabase-js`
 - autenticação por magic link
-- leitura direta da tabela `transactions`
-- atualização direta de `category` e `budget_group`
+- leitura direta das tabelas `transactions` e `budget_groups`
+- atualização direta de `category` e `budget_group_id`
 
 Configuração:
 
@@ -169,6 +169,18 @@ Preencha:
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 ```
+
+Ou use os atalhos versionados para alternar entre Supabase local e remoto:
+
+```sh
+npm run env:local
+```
+
+```sh
+npm run env:remote
+```
+
+Esses scripts sobrescrevem `web/.env.local`. Depois da troca, reinicie o `npm run dev`.
 
 Rodar:
 
@@ -199,7 +211,7 @@ Schema mínimo esperado em `transactions`:
 - `amount`
 - `type`
 - `category`
-- `budget_group`
+- `budget_group_id`
 - `account`
 - `institution`
 - `status`
