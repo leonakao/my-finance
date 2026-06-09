@@ -27,6 +27,13 @@
   - triggers
   - RLS
 
+### Supabase Edge Functions
+
+- nao havia check dedicado documentado para `supabase/functions/`
+- o check operacional minimo passa a ser:
+  - subir a stack local com `supabase start`
+  - rodar `sh tools/check_supabase_functions.sh`
+
 ## Test Strategy We Should Follow
 
 ### Minimum gate for Python changes
@@ -46,6 +53,7 @@
 - revisar migration para compatibilidade com dados existentes
 - validar impacto em `transactions` e policies de RLS
 - manter enum/checks sincronizados com o frontend
+- quando houver alteracao em `supabase/functions/`, rodar `sh tools/check_supabase_functions.sh`
 
 ## Standards To Adopt
 

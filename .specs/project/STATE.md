@@ -9,6 +9,7 @@
 - Regras de negocio financeiras devem permanecer no pipeline de ingestao Python e/ou no schema do Supabase, nao na UI.
 - Mudancas em `type`, `category`, `budget_group` e `status` devem ser coordenadas entre SQL, Python, frontend e documentacao.
 - `App.jsx` pode permanecer central enquanto houver uma unica tela simples; novas responsabilidades relevantes devem disparar modularizacao.
+- Pastas de feature em `.specs/features/` devem seguir o padrao numerado `NNN-slug-da-feature`, com zero padding de 3 digitos.
 
 ## Current Facts
 

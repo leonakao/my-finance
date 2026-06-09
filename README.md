@@ -67,15 +67,15 @@ O extrator Nubank normaliza os campos para o Notion e tenta evitar duplicidade:
 
 Base atual: salário de `R$ 13.410,62`.
 
-- `50 Necessidades`: até `R$ 6.705,31`.
-- `30 Desejos`: até `R$ 4.023,19`.
-- `20 Futuro`: pelo menos `R$ 2.682,12`.
+- `Necessidades`: até `R$ 6.705,31`.
+- `Desejos`: até `R$ 4.023,19`.
+- `Futuro`: pelo menos `R$ 2.682,12`.
 
 Classificação inicial:
 
-- `50 Necessidades`: saúde, seguros essenciais, internet/serviços básicos, VERO, OpenAI/ChatGPT, Windsurf, anuidade, telefone/C6, mercado, carne, supermercado, combustível, pedágio e transporte necessário.
-- `30 Desejos`: restaurantes, cafés, bares, delivery, lazer, compras online, assinaturas, apps e viagens opcionais.
-- `20 Futuro`: aplicações, investimentos, Avenue, Banco Inter e aportes.
+- `Necessidades`: saúde, seguros essenciais, internet/serviços básicos, VERO, OpenAI/ChatGPT, Windsurf, anuidade, telefone/C6, mercado, carne, supermercado, combustível, pedágio e transporte necessário.
+- `Desejos`: restaurantes, cafés, bares, delivery, lazer, compras online, assinaturas, apps e viagens opcionais.
+- `Futuro`: aplicações, investimentos, Avenue, Banco Inter e aportes.
 - `Receita`: salário e entradas que compõem renda mensal.
 - `Transferência`: movimentação entre contas próprias, pagamento de fatura e resgates que não são gasto.
 - `Ignorar`: estornos, créditos técnicos e pagamentos recebidos no cartão.
@@ -101,7 +101,7 @@ O resumo calcula:
 - quantidade de transações incluídas em cada linha.
 
 Linhas com `Status = Ignorar` são descartadas. Transferências comuns também
-ficam fora do resumo, exceto quando classificadas em `20 Futuro` ou `Receita`.
+ficam fora do resumo, exceto quando classificadas em `Futuro` ou `Receita`.
 
 Esse fluxo antigo foi arquivado no Notion e não deve mais ser usado como
 visualização principal.
@@ -177,6 +177,20 @@ npm install
 npm run dev
 ```
 
+O frontend sobe em `http://localhost:4173`.
+
+Checks uteis:
+
+```sh
+cd web
+npm run lint
+npm run build
+cd ..
+sh tools/check_supabase_functions.sh
+```
+
+O check das Edge Functions exige a stack local do Supabase ativa via `supabase start`.
+
 Schema mínimo esperado em `transactions`:
 
 - `id`
@@ -201,6 +215,7 @@ O app calcula no cliente:
 Importação atual:
 
 - painel de importação de CSV Nubank no frontend
+- upload autenticado de CSV Nubank e PDF Santander (fatura e extrato) no frontend
 - upload autenticado para as Edge Functions `import-nubank-csv` e `import-santander-pdf`
 - upsert em `transactions` por `user_id, external_id`
 
