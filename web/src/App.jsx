@@ -3,83 +3,43 @@ import './App.css'
 import { DashboardView } from './components/DashboardView'
 import { MissingConfig } from './components/MissingConfig'
 import { SignIn } from './components/SignIn'
+import { useAuthActions } from './hooks/useAuthActions'
 import { useAuthSession } from './hooks/useAuthSession'
+import { useDashboardState } from './hooks/useDashboardState'
+import { useBudgetGroupManagement } from './hooks/useBudgetGroupManagement'
 import { useTransactionEditing } from './hooks/useTransactionEditing'
 import { useTransactionsData } from './hooks/useTransactionsData'
 import { useTransactionsImport } from './hooks/useTransactionsImport'
 import { supabase } from './lib/supabase'
-import {
-  buildMonthData,
-  filterTransactions,
-  getMonthTransactions,
-  getTransactionOptions,
-} from './lib/transactions'
 
-function App() {
-  const { session, loading, setLoading } = useAuthSession()
-  const [signInLoading, setSignInLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [feedback, setFeedback] = useState('')
-  const [transactionFilters, setTransactionFilters] = useState({
-    search: '',
-    type: 'all',
-    category: 'all',
-    group: 'all',
-  })
-  const { transactions, setTransactions, selectedMonth, setSelectedMonth, loadTransactions } = useTransactionsData(
-    session,
-    setLoading,
-    setError,
-  )
-  const { savingId, handleUpdate } = useTransactionEditing(transactions, setTransactions, setError)
-  const { importLoading, handleImport } = useTransactionsImport(loadTransactions, setError, setFeedback)
-
-  async function handleSignIn(email) {
-    setSignInLoading(true)
-    setError('')
-    setFeedback('')
-
-    const { error: authError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    })
-
-    if (authError) {
-      setError(authError.message)
-    } else {
-      setFeedback('Magic link enviado. Confira seu email.')
-    }
-
-    setSignInLoading(false)
-  }
-
-  async function handleSignOut() {
-    await supabase.auth.signOut()
-    setTransactions([])
-    setSelectedMonth('')
-  }
-
-  if (!supabase) {
-    return <MissingConfig />
-  }
-
-  if (!session) {
-    return <SignIn onSignIn={handleSignIn} loading={signInLoading} error={error || feedback} />
-  }
-
-  const monthMap = buildMonthData(transactions)
-  const months = [...monthMap.keys()].sort().reverse()
-  const activeMonth = selectedMonth || months[0] || ''
-  const monthData = activeMonth ? monthMap.get(activeMonth) : null
-  const monthTransactions = getMonthTransactions(transactions, activeMonth)
-  const filteredTransactions = filterTransactions(monthTransactions, transactionFilters)
-  const { typeOptions, categoryOptions, groupOptions } = getTransactionOptions(monthTransactions)
-
+function AuthenticatedApp({
+  budgetGroups,
+  categoryOptions,
+  createBudgetGroup,
+  deleteBudgetGroup,
+  error,
+  feedback,
+  filteredTransactions,
+  groupOptions,
+  handleImport,
+  handleSignOut,
+  handleUpdate,
+  importLoading,
+  loading,
+  monthData,
+  months,
+  savingGroupId,
+  savingId,
+  selectedMonth,
+  setSelectedMonth,
+  setTransactionFilters,
+  transactionFilters,
+  typeOptions,
+  updateBudgetGroup,
+}) {
   return (
     <DashboardView
-      activeMonth={activeMonth}
+      activeMonth={selectedMonth}
       months={months}
       loading={loading}
       error={error}
@@ -88,6 +48,11 @@ function App() {
       handleImport={handleImport}
       handleSignOut={handleSignOut}
       monthData={monthData}
+      budgetGroups={budgetGroups}
+      savingGroupId={savingGroupId}
+      createBudgetGroup={createBudgetGroup}
+      updateBudgetGroup={updateBudgetGroup}
+      deleteBudgetGroup={deleteBudgetGroup}
       filteredTransactions={filteredTransactions}
       savingId={savingId}
       handleUpdate={handleUpdate}
@@ -97,6 +62,79 @@ function App() {
       categoryOptions={categoryOptions}
       groupOptions={groupOptions}
       setSelectedMonth={setSelectedMonth}
+    />
+  )
+}
+
+function App() {
+  const { session, loading, setLoading } = useAuthSession()
+  const [error, setError] = useState('')
+  const [feedback, setFeedback] = useState('')
+  const [transactionFilters, setTransactionFilters] = useState({ search: '', type: 'all', category: 'all', group: 'all' })
+  const {
+    budgetGroups,
+    setBudgetGroups,
+    transactions,
+    setTransactions,
+    selectedMonth,
+    setSelectedMonth,
+    loadTransactions,
+  } = useTransactionsData(
+    session,
+    setLoading,
+    setError,
+  )
+  const { savingId, handleUpdate } = useTransactionEditing(transactions, setTransactions, setError)
+  const { savingGroupId, createBudgetGroup, updateBudgetGroup, deleteBudgetGroup } = useBudgetGroupManagement(
+    setBudgetGroups,
+    setTransactions,
+    setError,
+    setFeedback,
+  )
+  const { signInLoading, handleSignIn, handleSignOut } = useAuthActions(
+    setBudgetGroups,
+    setTransactions,
+    setSelectedMonth,
+    setError,
+    setFeedback,
+  )
+  const { importLoading, handleImport } = useTransactionsImport(loadTransactions, setError, setFeedback)
+  const { activeMonth, monthData, filteredTransactions, months, typeOptions, categoryOptions, groupOptions } =
+    useDashboardState(budgetGroups, transactions, selectedMonth, transactionFilters)
+
+  if (!supabase) {
+    return <MissingConfig />
+  }
+
+  if (!session) {
+    return <SignIn onSignIn={handleSignIn} loading={signInLoading} error={error || feedback} />
+  }
+
+  return (
+    <AuthenticatedApp
+      budgetGroups={budgetGroups}
+      categoryOptions={categoryOptions}
+      createBudgetGroup={createBudgetGroup}
+      deleteBudgetGroup={deleteBudgetGroup}
+      error={error}
+      feedback={feedback}
+      filteredTransactions={filteredTransactions}
+      groupOptions={groupOptions}
+      handleImport={handleImport}
+      handleSignOut={handleSignOut}
+      handleUpdate={handleUpdate}
+      importLoading={importLoading}
+      loading={loading}
+      monthData={monthData}
+      months={months}
+      savingGroupId={savingGroupId}
+      savingId={savingId}
+      selectedMonth={activeMonth}
+      setSelectedMonth={setSelectedMonth}
+      setTransactionFilters={setTransactionFilters}
+      transactionFilters={transactionFilters}
+      typeOptions={typeOptions}
+      updateBudgetGroup={updateBudgetGroup}
     />
   )
 }

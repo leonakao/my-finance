@@ -76,9 +76,9 @@ create table if not exists public.transactions (
   ),
   budget_group text not null check (
     budget_group in (
-      '50 Necessidades',
-      '30 Desejos',
-      '20 Futuro',
+      'Necessidades',
+      'Desejos',
+      'Futuro',
       'Receita',
       'Transferência',
       'Ignorar'

@@ -1,14 +1,15 @@
-import { GROUP_LABELS, GROUP_TARGETS } from '../constants'
 import { monthLabel, toCurrency, toPercent } from '../lib/formatters'
 
 export function SummaryTable({ monthKey, monthData }) {
-  const rows = GROUP_LABELS.map((group) => {
-    const total = monthData.groups[group].total
+  const rows = monthData.groupOrder.map((groupId) => {
+    const group = monthData.groups[groupId]
+    const total = group.total
     const percent = monthData.revenue ? (total / monthData.revenue) * 100 : 0
-    const target = GROUP_TARGETS[group]
+    const target = group.targetPercentage
 
     return {
-      group,
+      groupId,
+      groupName: group.name,
       total,
       percent,
       target,
@@ -40,8 +41,8 @@ export function SummaryTable({ monthKey, monthData }) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.group}>
-              <td>{row.group}</td>
+            <tr key={row.groupId}>
+              <td>{row.groupName}</td>
               <td>{toCurrency(row.total)}</td>
               <td>{toPercent(row.percent)}</td>
               <td>{toPercent(row.target)}</td>

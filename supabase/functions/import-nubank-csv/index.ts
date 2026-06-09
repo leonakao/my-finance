@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { resolveImportedTransactionBudgetGroups } from '../_shared/budget-groups.ts'
 import { parseNubankCsv, type ImportKind } from '../_shared/nubank.ts'
 
 type ImportPayload = {
@@ -59,13 +60,15 @@ Deno.serve(async (request) => {
     return json({ error: 'kind and csvText are required' }, 400)
   }
 
-  const transactions = parseNubankCsv({
+  const parsedTransactions = parseNubankCsv({
     userId: user.id,
     kind: payload.kind,
     csvText: payload.csvText,
     invoice: payload.invoice,
     filename: payload.filename,
   })
+
+  const transactions = await resolveImportedTransactionBudgetGroups(supabase, user.id, parsedTransactions)
 
   const { error: upsertError } = await supabase
     .from('transactions')

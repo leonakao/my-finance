@@ -1,11 +1,11 @@
 import { toCurrency, toPercent } from '../lib/formatters'
 
-export function CategorySection({ group, monthData }) {
-  const rows = Object.entries(monthData.groups[group].byCategory)
+export function CategorySection({ group, revenue }) {
+  const rows = Object.entries(group.byCategory)
     .map(([category, total]) => ({
       category,
       total,
-      percent: monthData.revenue ? (total / monthData.revenue) * 100 : 0,
+      percent: revenue ? (total / revenue) * 100 : 0,
     }))
     .sort((left, right) => right.total - left.total)
 
@@ -13,7 +13,7 @@ export function CategorySection({ group, monthData }) {
     <section className="panel">
       <div className="panel-header compact">
         <div>
-          <div className="eyebrow">{group}</div>
+          <div className="eyebrow">{group.name}</div>
           <h3>Categorias</h3>
         </div>
       </div>
@@ -28,7 +28,7 @@ export function CategorySection({ group, monthData }) {
         <tbody>
           {rows.length ? (
             rows.map((row) => (
-              <tr key={`${group}-${row.category}`}>
+              <tr key={`${group.id}-${row.category}`}>
                 <td>{row.category}</td>
                 <td>{toCurrency(row.total)}</td>
                 <td>{toPercent(row.percent)}</td>

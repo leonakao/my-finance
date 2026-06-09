@@ -1,6 +1,5 @@
-import { CATEGORY_OPTIONS, GROUP_LABELS, TYPE_OPTIONS } from '../constants'
+import { CATEGORY_OPTIONS, TYPE_OPTIONS } from '../constants'
 import { toCurrency } from '../lib/formatters'
-import { isExpenseGroup } from '../lib/transactions'
 
 function TransactionFilters({ filters, onFiltersChange, typeOptions, categoryOptions, groupOptions }) {
   return (
@@ -41,8 +40,8 @@ function TransactionFilters({ filters, onFiltersChange, typeOptions, categoryOpt
         <select value={filters.group} onChange={(event) => onFiltersChange('group', event.target.value)}>
           <option value="all">Todos</option>
           {groupOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
@@ -51,7 +50,28 @@ function TransactionFilters({ filters, onFiltersChange, typeOptions, categoryOpt
   )
 }
 
-function TransactionRow({ transaction, savingId, onUpdate }) {
+function GroupCell({ budgetGroups, isSaving, transaction, onUpdate }) {
+  if (transaction.type === 'Receita') {
+    return <span className="muted">Sem grupo</span>
+  }
+
+  return (
+    <select
+      value={transaction.budgetGroupId ?? ''}
+      onChange={(event) => onUpdate(transaction.id, 'budget_group_id', event.target.value || null)}
+      disabled={isSaving}
+    >
+      <option value="">Sem grupo</option>
+      {budgetGroups.map((budgetGroup) => (
+        <option key={budgetGroup.id} value={budgetGroup.id}>
+          {budgetGroup.name}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function TransactionRow({ budgetGroups, transaction, savingId, onUpdate }) {
   const isSaving = savingId === transaction.id
 
   return (
@@ -91,27 +111,15 @@ function TransactionRow({ transaction, savingId, onUpdate }) {
         </select>
       </td>
       <td>
-        {isExpenseGroup(transaction.budgetGroup) ? (
-          <select
-            value={transaction.budgetGroup}
-            onChange={(event) => onUpdate(transaction.id, 'budget_group', event.target.value)}
-            disabled={isSaving}
-          >
-            {GROUP_LABELS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span className="muted">{transaction.budgetGroup || '-'}</span>
-        )}
+        <GroupCell budgetGroups={budgetGroups} isSaving={isSaving} transaction={transaction} onUpdate={onUpdate} />
+        {transaction.needsReclassification ? <div className="row-hint">Precisa de classificação</div> : null}
       </td>
     </tr>
   )
 }
 
 export function TransactionTable({
+  budgetGroups,
   transactions,
   savingId,
   onUpdate,
@@ -160,6 +168,7 @@ export function TransactionTable({
             {transactions.map((transaction) => (
               <TransactionRow
                 key={transaction.id}
+                budgetGroups={budgetGroups}
                 transaction={transaction}
                 savingId={savingId}
                 onUpdate={onUpdate}
@@ -168,6 +177,7 @@ export function TransactionTable({
           </tbody>
         </table>
       </div>
+      {!transactions.length ? <p className="muted">Nenhuma transação encontrada para esse filtro.</p> : null}
     </section>
   )
 }

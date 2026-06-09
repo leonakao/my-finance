@@ -1,5 +1,5 @@
 import { inflate } from 'npm:pako@2.1.0'
-import type { ImportedTransaction } from './nubank.ts'
+import type { DefaultBudgetGroupName, ParsedImportedTransaction } from './budget-groups.ts'
 
 type TextEvent = {
   page: number
@@ -13,11 +13,16 @@ const dateRe = /(?<day>\d{2})\/(?<month>\d{2})/
 const moneyRe = /^-?\d{1,3}(?:\.\d{3})*,\d{2}$|^-?\d+,\d{2}$/
 const parcelRe = /^\d{2}\/\d{2}$/
 
-function latin1Decode(bytes: Uint8Array): string {
-  return new TextDecoder('latin1').decode(bytes)
+function binaryStringFromBytes(bytes: Uint8Array): string {
+  let out = ''
+  const chunkSize = 0x8000
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    out += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+  }
+  return out
 }
 
-function latin1Encode(value: string): Uint8Array {
+function bytesFromBinaryString(value: string): Uint8Array {
   const out = new Uint8Array(value.length)
   for (let index = 0; index < value.length; index += 1) out[index] = value.charCodeAt(index) & 0xff
   return out
@@ -59,7 +64,7 @@ function decodePdfString(raw: string): string {
       index += 1
     }
   }
-  return latin1Decode(new Uint8Array(out))
+  return binaryStringFromBytes(new Uint8Array(out))
 }
 
 function textFromTjArray(raw: string): string {
@@ -68,15 +73,15 @@ function textFromTjArray(raw: string): string {
 }
 
 function inflateStreams(pdfBytes: Uint8Array): string[] {
-  const pdf = latin1Decode(pdfBytes)
+  const pdf = binaryStringFromBytes(pdfBytes)
   const streams: string[] = []
   const regex = /stream\r?\n([\s\S]*?)\r?\nendstream/g
   let match: RegExpExecArray | null
 
   while ((match = regex.exec(pdf))) {
     try {
-      const inflated = inflate(latin1Encode(match[1]))
-      streams.push(latin1Decode(inflated))
+      const inflated = inflate(bytesFromBinaryString(match[1]))
+      streams.push(binaryStringFromBytes(inflated))
     } catch {
       continue
     }
@@ -142,6 +147,10 @@ function decimalFromBrl(value: string): number {
   return Number(value.replace(/\./g, '').replace(',', '.'))
 }
 
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate()
+}
+
 function inferClosingMonth(events: TextEvent[]): number {
   for (const event of events) {
     const match = event.text.match(/até\s+(\d{2})\/(\d{2})/)
@@ -158,17 +167,58 @@ function inferYear(events: TextEvent[]): number {
   return 2026
 }
 
-function inferCardByPosition(page: number, x: number, activeCards: Record<number, string>): string {
-  if (page === 2 && x < 285) return activeCards[5480] ?? '5480'
-  if (page === 2 && x >= 285) return activeCards[128] ?? '0128'
-  if (page === 3) return activeCards[128] ?? '0128'
+function inferCardByPage(page: number, pageCards: Record<number, string>): string {
+  if (pageCards[page]) return pageCards[page]
+
+  for (let current = page - 1; current >= 1; current -= 1) {
+    if (pageCards[current]) return pageCards[current]
+  }
+
   return ''
+}
+
+function buildCandidateRows(events: TextEvent[]) {
+  const rows = new Map<string, TextEvent[]>()
+
+  for (const event of events) {
+    const key = `${event.page}:${event.y}`
+    rows.set(key, [...(rows.get(key) ?? []), event])
+  }
+
+  return rows
+}
+
+function detectCandidatePages(rows: Map<string, TextEvent[]>) {
+  const pageScores = new Map<number, number>()
+
+  for (const [, rowEvents] of rows) {
+    const texts = [...rowEvents].sort((left, right) => left.x - right.x).map((event) => event.text)
+    const rowText = texts.join(' ')
+    const hasDate = dateRe.test(rowText)
+    const hasAmount = texts.some((text) => moneyRe.test(text) && !text.startsWith('-'))
+    if (!hasDate || !hasAmount) continue
+    const page = rowEvents[0]?.page
+    if (!page) continue
+    pageScores.set(page, (pageScores.get(page) ?? 0) + 1)
+  }
+
+  const candidates = new Set<number>()
+  for (const [page, score] of pageScores) {
+    if (score >= 3) candidates.add(page)
+  }
+
+  if (!candidates.size) {
+    for (const page of pageScores.keys()) candidates.add(page)
+  }
+
+  return candidates
 }
 
 function categoryFor(description: string): string {
   const text = description.toUpperCase()
+  if (text.includes('VERO')) return 'Moradia'
   const rules: Array<[string, string[]]> = [
-    ['Assinaturas', ['AMAZONPRIME', 'AMAZON PRIME', 'AMAZON MUSIC', 'YOUTUBE', 'VERO', 'SCP ESSENCIAL']],
+    ['Assinaturas', ['AMAZONPRIME', 'AMAZON PRIME', 'AMAZON MUSIC', 'YOUTUBE', 'VERO', 'SCP ESSENCIAL', 'PAG*XSOLLAGAMES', 'ESFERA']],
     ['Transporte', ['UBER', 'POSTO', 'SEM PARAR', 'SEM*PARAR', 'AZUL', 'AEREAS']],
     ['Saúde', ['DROGASIL', 'NUTRIVICA']],
     ['Lazer', ['INGRESSO', 'MULTIPLEX', 'AIRBNB']],
@@ -204,44 +254,45 @@ function categoryFor(description: string): string {
   return 'Outros'
 }
 
-function budgetGroupFor(category: string, description: string): string {
+function budgetGroupFor(category: string, description: string): DefaultBudgetGroupName | null {
   const text = description.toUpperCase()
-  if (['VERO', 'OPENAI', 'CHATGPT'].some((needle) => text.includes(needle))) return '50 Necessidades'
-  if (text.includes('ANUIDADE')) return '50 Necessidades'
-  if (['Saúde', 'Moradia'].includes(category)) return '50 Necessidades'
-  if (category === 'Transporte') return text.includes('AZUL') || text.includes('AEREAS') ? '30 Desejos' : '50 Necessidades'
+  if (['VERO', 'OPENAI', 'CHATGPT'].some((needle) => text.includes(needle))) return 'Necessidades'
+  if (text.includes('ANUIDADE')) return 'Necessidades'
+  if (['Saúde', 'Moradia'].includes(category)) return 'Necessidades'
+  if (category === 'Transporte') return text.includes('AZUL') || text.includes('AEREAS') ? 'Desejos' : 'Necessidades'
   if (category === 'Alimentação') {
     if (['SUSHI', 'PASTEL', 'ROOFTOP', 'LANCHES', 'LIBANESA', 'CAFE', 'PUB', 'PIZZARIA', 'LOS BRUTOS', 'MONTANA', 'SALGADOS', 'BOUCHERIE'].some((needle) => text.includes(needle))) {
-      return '30 Desejos'
+      return 'Desejos'
     }
-    return '50 Necessidades'
+    return 'Necessidades'
   }
-  if (category === 'Investimentos') return '20 Futuro'
-  return '30 Desejos'
+  if (category === 'Investimentos') return 'Futuro'
+  return 'Desejos'
 }
 
 export function parseSantanderPdf(params: {
   userId: string
   pdfBytes: Uint8Array
   filename?: string
-}): ImportedTransaction[] {
+}): ParsedImportedTransaction[] {
   const events = extractTextEvents(params.pdfBytes)
   const closingMonth = inferClosingMonth(events)
   const statementYear = inferYear(events)
-  const rows = new Map<string, TextEvent[]>()
-  const activeCards: Record<number, string> = { 128: '0128', 5480: '5480' }
+  const rows = buildCandidateRows(events)
+  const candidatePages = detectCandidatePages(rows)
+  const pageCards: Record<number, string> = {}
 
   for (const event of events) {
-    if (event.text.includes('XXXX XXXX 8713')) activeCards[5480] = '8713'
-    if (![2, 3].includes(event.page)) continue
-    if (event.font === '/F10') continue
-    const key = `${event.page}:${event.y}`
-    rows.set(key, [...(rows.get(key) ?? []), event])
+    const cardMatch = event.text.match(/(?:XXXX XXXX|5228 XXXX XXXX)\s+(\d{4})/)
+    if (cardMatch) {
+      pageCards[event.page] = cardMatch[1]
+    }
   }
 
   const transactions: ImportedTransaction[] = []
   let index = 0
   for (const [, rowEvents] of [...rows.entries()].sort((left, right) => left[0].localeCompare(right[0]))) {
+    if (!candidatePages.has(rowEvents[0]?.page ?? 0)) continue
     const ordered = [...rowEvents].sort((left, right) => left.x - right.x)
     const texts = ordered.map((event) => event.text)
     const rowText = texts.join(' ')
@@ -276,29 +327,64 @@ export function parseSantanderPdf(params: {
     const day = Number(dateMatch.groups.day)
     const month = Number(dateMatch.groups.month)
     const year = month > closingMonth ? statementYear - 1 : statementYear
-    const card = inferCardByPosition(ordered[0].page, ordered[0].x, activeCards)
+    const card = inferCardByPage(ordered[0].page, pageCards)
     const category = categoryFor(description)
     const amount = decimalFromBrl(amountText)
+    const originalDate = `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+    const effectiveYear = installment ? statementYear : year
+    const effectiveMonth = installment ? closingMonth : month
+    const effectiveDay = installment ? Math.min(day, daysInMonth(effectiveYear, effectiveMonth)) : day
+    const effectiveDate = `${effectiveYear.toString().padStart(4, '0')}-${effectiveMonth.toString().padStart(2, '0')}-${effectiveDay.toString().padStart(2, '0')}`
+    const notes = installment
+      ? `Importado de PDF de fatura Santander via Edge Function. Compra original em ${originalDate}. Parcela ${installment}.`
+      : 'Importado de PDF de fatura Santander via Edge Function.'
 
     transactions.push({
       user_id: params.userId,
-      date: `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`,
+      date: effectiveDate,
       description,
       amount,
       type: 'Despesa',
       category,
-      budget_group: budgetGroupFor(category, description),
+      budget_group_name: budgetGroupFor(category, description),
       account: 'Cartão de crédito',
       institution: 'Santander',
       status: 'Confirmado',
-      notes: 'Importado de PDF de fatura Santander via Edge Function.',
+      notes,
       invoice: params.filename ?? '',
       installment,
-      external_id: `santander-card:${year}-${month}-${day}:${index}:${card}:${description}:${amount.toFixed(2)}`,
+      external_id: `santander-card:${originalDate}:${index}:${card}:${description}:${amount.toFixed(2)}`,
       source: 'Santander',
     })
     index += 1
   }
 
   return transactions
+}
+
+export function inspectSantanderPdf(pdfBytes: Uint8Array) {
+  const events = extractTextEvents(pdfBytes)
+  const rows = buildCandidateRows(events)
+  const candidatePages = [...detectCandidatePages(rows)].sort((left, right) => left - right)
+  const pageEventCounts: Record<string, number> = {}
+  const pageRowCounts: Record<string, number> = {}
+
+  for (const event of events) {
+    pageEventCounts[String(event.page)] = (pageEventCounts[String(event.page)] ?? 0) + 1
+  }
+
+  for (const [, rowEvents] of rows) {
+    const page = rowEvents[0]?.page
+    if (!page) continue
+    pageRowCounts[String(page)] = (pageRowCounts[String(page)] ?? 0) + 1
+  }
+
+  return {
+    eventCount: events.length,
+    rowCount: rows.size,
+    candidatePages,
+    pageEventCounts,
+    pageRowCounts,
+    sampleTexts: events.slice(0, 12).map((event) => event.text),
+  }
 }

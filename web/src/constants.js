@@ -1,12 +1,5 @@
-export const GROUP_LABELS = ['Necessidades', 'Desejos', 'Futuro']
-
 export const TYPE_OPTIONS = ['Despesa', 'Receita', 'Transferência']
-
-export const GROUP_TARGETS = {
-  Necessidades: 50,
-  Desejos: 30,
-  Futuro: 20,
-}
+export const UNGROUPED_FILTER_VALUE = '__ungrouped__'
 
 export const CATEGORY_OPTIONS = [
   'Alimentação',

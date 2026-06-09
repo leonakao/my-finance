@@ -5,6 +5,8 @@ set -eu
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 LOG_FILE="${TMPDIR:-/tmp}/finance-supabase-functions-check.log"
 
+export SUPABASE_DISABLE_TELEMETRY=1
+
 cd "$ROOT_DIR"
 
 if ! command -v supabase >/dev/null 2>&1; then
@@ -12,7 +14,9 @@ if ! command -v supabase >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! supabase status >/dev/null 2>&1; then
+STATUS_OUTPUT=$(supabase status 2>&1 || true)
+
+if ! printf '%s' "$STATUS_OUTPUT" | grep -q "supabase local development setup is running."; then
   echo "Supabase local nao esta em execucao. Rode 'supabase start' antes do check das functions." >&2
   exit 1
 fi

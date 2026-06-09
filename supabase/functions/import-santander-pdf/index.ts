@@ -1,9 +1,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { parseSantanderPdf } from '../_shared/santander.ts'
+import { resolveImportedTransactionBudgetGroups } from '../_shared/budget-groups.ts'
+import { parseSantanderAccountPdf } from '../_shared/santander-account.ts'
+import { inspectSantanderPdf, parseSantanderPdf } from '../_shared/santander.ts'
 
 type ImportPayload = {
   filename?: string
   pdfBase64: string
+  kind?: 'card' | 'account'
 }
 
 function json(body: unknown, status = 200) {
@@ -64,11 +67,22 @@ Deno.serve(async (request) => {
     return json({ error: 'pdfBase64 is required' }, 400)
   }
 
-  const transactions = parseSantanderPdf({
-    userId: user.id,
-    pdfBytes: decodeBase64(payload.pdfBase64),
-    filename: payload.filename,
-  })
+  const pdfBytes = decodeBase64(payload.pdfBase64)
+  const importKind = payload.kind ?? 'card'
+  const parsedTransactions =
+    importKind === 'account'
+      ? await parseSantanderAccountPdf({
+          userId: user.id,
+          pdfBytes,
+          filename: payload.filename,
+        })
+      : parseSantanderPdf({
+          userId: user.id,
+          pdfBytes,
+          filename: payload.filename,
+        })
+
+  const transactions = await resolveImportedTransactionBudgetGroups(supabase, user.id, parsedTransactions)
 
   const { error: upsertError } = await supabase
     .from('transactions')
@@ -78,14 +92,17 @@ Deno.serve(async (request) => {
     return json({ error: upsertError.message }, 400)
   }
 
-  const total = transactions.reduce((sum, item) => sum + item.amount, 0)
+  const confirmed = transactions.filter((item) => item.status === 'Confirmado')
+  const ignored = transactions.filter((item) => item.status === 'Ignorar')
+  const total = confirmed.reduce((sum, item) => sum + item.amount, 0)
 
   return json({
     imported: transactions.length,
-    confirmed: transactions.length,
-    ignored: 0,
+    confirmed: confirmed.length,
+    ignored: ignored.length,
     confirmedTotal: total,
     filename: payload.filename ?? '',
-    kind: 'santander-pdf',
+    kind: `santander-${importKind}-pdf`,
+    ...(transactions.length === 0 && importKind === 'card' ? { debug: inspectSantanderPdf(pdfBytes) } : {}),
   })
 })

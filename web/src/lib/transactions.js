@@ -1,21 +1,23 @@
-import { GROUP_LABELS } from '../constants'
-
-export function isExpenseGroup(group) {
-  return GROUP_LABELS.includes(group)
-}
+import { UNGROUPED_FILTER_VALUE } from '../constants'
 
 export function matchesFilter(value, filter) {
   return filter === 'all' || value === filter
 }
 
-export function nextGroupForType(type, currentGroup) {
+export function nextBudgetGroupIdForType(type, currentBudgetGroupId) {
   if (type === 'Receita') {
-    return 'Receita'
+    return null
   }
-  if (type === 'Transferência') {
-    return isExpenseGroup(currentGroup) ? 'Transferência' : currentGroup || 'Transferência'
+
+  return currentBudgetGroupId ?? null
+}
+
+export function normalizeBudgetGroup(row) {
+  return {
+    id: row.id,
+    name: row.name ?? '',
+    targetPercentage: Number(row.target_percentage ?? 0),
   }
-  return isExpenseGroup(currentGroup) ? currentGroup : 'Desejos'
 }
 
 export function normalizeTransaction(row) {
@@ -26,12 +28,26 @@ export function normalizeTransaction(row) {
     amount: Number(row.amount ?? 0),
     type: row.type ?? 'Despesa',
     category: row.category ?? 'Outros',
-    budgetGroup: row.budget_group ?? 'Desejos',
+    budgetGroupId: row.budget_group_id ?? null,
     account: row.account ?? '',
     institution: row.institution ?? '',
     status: row.status ?? 'Confirmado',
     notes: row.notes ?? '',
   }
+}
+
+export function decorateTransactions(transactions, budgetGroups) {
+  const budgetGroupsById = new Map(budgetGroups.map((budgetGroup) => [budgetGroup.id, budgetGroup]))
+
+  return transactions.map((transaction) => {
+    const budgetGroup = transaction.budgetGroupId ? (budgetGroupsById.get(transaction.budgetGroupId) ?? null) : null
+
+    return {
+      ...transaction,
+      budgetGroupName: budgetGroup?.name ?? null,
+      needsReclassification: transaction.type !== 'Receita' && transaction.budgetGroupId === null,
+    }
+  })
 }
 
 export function fileToBase64(file) {
@@ -47,7 +63,21 @@ export function fileToBase64(file) {
   })
 }
 
-export function buildMonthData(transactions) {
+function buildGroupBuckets(budgetGroups) {
+  return Object.fromEntries(
+    budgetGroups.map((budgetGroup) => [
+      budgetGroup.id,
+      {
+        ...budgetGroup,
+        total: 0,
+        byCategory: {},
+        transactions: [],
+      },
+    ]),
+  )
+}
+
+export function buildMonthData(transactions, budgetGroups) {
   const monthMap = new Map()
 
   for (const transaction of transactions) {
@@ -59,11 +89,10 @@ export function buildMonthData(transactions) {
     if (!monthMap.has(month)) {
       monthMap.set(month, {
         revenue: 0,
-        groups: {
-          Necessidades: { total: 0, byCategory: {}, transactions: [] },
-          Desejos: { total: 0, byCategory: {}, transactions: [] },
-          Futuro: { total: 0, byCategory: {}, transactions: [] },
-        },
+        groups: buildGroupBuckets(budgetGroups),
+        groupOrder: budgetGroups.map((budgetGroup) => budgetGroup.id),
+        orphanedTotal: 0,
+        orphanedCount: 0,
       })
     }
 
@@ -72,16 +101,18 @@ export function buildMonthData(transactions) {
       continue
     }
 
-    if (transaction.type === 'Receita' || transaction.budgetGroup === 'Receita') {
+    if (transaction.type === 'Receita') {
       bucket.revenue += transaction.amount
       continue
     }
 
-    if (!GROUP_LABELS.includes(transaction.budgetGroup)) {
+    if (!transaction.budgetGroupId || !bucket.groups[transaction.budgetGroupId]) {
+      bucket.orphanedTotal += transaction.amount
+      bucket.orphanedCount += 1
       continue
     }
 
-    const group = bucket.groups[transaction.budgetGroup]
+    const group = bucket.groups[transaction.budgetGroupId]
     group.total += transaction.amount
     group.transactions.push(transaction)
     group.byCategory[transaction.category] = (group.byCategory[transaction.category] || 0) + transaction.amount
@@ -118,7 +149,10 @@ export function filterTransactions(transactions, filters) {
     if (!matchesFilter(transaction.category, filters.category)) {
       return false
     }
-    if (!matchesFilter(transaction.budgetGroup, filters.group)) {
+    if (filters.group === UNGROUPED_FILTER_VALUE) {
+      return transaction.budgetGroupId === null
+    }
+    if (!matchesFilter(transaction.budgetGroupId ?? '', filters.group)) {
       return false
     }
 
@@ -126,10 +160,22 @@ export function filterTransactions(transactions, filters) {
   })
 }
 
-export function getTransactionOptions(monthTransactions) {
+export function getTransactionOptions(monthTransactions, budgetGroups) {
+  const groupOptions = budgetGroups.map((budgetGroup) => ({
+    value: budgetGroup.id,
+    label: budgetGroup.name,
+  }))
+
+  if (monthTransactions.some((transaction) => transaction.budgetGroupId === null)) {
+    groupOptions.unshift({
+      value: UNGROUPED_FILTER_VALUE,
+      label: 'Sem grupo',
+    })
+  }
+
   return {
     typeOptions: [...new Set(monthTransactions.map((transaction) => transaction.type))].sort(),
     categoryOptions: [...new Set(monthTransactions.map((transaction) => transaction.category))].sort(),
-    groupOptions: [...new Set(monthTransactions.map((transaction) => transaction.budgetGroup))].sort(),
+    groupOptions,
   }
 }

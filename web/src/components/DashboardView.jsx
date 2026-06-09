@@ -1,19 +1,5 @@
-import { CategorySection } from './CategorySection'
+import { DashboardContent } from './DashboardContent'
 import { ImportPanel } from './ImportPanel'
-import { SummaryTable } from './SummaryTable'
-import { TransactionTable } from './TransactionTable'
-import { GROUP_LABELS } from '../constants'
-
-function EmptyState() {
-  return (
-    <section className="panel">
-      <h2>Nenhum dado encontrado</h2>
-      <p className="muted">
-        O app espera uma tabela <code>transactions</code> no Supabase com os campos usados neste dashboard.
-      </p>
-    </section>
-  )
-}
 
 export function DashboardView({
   activeMonth,
@@ -25,6 +11,11 @@ export function DashboardView({
   handleImport,
   handleSignOut,
   monthData,
+  budgetGroups,
+  savingGroupId,
+  createBudgetGroup,
+  updateBudgetGroup,
+  deleteBudgetGroup,
   filteredTransactions,
   savingId,
   handleUpdate,
@@ -62,33 +53,30 @@ export function DashboardView({
 
       {!loading ? <ImportPanel onImport={handleImport} loading={importLoading} /> : null}
 
-      {!loading && monthData ? (
-        <>
-          <SummaryTable monthKey={activeMonth} monthData={monthData} />
-          <div className="grid two-up">
-            {GROUP_LABELS.map((group) => (
-              <CategorySection key={group} group={group} monthData={monthData} />
-            ))}
-          </div>
-          <TransactionTable
-            transactions={filteredTransactions}
-            savingId={savingId}
-            onUpdate={handleUpdate}
-            filters={transactionFilters}
-            onFiltersChange={(field, value) =>
-              setTransactionFilters((current) => ({
-                ...current,
-                [field]: value,
-              }))
-            }
-            typeOptions={typeOptions}
-            categoryOptions={categoryOptions}
-            groupOptions={groupOptions}
-          />
-        </>
+      {!loading ? (
+        <DashboardContent
+          activeMonth={activeMonth}
+          budgetGroups={budgetGroups}
+          categoryOptions={categoryOptions}
+          createBudgetGroup={createBudgetGroup}
+          deleteBudgetGroup={deleteBudgetGroup}
+          filteredTransactions={filteredTransactions}
+          groupOptions={groupOptions}
+          handleUpdate={handleUpdate}
+          monthData={monthData}
+          onFiltersChange={(field, value) =>
+            setTransactionFilters((current) => ({
+              ...current,
+              [field]: value,
+            }))
+          }
+          savingGroupId={savingGroupId}
+          savingId={savingId}
+          transactionFilters={transactionFilters}
+          typeOptions={typeOptions}
+          updateBudgetGroup={updateBudgetGroup}
+        />
       ) : null}
-
-      {!loading && !monthData ? <EmptyState /> : null}
     </main>
   )
 }

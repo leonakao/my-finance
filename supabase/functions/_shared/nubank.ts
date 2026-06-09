@@ -1,22 +1,6 @@
-export type ImportKind = 'account' | 'card'
+import type { DefaultBudgetGroupName, ParsedImportedTransaction } from './budget-groups.ts'
 
-export type ImportedTransaction = {
-  user_id: string
-  date: string
-  description: string
-  amount: number
-  type: 'Despesa' | 'Receita' | 'Transferência'
-  category: string
-  budget_group: string
-  account: string
-  institution: string
-  status: 'Confirmado' | 'Pendente' | 'Ignorar'
-  notes: string
-  invoice: string
-  installment: string
-  external_id: string
-  source: string
-}
+export type ImportKind = 'account' | 'card'
 
 function parseCsv(text: string): string[][] {
   const rows: string[][] = []
@@ -96,11 +80,27 @@ function isoFromBr(date: string): string {
   return `${year}-${month}-${day}`
 }
 
-function categoryFor(description: string): string {
+function isMonthlyLucileneFoodPix(description: string, amount: number): boolean {
   const text = description.toUpperCase()
+  return text.includes('TRANSFERÊNCIA ENVIADA PELO PIX - LUCILENE DA SILVA NAKAO') && Math.abs(amount) === 400
+}
+
+function isLeonardoSantanderSalaryTransfer(description: string): boolean {
+  const text = description.toUpperCase()
+  return (
+    text.includes('TRANSFERÊNCIA RECEBIDA - LEONARDO NAKAO') &&
+    text.includes('BCO SANTANDER (BRASIL) S.A. (0033)')
+  )
+}
+
+function categoryFor(description: string, amount: number): string {
+  const text = description.toUpperCase()
+  if (isMonthlyLucileneFoodPix(description, amount)) return 'Alimentação'
+  if (isLeonardoSantanderSalaryTransfer(description)) return 'Salário'
+  if (text.includes('VERO')) return 'Moradia'
   const rules: Array<[string, string[]]> = [
     ['Moradia', ['DÉBITO EM CONTA', 'DEBITO EM CONTA']],
-    ['Assinaturas', ['SPOTIFY', 'NETFLIX', 'APPLE.COM/BILL', 'CHATGPT', 'OPENAI', 'WINDSURF', 'IFOOD CLUB']],
+    ['Assinaturas', ['SPOTIFY', 'NETFLIX', 'APPLE.COM/BILL', 'CHATGPT', 'OPENAI', 'WINDSURF', 'IFOOD CLUB', 'PAG*XSOLLAGAMES', 'ESFERA']],
     ['Saúde', ['SEGURO VIDA', 'SEGURO CELULAR', 'YELUMSEG']],
     ['Telefone', ['BCO C6', 'BANCO C6', ' C6 ']],
     ['Alimentação', ['COMERCIALBARROS', 'IFOOD']],
@@ -126,8 +126,11 @@ function transactionType(amount: number, description: string, source: ImportKind
   if (text.includes('TRANSFERÊNCIA RECEBIDA') && text.includes('LEONARDO NAKAO') && amount >= 10000) {
     return ['Receita', 'Confirmado']
   }
-  if (text.includes('LEONARDO NAKAO')) return ['Transferência', 'Confirmado']
   if (text.includes('BCO C6') || text.includes('BANCO C6')) return ['Despesa', 'Confirmado']
+  if (isLeonardoSantanderSalaryTransfer(description)) {
+    return ['Receita', 'Confirmado']
+  }
+  if (text.includes('LEONARDO NAKAO')) return ['Transferência', 'Confirmado']
   if (text.includes('TRANSFERÊNCIA RECEBIDA')) return ['Receita', 'Confirmado']
   if (text.includes('APLICAÇÃO RDB') || text.includes('RESGATE RDB') || text.includes('PAGAMENTO DE FATURA')) {
     return ['Transferência', 'Confirmado']
@@ -139,28 +142,34 @@ function transactionType(amount: number, description: string, source: ImportKind
   return ['Receita', 'Confirmado']
 }
 
-function budgetGroupFor(kind: string, status: string, category: string, description: string): string {
+function budgetGroupFor(
+  kind: string,
+  status: string,
+  category: string,
+  description: string,
+  amount: number,
+): DefaultBudgetGroupName | null {
   const text = description.toUpperCase()
-  if (status === 'Ignorar') return 'Ignorar'
-  if (kind === 'Receita') return 'Receita'
-  if (['VERO', 'OPENAI', 'CHATGPT', 'WINDSURF'].some((needle) => text.includes(needle))) return '50 Necessidades'
-  if (text.includes('LUCILENE DA SILVA NAKAO')) return '50 Necessidades'
-  if (text.includes('DÉBITO EM CONTA') || text.includes('DEBITO EM CONTA')) return '50 Necessidades'
+  if (status === 'Ignorar') return null
+  if (kind === 'Receita') return null
+  if (['VERO', 'OPENAI', 'CHATGPT', 'WINDSURF'].some((needle) => text.includes(needle))) return 'Necessidades'
+  if (isMonthlyLucileneFoodPix(description, amount)) return 'Necessidades'
+  if (text.includes('DÉBITO EM CONTA') || text.includes('DEBITO EM CONTA')) return 'Necessidades'
   if (kind === 'Transferência') {
     if (category === 'Investimentos' || ['APLICAÇÃO RDB', 'AVENUE', 'BANCO INTER', 'BCO INTER'].some((needle) => text.includes(needle))) {
-      return '20 Futuro'
+      return 'Futuro'
     }
-    return 'Transferência'
+    return null
   }
-  if (['Saúde', 'Moradia', 'Telefone'].includes(category)) return '50 Necessidades'
-  if (category === 'Transporte') return '50 Necessidades'
+  if (['Saúde', 'Moradia', 'Telefone'].includes(category)) return 'Necessidades'
+  if (category === 'Transporte') return 'Necessidades'
   if (category === 'Alimentação') {
     if (['IFOOD', 'BAR', 'CAFE', 'PUB', 'SUSHI', 'PIZZARIA', 'LANCHES'].some((needle) => text.includes(needle))) {
-      return '30 Desejos'
+      return 'Desejos'
     }
-    return '50 Necessidades'
+    return 'Necessidades'
   }
-  return '30 Desejos'
+  return 'Desejos'
 }
 
 export function parseNubankCsv(params: {
@@ -169,7 +178,7 @@ export function parseNubankCsv(params: {
   csvText: string
   invoice?: string
   filename?: string
-}): ImportedTransaction[] {
+}): ParsedImportedTransaction[] {
   const invoice = params.invoice ?? ''
 
   if (params.kind === 'card') {
@@ -177,7 +186,7 @@ export function parseNubankCsv(params: {
     return rows.map((row, index) => {
       const amount = Number(row.amount)
       const [type, status] = transactionType(amount, row.title, 'card')
-      const category = categoryFor(row.title)
+      const category = categoryFor(row.title, amount)
       return {
         user_id: params.userId,
         date: row.date,
@@ -185,7 +194,7 @@ export function parseNubankCsv(params: {
         amount: Math.abs(amount),
         type,
         category,
-        budget_group: budgetGroupFor(type, status, category, row.title),
+        budget_group_name: budgetGroupFor(type, status, category, row.title, amount),
         account: 'Cartão de crédito',
         institution: 'Nubank',
         status,
@@ -203,7 +212,7 @@ export function parseNubankCsv(params: {
     const amount = Number(row['Valor'])
     const description = row['Descrição']
     const [type, status] = transactionType(amount, description, 'account')
-    const category = categoryFor(description)
+    const category = categoryFor(description, amount)
     return {
       user_id: params.userId,
       date: isoFromBr(row['Data']),
@@ -211,7 +220,7 @@ export function parseNubankCsv(params: {
       amount: Math.abs(amount),
       type,
       category,
-      budget_group: budgetGroupFor(type, status, category, description),
+      budget_group_name: budgetGroupFor(type, status, category, description, amount),
       account: 'Conta principal',
       institution: 'Nubank',
       status,

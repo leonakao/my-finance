@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ./.codex/hooks/lint-changed-frontend.sh",
+            "timeout": 120,
+            "statusMessage": "Running ESLint on changed frontend files"
+          }
+        ]
+      }
+    ]
+  }
+}

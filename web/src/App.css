@@ -8,7 +8,8 @@
 .panel-header,
 .toolbar,
 .auth-form,
-.import-form {
+.import-form,
+.filters-bar {
   display: flex;
   gap: 16px;
 }
@@ -72,6 +73,34 @@
   border-collapse: collapse;
 }
 
+.transactions-table {
+  table-layout: fixed;
+}
+
+.transactions-table .col-date {
+  width: 12%;
+}
+
+.transactions-table .col-description {
+  width: 30%;
+}
+
+.transactions-table .col-type {
+  width: 10%;
+}
+
+.transactions-table .col-amount {
+  width: 12%;
+}
+
+.transactions-table .col-category {
+  width: 16%;
+}
+
+.transactions-table .col-group {
+  width: 20%;
+}
+
 .summary-table th,
 .summary-table td,
 .transactions-table th,
@@ -110,19 +139,62 @@
   overflow-x: auto;
 }
 
+.filters-bar {
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filters-bar label {
+  display: flex;
+  flex: 1 1 180px;
+  flex-direction: column;
+  gap: 8px;
+  color: #2a332d;
+  font-weight: 600;
+}
+
 .description-cell {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .description-cell strong {
   color: #1f2a1f;
+  overflow-wrap: anywhere;
 }
 
 .description-cell span {
   color: #6d737d;
   font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.type-badge.expense {
+  background: #fceceb;
+  color: #842029;
+}
+
+.type-badge.income {
+  background: #eef4ec;
+  color: #2d6e4f;
+}
+
+.type-badge.transfer {
+  background: #edf1f7;
+  color: #36557d;
 }
 
 .feedback {
@@ -136,6 +208,11 @@
 .feedback.error {
   background: #fceceb;
   color: #842029;
+}
+
+.feedback.warning {
+  background: #fff4d8;
+  color: #7a5314;
 }
 
 .auth-shell {
@@ -166,6 +243,50 @@
 .import-form {
   align-items: end;
   flex-wrap: wrap;
+}
+
+.budget-group-form,
+.budget-group-row,
+.budget-group-list {
+  display: flex;
+  gap: 12px;
+}
+
+.budget-group-form,
+.budget-group-row {
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.budget-group-list {
+  flex-direction: column;
+  margin-top: 16px;
+}
+
+.budget-group-form label {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 8px;
+  color: #2a332d;
+  font-weight: 600;
+}
+
+.budget-group-row input {
+  flex: 1 1 220px;
+}
+
+.orphan-chip {
+  margin: 0;
+  color: #7a5314;
+  font-weight: 600;
+}
+
+.row-hint {
+  margin-top: 6px;
+  color: #7a5314;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .auth-form label,
@@ -212,6 +333,11 @@ button {
 button.ghost {
   background: #edf3ea;
   color: #1f3524;
+}
+
+button.danger {
+  background: #842029;
+  color: #ffffff;
 }
 
 button:disabled {

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { nextGroupForType } from '../lib/transactions'
+import { nextBudgetGroupIdForType } from '../lib/transactions'
 
 export function useTransactionEditing(transactions, setTransactions, setError) {
   const [savingId, setSavingId] = useState('')
@@ -14,7 +14,7 @@ export function useTransactionEditing(transactions, setTransactions, setError) {
       field === 'type'
         ? {
             type: value,
-            budget_group: nextGroupForType(value, currentTransaction?.budgetGroup ?? ''),
+            budget_group_id: nextBudgetGroupIdForType(value, currentTransaction?.budgetGroupId ?? null),
           }
         : { [field]: value }
 
@@ -33,10 +33,10 @@ export function useTransactionEditing(transactions, setTransactions, setError) {
               ...(field === 'type'
                 ? {
                     type: value,
-                    budgetGroup: nextGroupForType(value, transaction.budgetGroup),
+                    budgetGroupId: nextBudgetGroupIdForType(value, transaction.budgetGroupId),
                   }
                 : {
-                    [field === 'budget_group' ? 'budgetGroup' : field]: value,
+                    [field === 'budget_group_id' ? 'budgetGroupId' : field]: value,
                   }),
             }
           : transaction,

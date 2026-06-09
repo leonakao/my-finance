@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { getAvailableMonths, normalizeTransaction } from '../lib/transactions'
+import { getAvailableMonths, normalizeBudgetGroup, normalizeTransaction } from '../lib/transactions'
 
 export function useTransactionsData(session, setLoading, setError) {
+  const [budgetGroups, setBudgetGroups] = useState([])
   const [transactions, setTransactions] = useState([])
   const [selectedMonth, setSelectedMonth] = useState('')
 
@@ -14,9 +15,20 @@ export function useTransactionsData(session, setLoading, setError) {
     setLoading(true)
     setError('')
 
+    const { data: budgetGroupsData, error: budgetGroupsError } = await supabase
+      .from('budget_groups')
+      .select('id, name, target_percentage')
+      .order('name', { ascending: true })
+
+    if (budgetGroupsError) {
+      setError(budgetGroupsError.message)
+      setLoading(false)
+      return
+    }
+
     const { data, error: queryError } = await supabase
       .from('transactions')
-      .select('id, date, description, amount, type, category, budget_group, account, institution, status, notes')
+      .select('id, date, description, amount, type, category, budget_group_id, account, institution, status, notes')
       .order('date', { ascending: false })
 
     if (queryError) {
@@ -25,6 +37,7 @@ export function useTransactionsData(session, setLoading, setError) {
       return
     }
 
+    setBudgetGroups((budgetGroupsData ?? []).map(normalizeBudgetGroup))
     const normalized = (data ?? []).map(normalizeTransaction)
     setTransactions(normalized)
 
@@ -44,6 +57,8 @@ export function useTransactionsData(session, setLoading, setError) {
   }, [session, loadTransactions])
 
   return {
+    budgetGroups,
+    setBudgetGroups,
     transactions,
     setTransactions,
     selectedMonth,
