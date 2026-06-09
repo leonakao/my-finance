@@ -6,6 +6,7 @@
 
 - Manter e ajustar os extratores de Santander e Nubank.
 - Melhorar validacoes para impedir importacoes com totais inconsistentes.
+- Expandir compras parceladas em transacoes mensais idempotentes no fluxo ativo de importacao.
 
 ### 2. Classification workflow
 
@@ -22,6 +23,7 @@
 - Mapear formalmente o codebase legado e atual na pasta `.specs/codebase/`.
 - Definir prioridades entre fluxo Notion legado e fluxo Supabase atual.
 - Documentar comandos de validacao e testes usados em cada area.
+- Planejar e implementar a feature `003-importar-parcelas-por-mes` na worktree dedicada.
 
 ## Open Product Decisions
 

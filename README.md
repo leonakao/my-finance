@@ -315,7 +315,36 @@ No caso do Santander:
 - recebe `pdfBase64`
 - extrai os lançamentos da fatura
 - classifica
+- quando a compra vier com `Parcela` no formato `NN/NN`, expande a compra em uma série mensal completa a partir da data original
 - faz `upsert` em `public.transactions`
+
+### Smoke test local da function Santander
+
+Com a stack local do Supabase disponivel, rode:
+
+```sh
+sh tools/test_import_santander_pdf.sh
+```
+
+Esse teste usa o fixture real `inbox/santander-2026-06.pdf`, faz signup de um usuario local, chama `import-santander-pdf` duas vezes e valida:
+
+- expansao de compras parceladas
+- serie completa para compras `08/10` do fixture
+- deduplicacao por `external_id` na reimportacao
+
+### Smoke test local da function Nubank
+
+Para validar parcelamento no CSV do Nubank com um arquivo real que contenha `Parcela NN/TT`, rode:
+
+```sh
+sh tools/test_import_nubank_csv.sh /caminho/para/Nubank.csv
+```
+
+O teste faz signup de um usuario local, chama `import-nubank-csv` duas vezes e valida:
+
+- expansao de compras com sufixo `Parcela NN/TT`
+- presenca da serie completa `01/TT` ate `TT/TT`
+- deduplicacao por `external_id` na reimportacao
 
 Arquivo compartilhado de regra:
 
