@@ -1,6 +1,9 @@
 import type { DefaultBudgetGroupName, ParsedImportedTransaction } from './budget-groups.ts'
+import { addMonthsPreservingDay, expandInstallmentSchedule, parseInstallment } from './installments.ts'
 
 export type ImportKind = 'account' | 'card'
+
+const nubankInstallmentSuffixRe = /\s*-\s*Parcela\s+(?<current>\d{2})\/(?<total>\d{2})\s*$/i
 
 function parseCsv(text: string): string[][] {
   const rows: string[][] = []
@@ -78,6 +81,26 @@ function accountCsvObjects(text: string): Record<string, string>[] {
 function isoFromBr(date: string): string {
   const [day, month, year] = date.split('/')
   return `${year}-${month}-${day}`
+}
+
+function decimalFromCsv(value: string): number {
+  const normalized = value.trim().replace(/\s+/g, '')
+  if (!normalized) return 0
+  const sign = normalized.startsWith('-') ? -1 : 1
+  const unsigned = normalized.replace(/^-/, '')
+  if (unsigned.includes(',')) {
+    return sign * Number(unsigned.replace(/\./g, '').replace(',', '.'))
+  }
+  return sign * Number(unsigned)
+}
+
+function extractNubankInstallment(title: string): { description: string; installment: string } {
+  const match = title.match(nubankInstallmentSuffixRe)
+  if (!match?.groups) return { description: title.trim(), installment: '' }
+
+  const installment = `${match.groups.current}/${match.groups.total}`
+  const description = title.replace(nubankInstallmentSuffixRe, '').trim()
+  return { description, installment }
 }
 
 function isMonthlyLucileneFoodPix(description: string, amount: number): boolean {
@@ -183,27 +206,48 @@ export function parseNubankCsv(params: {
 
   if (params.kind === 'card') {
     const rows = csvObjects(params.csvText)
-    return rows.map((row, index) => {
-      const amount = Number(row.amount)
-      const [type, status] = transactionType(amount, row.title, 'card')
-      const category = categoryFor(row.title, amount)
-      return {
+    return rows.flatMap((row, index) => {
+      const amount = decimalFromCsv(row.amount)
+      const { description, installment } = extractNubankInstallment(row.title)
+      const [type, status] = transactionType(amount, description, 'card')
+      const category = categoryFor(description, amount)
+
+      const transaction: ParsedImportedTransaction = {
         user_id: params.userId,
         date: row.date,
-        description: row.title,
+        description,
         amount: Math.abs(amount),
         type,
         category,
-        budget_group_name: budgetGroupFor(type, status, category, row.title, amount),
+        budget_group_name: budgetGroupFor(type, status, category, description, amount),
         account: 'Cartão de crédito',
         institution: 'Nubank',
         status,
         notes: 'Importado de CSV de fatura do cartão Nubank via Edge Function.',
         invoice,
-        installment: '',
-        external_id: `nubank-card:${row.date}:${index + 1}:${row.title}:${row.amount}`,
+        installment,
+        external_id: `nubank-card:${row.date}:${index + 1}:${description}:${Math.abs(amount).toFixed(2)}`,
         source: 'Nubank',
       }
+
+      const installmentInfo = parseInstallment(installment)
+      if (!installmentInfo || installmentInfo.total === 1) return [transaction]
+
+      const originalDate = addMonthsPreservingDay(row.date, -(installmentInfo.current - 1))
+      const purchaseKey = `nubank-card:${originalDate}:${description}:${Math.abs(amount).toFixed(2)}:${installmentInfo.total}`
+
+      return expandInstallmentSchedule({
+        transaction: {
+          ...transaction,
+          notes: 'Importado de CSV de fatura do cartão Nubank via Edge Function.',
+          external_id: purchaseKey,
+        },
+        originalDate,
+        purchaseKey,
+      }).map((expandedTransaction) => ({
+        ...expandedTransaction,
+        notes: `Importado de CSV de fatura do cartão Nubank via Edge Function. Compra original em ${originalDate}. Parcela ${expandedTransaction.installment}.`,
+      }))
     })
   }
 

@@ -10,12 +10,16 @@
 - Mudancas em `type`, `category`, `budget_group` e `status` devem ser coordenadas entre SQL, Python, frontend e documentacao.
 - `App.jsx` pode permanecer central enquanto houver uma unica tela simples; novas responsabilidades relevantes devem disparar modularizacao.
 - Pastas de feature em `.specs/features/` devem seguir o padrao numerado `NNN-slug-da-feature`, com zero padding de 3 digitos.
+- A feature `003-importar-parcelas-por-mes` sera desenvolvida na worktree `.worktrees/003-importar-parcelas-por-mes`, branch `feature/003-importar-parcelas-por-mes`.
+- O MVP da feature `003-importar-parcelas-por-mes` cobre o parser de cartao Santander em `supabase/functions/_shared/santander.ts`, unico fluxo ativo que hoje expoe `installment` no formato `NN/NN`.
+- A estrategia de idempotencia da feature `003-importar-parcelas-por-mes` sera gerar `external_id` determinista por parcela sintetizada, derivado de uma chave-base estavel da compra.
 
 ## Current Facts
 
 - O repositorio possui alteracoes locais em `README.md`, `.gitignore` e a arvore `supabase/`.
 - O frontend fica em `web/` e usa React + Vite + Supabase JS.
 - Os extratores locais ficam em `tools/`.
+- O parser de cartao Santander ja identifica `installment` e hoje persiste apenas a parcela presente na fatura importada.
 
 ## Blockers
 
