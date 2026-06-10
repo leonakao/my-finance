@@ -1,5 +1,6 @@
 import { inflate } from 'npm:pako@2.1.0'
 import type { DefaultBudgetGroupName, ParsedImportedTransaction } from './budget-groups.ts'
+import { expandInstallmentSchedule } from './installments.ts'
 
 type TextEvent = {
   page: number
@@ -147,10 +148,6 @@ function decimalFromBrl(value: string): number {
   return Number(value.replace(/\./g, '').replace(',', '.'))
 }
 
-function daysInMonth(year: number, month: number): number {
-  return new Date(year, month, 0).getDate()
-}
-
 function inferClosingMonth(events: TextEvent[]): number {
   for (const event of events) {
     const match = event.text.match(/até\s+(\d{2})\/(\d{2})/)
@@ -202,16 +199,7 @@ function detectCandidatePages(rows: Map<string, TextEvent[]>) {
     pageScores.set(page, (pageScores.get(page) ?? 0) + 1)
   }
 
-  const candidates = new Set<number>()
-  for (const [page, score] of pageScores) {
-    if (score >= 3) candidates.add(page)
-  }
-
-  if (!candidates.size) {
-    for (const page of pageScores.keys()) candidates.add(page)
-  }
-
-  return candidates
+  return new Set(pageScores.keys())
 }
 
 function categoryFor(description: string): string {
@@ -276,7 +264,7 @@ export function parseSantanderPdf(params: {
     }
   }
 
-  const transactions: ImportedTransaction[] = []
+  const transactions: ParsedImportedTransaction[] = []
   let index = 0
   for (const [, rowEvents] of [...rows.entries()].sort((left, right) => left[0].localeCompare(right[0]))) {
     if (!candidatePages.has(rowEvents[0]?.page ?? 0)) continue
@@ -318,15 +306,15 @@ export function parseSantanderPdf(params: {
     const category = categoryFor(description)
     const amount = decimalFromBrl(amountText)
     const originalDate = `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
-    const effectiveYear = installment ? statementYear : year
-    const effectiveMonth = installment ? closingMonth : month
-    const effectiveDay = installment ? Math.min(day, daysInMonth(effectiveYear, effectiveMonth)) : day
-    const effectiveDate = `${effectiveYear.toString().padStart(4, '0')}-${effectiveMonth.toString().padStart(2, '0')}-${effectiveDay.toString().padStart(2, '0')}`
+    const effectiveDate = installment
+      ? `${statementYear.toString().padStart(4, '0')}-${closingMonth.toString().padStart(2, '0')}-${Math.min(day, new Date(statementYear, closingMonth, 0).getDate()).toString().padStart(2, '0')}`
+      : originalDate
+    const purchaseKey = `santander-card:${originalDate}:${index}:${card}:${description}:${amount.toFixed(2)}`
     const notes = installment
       ? `Importado de PDF de fatura Santander via Edge Function. Compra original em ${originalDate}. Parcela ${installment}.`
       : 'Importado de PDF de fatura Santander via Edge Function.'
 
-    transactions.push({
+    const transaction: ParsedImportedTransaction = {
       user_id: params.userId,
       date: effectiveDate,
       description,
@@ -340,9 +328,15 @@ export function parseSantanderPdf(params: {
       notes,
       invoice: params.filename ?? '',
       installment,
-      external_id: `santander-card:${originalDate}:${index}:${card}:${description}:${amount.toFixed(2)}`,
+      external_id: purchaseKey,
       source: 'Santander',
-    })
+    }
+
+    transactions.push(...expandInstallmentSchedule({
+      transaction,
+      originalDate,
+      purchaseKey,
+    }))
     index += 1
   }
 
