@@ -1,7 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { resolveImportedTransactionBudgetGroups } from '../_shared/budget-groups.ts'
 import { applyUserClassificationRules, loadUserClassificationRules } from '../_shared/classification-rules.ts'
-import { inspectSantanderPdf, parseSantanderPdf } from '../_shared/santander.ts'
+import { parseSantanderAccountPdf } from '../_shared/santander-account.ts'
 
 type ImportPayload = {
   filename?: string
@@ -67,7 +67,7 @@ Deno.serve(async (request) => {
   }
 
   const pdfBytes = decodeBase64(payload.pdfBase64)
-  const parsedTransactions = parseSantanderPdf({
+  const parsedTransactions = await parseSantanderAccountPdf({
     userId: user.id,
     pdfBytes,
     filename: payload.filename,
@@ -95,7 +95,6 @@ Deno.serve(async (request) => {
     ignored: ignored.length,
     confirmedTotal: total,
     filename: payload.filename ?? '',
-    kind: 'santander-card-pdf',
-    ...(transactions.length === 0 ? { debug: inspectSantanderPdf(pdfBytes) } : {}),
+    kind: 'santander-account-pdf',
   })
 })

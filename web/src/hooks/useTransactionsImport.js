@@ -3,11 +3,20 @@ import { supabase } from '../lib/supabase'
 import { fileToBase64 } from '../lib/transactions'
 
 function buildImportRequest(kind, invoice, file, pdfBase64, csvText) {
-  if (kind === 'santander-card-pdf' || kind === 'santander-account-pdf') {
+  if (kind === 'santander-card-pdf') {
     return {
       functionName: 'import-santander-pdf',
       body: {
-        kind: kind === 'santander-account-pdf' ? 'account' : 'card',
+        filename: file.name,
+        pdfBase64,
+      },
+    }
+  }
+
+  if (kind === 'santander-account-pdf') {
+    return {
+      functionName: 'import-santander-account-pdf',
+      body: {
         filename: file.name,
         pdfBase64,
       },
