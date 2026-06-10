@@ -1,20 +1,50 @@
 export const TYPE_OPTIONS = ['Despesa', 'Receita', 'Transferência']
 export const UNGROUPED_FILTER_VALUE = '__ungrouped__'
-
-export const CATEGORY_OPTIONS = [
-  'Alimentação',
-  'Transporte',
-  'Moradia',
-  'Saúde',
-  'Educação',
-  'Lazer',
-  'Compras',
-  'Assinaturas',
-  'Investimentos',
-  'Salário',
-  'Telefone',
-  'Outros',
+export const CLASSIFICATION_RULE_MATCH_MODE_OPTIONS = [
+  { value: 'description', label: 'Nome' },
+  { value: 'description_amount', label: 'Nome + valor' },
 ]
+
+export const CATEGORY_OPTIONS_BY_TYPE = {
+  Despesa: [
+    'Alimentação',
+    'Moradia',
+    'Transporte',
+    'Saúde',
+    'Seguros',
+    'Educação',
+    'Lazer',
+    'Compras',
+    'Assinaturas',
+    'Telefone',
+    'Trabalho',
+    'Impostos e taxas',
+    'Serviços financeiros',
+    'Outros',
+  ],
+  Receita: [
+    'Salário',
+    'Freelance',
+    'Reembolso',
+    'Rendimentos',
+    'Venda',
+    'Benefícios',
+    'Outros',
+  ],
+  Transferência: [
+    'Investimentos',
+    'Pagamento de fatura',
+    'Transferência entre contas',
+    'Reserva',
+    'Outros',
+  ],
+}
+
+export const DEFAULT_CATEGORY_BY_TYPE = {
+  Despesa: 'Outros',
+  Receita: 'Outros',
+  Transferência: 'Outros',
+}
 
 export const IMPORT_OPTIONS = [
   { value: 'account', label: 'Nubank conta (CSV)' },

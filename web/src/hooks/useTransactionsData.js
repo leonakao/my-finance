@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { getAvailableMonths, normalizeBudgetGroup, normalizeTransaction } from '../lib/transactions'
+import { getAvailableMonths, normalizeBudgetGroup, normalizeClassificationRule, normalizeTransaction, sortClassificationRules } from '../lib/transactions'
 
 export function useTransactionsData(session, setLoading, setError) {
   const [budgetGroups, setBudgetGroups] = useState([])
+  const [classificationRules, setClassificationRules] = useState([])
   const [transactions, setTransactions] = useState([])
   const [selectedMonth, setSelectedMonth] = useState('')
 
@@ -26,6 +27,17 @@ export function useTransactionsData(session, setLoading, setError) {
       return
     }
 
+    const { data: classificationRulesData, error: classificationRulesError } = await supabase
+      .from('transaction_classification_rules')
+      .select('id, match_mode, match_description, match_description_normalized, match_amount, type, category, budget_group_id, updated_at')
+      .order('updated_at', { ascending: false })
+
+    if (classificationRulesError) {
+      setError(classificationRulesError.message)
+      setLoading(false)
+      return
+    }
+
     const { data, error: queryError } = await supabase
       .from('transactions')
       .select('id, date, description, amount, type, category, budget_group_id, account, institution, status, notes')
@@ -38,6 +50,7 @@ export function useTransactionsData(session, setLoading, setError) {
     }
 
     setBudgetGroups((budgetGroupsData ?? []).map(normalizeBudgetGroup))
+    setClassificationRules(sortClassificationRules((classificationRulesData ?? []).map(normalizeClassificationRule)))
     const normalized = (data ?? []).map(normalizeTransaction)
     setTransactions(normalized)
 
@@ -59,6 +72,8 @@ export function useTransactionsData(session, setLoading, setError) {
   return {
     budgetGroups,
     setBudgetGroups,
+    classificationRules,
+    setClassificationRules,
     transactions,
     setTransactions,
     selectedMonth,

@@ -1,15 +1,28 @@
-import { UNGROUPED_FILTER_VALUE } from '../constants'
+import { CATEGORY_OPTIONS_BY_TYPE, DEFAULT_CATEGORY_BY_TYPE, UNGROUPED_FILTER_VALUE } from '../constants'
 
 export function matchesFilter(value, filter) {
   return filter === 'all' || value === filter
 }
 
 export function nextBudgetGroupIdForType(type, currentBudgetGroupId) {
-  if (type === 'Receita' || type === 'Transferência') {
+  if (type === 'Receita') {
     return null
   }
 
   return currentBudgetGroupId ?? null
+}
+
+export function getCategoryOptionsForType(type) {
+  return CATEGORY_OPTIONS_BY_TYPE[type] ?? CATEGORY_OPTIONS_BY_TYPE.Despesa
+}
+
+export function getDefaultCategoryForType(type) {
+  return DEFAULT_CATEGORY_BY_TYPE[type] ?? DEFAULT_CATEGORY_BY_TYPE.Despesa
+}
+
+export function normalizeCategoryForType(type, category) {
+  const options = getCategoryOptionsForType(type)
+  return options.includes(category) ? category : getDefaultCategoryForType(type)
 }
 
 export function normalizeBudgetGroup(row) {
@@ -20,14 +33,157 @@ export function normalizeBudgetGroup(row) {
   }
 }
 
+export function normalizeRuleDescription(description) {
+  return String(description ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function getClassificationSnapshot(transaction) {
+  return {
+    type: transaction.type ?? 'Despesa',
+    category: normalizeCategoryForType(transaction.type ?? 'Despesa', transaction.category ?? 'Outros'),
+    budget_group_id: transaction.budgetGroupId ?? transaction.budget_group_id ?? null,
+  }
+}
+
+export function classificationSnapshotsEqual(left, right) {
+  return left.type === right.type && left.category === right.category && (left.budget_group_id ?? null) === (right.budget_group_id ?? null)
+}
+
+function normalizeRuleMatchAmount(value) {
+  return value === null || value === undefined ? null : Number(value)
+}
+
+export function normalizeClassificationRule(row) {
+  const type = row.type ?? 'Despesa'
+  return {
+    id: row.id,
+    matchMode: row.match_mode ?? 'description',
+    matchDescription: row.match_description ?? '',
+    matchDescriptionNormalized: row.match_description_normalized ?? '',
+    matchAmount: normalizeRuleMatchAmount(row.match_amount),
+    type,
+    category: normalizeCategoryForType(type, row.category ?? 'Outros'),
+    budgetGroupId: row.budget_group_id ?? null,
+    updatedAt: row.updated_at ?? '',
+  }
+}
+
+export function sortClassificationRules(rules) {
+  return [...rules].sort((left, right) => {
+    if (left.matchMode !== right.matchMode) {
+      return left.matchMode === 'description_amount' ? -1 : 1
+    }
+
+    const lengthDelta = right.matchDescriptionNormalized.length - left.matchDescriptionNormalized.length
+    if (lengthDelta !== 0) {
+      return lengthDelta
+    }
+
+    return (right.updatedAt ?? '').localeCompare(left.updatedAt ?? '')
+  })
+}
+
+export function getRuleDescriptionWarning(description) {
+  const normalized = normalizeRuleDescription(description)
+  if (normalized.length < 4) {
+    return 'Descrições muito curtas podem classificar transações demais.'
+  }
+
+  if (!normalized.includes(' ') && normalized.length < 6) {
+    return 'Descrições muito genéricas podem gerar matches parciais amplos.'
+  }
+
+  return ''
+}
+
+function normalizeRuleMatchMode(rule) {
+  return rule.matchMode ?? rule.match_mode ?? 'description'
+}
+
+function normalizeRuleMatchDescriptionNormalized(rule) {
+  return rule.matchDescriptionNormalized
+    ?? rule.match_description_normalized
+    ?? normalizeRuleDescription(rule.matchDescription ?? rule.match_description ?? '')
+}
+
+function normalizeRuleMatchAmountFromRule(rule) {
+  const value = rule.matchAmount ?? rule.match_amount
+  return value === null || value === undefined ? null : Number(value)
+}
+
+export function doesClassificationRuleMatchTransaction(transaction, rule) {
+  const transactionDescription = normalizeRuleDescription(transaction.description ?? '')
+  const ruleDescription = normalizeRuleMatchDescriptionNormalized(rule)
+
+  if (!transactionDescription || !ruleDescription) {
+    return false
+  }
+
+  if (!transactionDescription.includes(ruleDescription)) {
+    return false
+  }
+
+  if (normalizeRuleMatchMode(rule) === 'description_amount') {
+    return Number(transaction.amount ?? 0).toFixed(2) === Number(normalizeRuleMatchAmountFromRule(rule) ?? 0).toFixed(2)
+  }
+
+  return true
+}
+
+export function applyClassificationRulesToTransaction(transaction, rules) {
+  const matchedRule = rules.find((rule) => doesClassificationRuleMatchTransaction(transaction, rule))
+  if (!matchedRule) {
+    return transaction
+  }
+
+  const nextType = matchedRule.type ?? transaction.type ?? 'Despesa'
+  const nextCategory = normalizeCategoryForType(nextType, matchedRule.category ?? transaction.category ?? 'Outros')
+
+  return {
+    ...transaction,
+    type: nextType,
+    category: nextCategory,
+    budgetGroupId: nextType === 'Receita' ? null : (matchedRule.budgetGroupId ?? matchedRule.budget_group_id ?? null),
+  }
+}
+
+export function reclassifyTransactionsWithRules(transactions, rules) {
+  let changedCount = 0
+
+  const nextTransactions = transactions.map((transaction) => {
+    const nextTransaction = applyClassificationRulesToTransaction(transaction, rules)
+    const changed =
+      nextTransaction.type !== transaction.type
+      || nextTransaction.category !== transaction.category
+      || (nextTransaction.budgetGroupId ?? null) !== (transaction.budgetGroupId ?? null)
+
+    if (changed) {
+      changedCount += 1
+    }
+
+    return nextTransaction
+  })
+
+  return {
+    changedCount,
+    transactions: nextTransactions,
+  }
+}
+
 export function normalizeTransaction(row) {
+  const type = row.type ?? 'Despesa'
   return {
     id: row.id,
     date: row.date,
     description: row.description ?? '',
     amount: Number(row.amount ?? 0),
-    type: row.type ?? 'Despesa',
-    category: row.category ?? 'Outros',
+    type,
+    category: normalizeCategoryForType(type, row.category ?? 'Outros'),
     budgetGroupId: row.budget_group_id ?? null,
     account: row.account ?? '',
     institution: row.institution ?? '',
@@ -106,13 +262,11 @@ export function buildMonthData(transactions, budgetGroups) {
       continue
     }
 
-    if (transaction.type === 'Transferência') {
-      continue
-    }
-
     if (!transaction.budgetGroupId || !bucket.groups[transaction.budgetGroupId]) {
-      bucket.orphanedTotal += transaction.amount
-      bucket.orphanedCount += 1
+      if (transaction.type === 'Despesa') {
+        bucket.orphanedTotal += transaction.amount
+        bucket.orphanedCount += 1
+      }
       continue
     }
 

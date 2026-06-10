@@ -204,33 +204,22 @@ function detectCandidatePages(rows: Map<string, TextEvent[]>) {
 
 function categoryFor(description: string): string {
   const text = description.toUpperCase()
-  if (text.includes('VERO')) return 'Moradia'
   const rules: Array<[string, string[]]> = [
-    ['Assinaturas', ['AMAZONPRIME', 'AMAZON PRIME', 'AMAZON MUSIC', 'YOUTUBE', 'VERO', 'SCP ESSENCIAL', 'PAG*XSOLLAGAMES', 'ESFERA']],
+    ['Assinaturas', ['AMAZONPRIME', 'AMAZON PRIME', 'AMAZON MUSIC', 'YOUTUBE', 'SPOTIFY', 'NETFLIX', 'APPLE.COM/BILL']],
     ['Transporte', ['UBER', 'POSTO', 'SEM PARAR', 'SEM*PARAR', 'AZUL', 'AEREAS']],
-    ['Saúde', ['DROGASIL', 'NUTRIVICA']],
+    ['Seguros', ['SEGURO', 'SEGURO VIDA', 'SEGURO CELULAR', 'SEGURO AUTO']],
+    ['Saúde', ['DROGASIL', 'DROGARIA', 'FARMACIA']],
     ['Lazer', ['INGRESSO', 'MULTIPLEX', 'AIRBNB']],
     [
       'Alimentação',
       [
-        'BOUCHERIE',
         'SUSHI',
-        'CARNES',
-        'PASTEL',
-        'ROOFTOP',
         'LANCHES',
-        'LIBANESA',
         'PIZZARIA',
-        'SALGADOS',
-        'MONTANA',
-        'DOM ATACADISTA',
-        'LA CARNE',
         'SUPERMERCADO',
-        'FRANS CAFE',
-        'GASTRO',
-        'LOS BRUTOS',
-        'A LIBANESA',
-        'DUAS MENINAS',
+        'MERCADO',
+        'PADARIA',
+        'RESTAURANTE',
       ],
     ],
     ['Compras', ['AMAZON', 'MERCADOLIVRE', 'KABUM', 'CASASBAHIA', 'MARKETPLACE', 'MKTPLC']],
@@ -244,9 +233,8 @@ function categoryFor(description: string): string {
 
 function budgetGroupFor(category: string, description: string): DefaultBudgetGroupName | null {
   const text = description.toUpperCase()
-  if (['VERO', 'OPENAI', 'CHATGPT'].some((needle) => text.includes(needle))) return 'Necessidades'
   if (text.includes('ANUIDADE')) return 'Necessidades'
-  if (['Saúde', 'Moradia'].includes(category)) return 'Necessidades'
+  if (['Saúde', 'Seguros', 'Moradia'].includes(category)) return 'Necessidades'
   if (category === 'Transporte') return text.includes('AZUL') || text.includes('AEREAS') ? 'Desejos' : 'Necessidades'
   if (category === 'Alimentação') {
     if (['SUSHI', 'PASTEL', 'ROOFTOP', 'LANCHES', 'LIBANESA', 'CAFE', 'PUB', 'PIZZARIA', 'LOS BRUTOS', 'MONTANA', 'SALGADOS', 'BOUCHERIE'].some((needle) => text.includes(needle))) {

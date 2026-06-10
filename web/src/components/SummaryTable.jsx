@@ -33,7 +33,7 @@ export function SummaryTable({ monthKey, monthData }) {
         <thead>
           <tr>
             <th>Grupo</th>
-            <th>Total gasto</th>
+            <th>Total alocado</th>
             <th>% da receita</th>
             <th>Meta</th>
             <th>Diferenca</th>

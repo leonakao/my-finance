@@ -20,7 +20,7 @@ export function DashboardContent({
   deleteBudgetGroup,
   filteredTransactions,
   groupOptions,
-  handleUpdate,
+  handleEditTransaction,
   monthData,
   onFiltersChange,
   savingGroupId,
@@ -53,10 +53,9 @@ export function DashboardContent({
             ))}
           </div>
           <TransactionTable
-            budgetGroups={budgetGroups}
             transactions={filteredTransactions}
             savingId={savingId}
-            onUpdate={handleUpdate}
+            onEdit={handleEditTransaction}
             filters={transactionFilters}
             onFiltersChange={onFiltersChange}
             typeOptions={typeOptions}

@@ -1,4 +1,3 @@
-import { CATEGORY_OPTIONS, TYPE_OPTIONS } from '../constants'
 import { toCurrency } from '../lib/formatters'
 
 function TransactionFilters({ filters, onFiltersChange, typeOptions, categoryOptions, groupOptions }) {
@@ -50,28 +49,14 @@ function TransactionFilters({ filters, onFiltersChange, typeOptions, categoryOpt
   )
 }
 
-function GroupCell({ budgetGroups, isSaving, transaction, onUpdate }) {
-  if (transaction.type === 'Receita' || transaction.type === 'Transferência') {
-    return <span className="muted">Sem grupo</span>
-  }
+function TypeBadge({ type }) {
+  const className =
+    type === 'Receita' ? 'type-badge income' : type === 'Transferência' ? 'type-badge transfer' : 'type-badge expense'
 
-  return (
-    <select
-      value={transaction.budgetGroupId ?? ''}
-      onChange={(event) => onUpdate(transaction.id, 'budget_group_id', event.target.value || null)}
-      disabled={isSaving}
-    >
-      <option value="">Sem grupo</option>
-      {budgetGroups.map((budgetGroup) => (
-        <option key={budgetGroup.id} value={budgetGroup.id}>
-          {budgetGroup.name}
-        </option>
-      ))}
-    </select>
-  )
+  return <span className={className}>{type}</span>
 }
 
-function TransactionRow({ budgetGroups, transaction, savingId, onUpdate }) {
+function TransactionRow({ transaction, savingId, onEdit }) {
   const isSaving = savingId === transaction.id
 
   return (
@@ -80,49 +65,33 @@ function TransactionRow({ budgetGroups, transaction, savingId, onUpdate }) {
       <td>
         <div className="description-cell">
           <strong>{transaction.description}</strong>
-          <span>{transaction.institution || transaction.notes || 'Sem observacoes'}</span>
+          <span>{transaction.institution || 'Sem instituicao'}</span>
         </div>
       </td>
       <td>
-        <select
-          value={transaction.type}
-          onChange={(event) => onUpdate(transaction.id, 'type', event.target.value)}
-          disabled={isSaving}
-        >
-          {TYPE_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <TypeBadge type={transaction.type} />
       </td>
       <td>{toCurrency(transaction.amount)}</td>
+      <td>{transaction.category}</td>
       <td>
-        <select
-          value={transaction.category}
-          onChange={(event) => onUpdate(transaction.id, 'category', event.target.value)}
-          disabled={isSaving}
-        >
-          {CATEGORY_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <div className="group-cell">
+          <span>{transaction.budgetGroupName ?? 'Sem grupo'}</span>
+          {transaction.needsReclassification ? <div className="row-hint">Precisa de classificação</div> : null}
+        </div>
       </td>
       <td>
-        <GroupCell budgetGroups={budgetGroups} isSaving={isSaving} transaction={transaction} onUpdate={onUpdate} />
-        {transaction.needsReclassification ? <div className="row-hint">Precisa de classificação</div> : null}
+        <button type="button" className="ghost" onClick={() => onEdit(transaction.id)} disabled={isSaving}>
+          {isSaving ? 'Salvando...' : 'Editar'}
+        </button>
       </td>
     </tr>
   )
 }
 
 export function TransactionTable({
-  budgetGroups,
   transactions,
   savingId,
-  onUpdate,
+  onEdit,
   filters,
   onFiltersChange,
   typeOptions,
@@ -153,6 +122,7 @@ export function TransactionTable({
             <col className="col-amount" />
             <col className="col-category" />
             <col className="col-group" />
+            <col className="col-actions" />
           </colgroup>
           <thead>
             <tr>
@@ -162,17 +132,12 @@ export function TransactionTable({
               <th>Valor</th>
               <th>Categoria</th>
               <th>Grupo</th>
+              <th>Acoes</th>
             </tr>
           </thead>
           <tbody>
             {transactions.map((transaction) => (
-              <TransactionRow
-                key={transaction.id}
-                budgetGroups={budgetGroups}
-                transaction={transaction}
-                savingId={savingId}
-                onUpdate={onUpdate}
-              />
+              <TransactionRow key={transaction.id} transaction={transaction} savingId={savingId} onEdit={onEdit} />
             ))}
           </tbody>
         </table>

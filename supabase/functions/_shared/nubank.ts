@@ -102,32 +102,32 @@ function extractNubankInstallment(title: string): { description: string; install
   const description = title.replace(nubankInstallmentSuffixRe, '').trim()
   return { description, installment }
 }
-
-function isMonthlyLucileneFoodPix(description: string, amount: number): boolean {
-  const text = description.toUpperCase()
-  return text.includes('TRANSFERÊNCIA ENVIADA PELO PIX - LUCILENE DA SILVA NAKAO') && Math.abs(amount) === 400
+function isRdbApplication(description: string): boolean {
+  return description.toUpperCase().includes('APLICAÇÃO RDB')
 }
 
-function isLeonardoSantanderSalaryTransfer(description: string): boolean {
+function isRdbRedemption(description: string): boolean {
+  return description.toUpperCase().includes('RESGATE RDB')
+}
+
+function isSalaryIncome(description: string): boolean {
   const text = description.toUpperCase()
-  return (
-    text.includes('TRANSFERÊNCIA RECEBIDA - LEONARDO NAKAO') &&
-    text.includes('BCO SANTANDER (BRASIL) S.A. (0033)')
-  )
+  return text.includes('SALARIO') || text.includes('SALÁRIO') || text.includes('FOLHA') || text.includes('PROVENTO')
 }
 
 function categoryFor(description: string, amount: number): string {
   const text = description.toUpperCase()
-  if (isMonthlyLucileneFoodPix(description, amount)) return 'Alimentação'
-  if (isLeonardoSantanderSalaryTransfer(description)) return 'Salário'
-  if (text.includes('VERO')) return 'Moradia'
+  if (text.includes('PAGAMENTO DE FATURA')) return 'Pagamento de fatura'
+  if (isSalaryIncome(description) && amount >= 0) return 'Salário'
+  if (isRdbApplication(description) || isRdbRedemption(description)) return 'Investimentos'
   const rules: Array<[string, string[]]> = [
     ['Moradia', ['DÉBITO EM CONTA', 'DEBITO EM CONTA']],
-    ['Assinaturas', ['SPOTIFY', 'NETFLIX', 'APPLE.COM/BILL', 'CHATGPT', 'OPENAI', 'WINDSURF', 'IFOOD CLUB', 'PAG*XSOLLAGAMES', 'ESFERA']],
-    ['Saúde', ['SEGURO VIDA', 'SEGURO CELULAR', 'YELUMSEG']],
-    ['Telefone', ['BCO C6', 'BANCO C6', ' C6 ']],
-    ['Alimentação', ['COMERCIALBARROS', 'IFOOD']],
-    ['Investimentos', ['RDB', 'AVENUE SECURITIES', 'BANCO INTER', 'BCO INTER', 'INTER']],
+    ['Assinaturas', ['SPOTIFY', 'NETFLIX', 'APPLE.COM/BILL', 'YOUTUBE', 'AMAZON PRIME']],
+    ['Seguros', ['SEGURO', 'SEGURO VIDA', 'SEGURO CELULAR', 'SEGURO AUTO']],
+    ['Saúde', ['DROGARIA', 'DROGASIL', 'FARMACIA']],
+    ['Telefone', ['TIM', 'VIVO', 'CLARO', 'OI ']],
+    ['Alimentação', ['IFOOD', 'RESTAURANTE', 'LANCHES', 'PADARIA', 'MERCADO', 'SUPERMERCADO']],
+    ['Investimentos', ['RDB', 'CDB', 'TESOURO', 'CORRETORA', 'INVEST']],
     ['Transporte', ['UBER', 'POSTO']],
   ]
 
@@ -146,19 +146,13 @@ function transactionType(amount: number, description: string, source: ImportKind
     return ['Despesa', 'Confirmado']
   }
 
-  if (text.includes('TRANSFERÊNCIA RECEBIDA') && text.includes('LEONARDO NAKAO') && amount >= 10000) {
-    return ['Receita', 'Confirmado']
-  }
-  if (text.includes('BCO C6') || text.includes('BANCO C6')) return ['Despesa', 'Confirmado']
-  if (isLeonardoSantanderSalaryTransfer(description)) {
-    return ['Receita', 'Confirmado']
-  }
-  if (text.includes('LEONARDO NAKAO')) return ['Transferência', 'Confirmado']
+  if (isRdbApplication(description)) return ['Transferência', 'Confirmado']
+  if (isRdbRedemption(description)) return ['Transferência', 'Confirmado']
   if (text.includes('TRANSFERÊNCIA RECEBIDA')) return ['Receita', 'Confirmado']
-  if (text.includes('APLICAÇÃO RDB') || text.includes('RESGATE RDB') || text.includes('PAGAMENTO DE FATURA')) {
+  if (text.includes('PAGAMENTO DE FATURA')) {
     return ['Transferência', 'Confirmado']
   }
-  if (text.includes('AVENUE SECURITIES') || text.includes('BANCO INTER') || text.includes('BCO INTER')) {
+  if (['RDB', 'CDB', 'TESOURO', 'CORRETORA', 'INVEST'].some((needle) => text.includes(needle))) {
     return ['Transferência', 'Confirmado']
   }
   if (amount < 0) return ['Despesa', 'Confirmado']
@@ -175,19 +169,17 @@ function budgetGroupFor(
   const text = description.toUpperCase()
   if (status === 'Ignorar') return null
   if (kind === 'Receita') return null
-  if (['VERO', 'OPENAI', 'CHATGPT', 'WINDSURF'].some((needle) => text.includes(needle))) return 'Necessidades'
-  if (isMonthlyLucileneFoodPix(description, amount)) return 'Necessidades'
   if (text.includes('DÉBITO EM CONTA') || text.includes('DEBITO EM CONTA')) return 'Necessidades'
   if (kind === 'Transferência') {
-    if (category === 'Investimentos' || ['APLICAÇÃO RDB', 'AVENUE', 'BANCO INTER', 'BCO INTER'].some((needle) => text.includes(needle))) {
+    if (category === 'Investimentos' || ['APLICAÇÃO RDB', 'RDB', 'CDB', 'TESOURO', 'CORRETORA', 'INVEST'].some((needle) => text.includes(needle))) {
       return 'Futuro'
     }
     return null
   }
-  if (['Saúde', 'Moradia', 'Telefone'].includes(category)) return 'Necessidades'
+  if (['Saúde', 'Seguros', 'Moradia', 'Telefone'].includes(category)) return 'Necessidades'
   if (category === 'Transporte') return 'Necessidades'
   if (category === 'Alimentação') {
-    if (['IFOOD', 'BAR', 'CAFE', 'PUB', 'SUSHI', 'PIZZARIA', 'LANCHES'].some((needle) => text.includes(needle))) {
+    if (['BAR', 'CAFE', 'PUB', 'SUSHI', 'PIZZARIA', 'LANCHES'].some((needle) => text.includes(needle))) {
       return 'Desejos'
     }
     return 'Necessidades'
