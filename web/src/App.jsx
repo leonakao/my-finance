@@ -1,10 +1,15 @@
+/* eslint-disable max-lines-per-function */
 import { useState } from 'react'
 import './App.css'
+import { ClassificationRulePrompt } from './components/ClassificationRulePrompt'
+import { ClassificationRulesView } from './components/ClassificationRulesView'
 import { DashboardView } from './components/DashboardView'
 import { MissingConfig } from './components/MissingConfig'
 import { SignIn } from './components/SignIn'
+import { TransactionEditModal } from './components/TransactionEditModal'
 import { useAuthActions } from './hooks/useAuthActions'
 import { useAuthSession } from './hooks/useAuthSession'
+import { useClassificationRuleManagement } from './hooks/useClassificationRuleManagement'
 import { useDashboardState } from './hooks/useDashboardState'
 import { useBudgetGroupManagement } from './hooks/useBudgetGroupManagement'
 import { useTransactionEditing } from './hooks/useTransactionEditing'
@@ -13,56 +18,108 @@ import { useTransactionsImport } from './hooks/useTransactionsImport'
 import { supabase } from './lib/supabase'
 
 function AuthenticatedApp({
+  activeView,
   budgetGroups,
   categoryOptions,
+  classificationRules,
   createBudgetGroup,
+  createRuleManually,
   deleteBudgetGroup,
+  deleteClassificationRule,
+  dismissRememberPrompt,
+  editingTransaction,
   error,
   feedback,
   filteredTransactions,
   groupOptions,
+  handleEditTransaction,
   handleImport,
   handleSignOut,
-  handleUpdate,
   importLoading,
   loading,
   monthData,
   months,
+  openDashboardView,
+  openRulesView,
+  promptTransaction,
+  rememberClassification,
+  saveTransactionEdit,
   savingGroupId,
   savingId,
+  savingRuleId,
   selectedMonth,
   setSelectedMonth,
   setTransactionFilters,
+  closeTransactionEditor,
   transactionFilters,
   typeOptions,
   updateBudgetGroup,
+  updateClassificationRule,
 }) {
+  if (activeView === 'classification-rules') {
+    return (
+      <ClassificationRulesView
+        budgetGroups={budgetGroups}
+        classificationRules={classificationRules}
+        error={error}
+        feedback={feedback}
+        handleSignOut={handleSignOut}
+        onBackToDashboard={openDashboardView}
+        onCreateRule={createRuleManually}
+        onDeleteRule={deleteClassificationRule}
+        onUpdateRule={updateClassificationRule}
+        savingRuleId={savingRuleId}
+      />
+    )
+  }
+
   return (
-    <DashboardView
-      activeMonth={selectedMonth}
-      months={months}
-      loading={loading}
-      error={error}
-      feedback={feedback}
-      importLoading={importLoading}
-      handleImport={handleImport}
-      handleSignOut={handleSignOut}
-      monthData={monthData}
-      budgetGroups={budgetGroups}
-      savingGroupId={savingGroupId}
-      createBudgetGroup={createBudgetGroup}
-      updateBudgetGroup={updateBudgetGroup}
-      deleteBudgetGroup={deleteBudgetGroup}
-      filteredTransactions={filteredTransactions}
-      savingId={savingId}
-      handleUpdate={handleUpdate}
-      transactionFilters={transactionFilters}
-      setTransactionFilters={setTransactionFilters}
-      typeOptions={typeOptions}
-      categoryOptions={categoryOptions}
-      groupOptions={groupOptions}
-      setSelectedMonth={setSelectedMonth}
-    />
+    <>
+      <DashboardView
+        activeMonth={selectedMonth}
+        months={months}
+        loading={loading}
+        error={error}
+        feedback={feedback}
+        importLoading={importLoading}
+        handleImport={handleImport}
+        handleSignOut={handleSignOut}
+        monthData={monthData}
+        budgetGroups={budgetGroups}
+        savingGroupId={savingGroupId}
+        createBudgetGroup={createBudgetGroup}
+        updateBudgetGroup={updateBudgetGroup}
+        deleteBudgetGroup={deleteBudgetGroup}
+        filteredTransactions={filteredTransactions}
+        savingId={savingId}
+        handleEditTransaction={handleEditTransaction}
+        transactionFilters={transactionFilters}
+        setTransactionFilters={setTransactionFilters}
+        typeOptions={typeOptions}
+        categoryOptions={categoryOptions}
+        groupOptions={groupOptions}
+        setSelectedMonth={setSelectedMonth}
+        openRulesView={openRulesView}
+      />
+      {editingTransaction ? (
+        <TransactionEditModal
+          key={editingTransaction.id}
+          budgetGroups={budgetGroups}
+          saving={savingId === editingTransaction.id}
+          transaction={editingTransaction}
+          onClose={closeTransactionEditor}
+          onSave={saveTransactionEdit}
+        />
+      ) : null}
+      <ClassificationRulePrompt
+        key={promptTransaction?.id ?? 'empty'}
+        transaction={promptTransaction}
+        onDismiss={dismissRememberPrompt}
+        onRemember={(matchMode, overrides) => {
+          void rememberClassification(matchMode, overrides)
+        }}
+      />
+    </>
   )
 }
 
@@ -107,12 +164,50 @@ function App() {
   const { session, loading, setLoading, isRecoveryMode, setIsRecoveryMode } = useAuthSession()
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState('')
+  const [activeView, setActiveView] = useState('dashboard')
   const [transactionFilters, setTransactionFilters] = useState({ search: '', type: 'all', category: 'all', group: 'all' })
-  const { budgetGroups, setBudgetGroups, transactions, setTransactions, selectedMonth, setSelectedMonth, loadTransactions } =
-    useTransactionsData(session, setLoading, setError)
-  const { savingId, handleUpdate } = useTransactionEditing(transactions, setTransactions, setError)
-  const { savingGroupId, createBudgetGroup, updateBudgetGroup, deleteBudgetGroup } = useBudgetGroupManagement(setBudgetGroups, setTransactions, setError, setFeedback)
-  const { signInLoading, handleSignIn, handleSignUp, handlePasswordReset, handlePasswordUpdate, handleSignOut } = useAuthActions(setBudgetGroups, setTransactions, setSelectedMonth, setError, setFeedback)
+
+  const {
+    budgetGroups,
+    setBudgetGroups,
+    classificationRules,
+    setClassificationRules,
+    transactions,
+    setTransactions,
+    selectedMonth,
+    setSelectedMonth,
+    loadTransactions,
+  } = useTransactionsData(session, setLoading, setError)
+
+  const {
+    savingRuleId,
+    createRuleFromTransaction,
+    upsertClassificationRule,
+    updateClassificationRule,
+    deleteClassificationRule,
+  } = useClassificationRuleManagement(setClassificationRules, setError, setFeedback)
+
+  const {
+    savingId,
+    editingTransaction,
+    promptTransaction,
+    openTransactionEditor,
+    closeTransactionEditor,
+    saveTransactionEdit,
+    dismissRememberPrompt,
+    rememberClassification,
+  } = useTransactionEditing(transactions, setTransactions, setError, createRuleFromTransaction)
+
+  const { savingGroupId, createBudgetGroup, updateBudgetGroup, deleteBudgetGroup } = useBudgetGroupManagement(
+    setBudgetGroups,
+    setTransactions,
+    setError,
+    setFeedback,
+  )
+
+  const { signInLoading, handleSignIn, handleSignUp, handlePasswordReset, handlePasswordUpdate, handleSignOut } =
+    useAuthActions(setBudgetGroups, setClassificationRules, setTransactions, setSelectedMonth, setError, setFeedback)
+
   const { importLoading, handleImport } = useTransactionsImport(loadTransactions, setError, setFeedback)
   const { activeMonth, monthData, filteredTransactions, months, typeOptions, categoryOptions, groupOptions } =
     useDashboardState(budgetGroups, transactions, selectedMonth, transactionFilters)
@@ -141,29 +236,46 @@ function App() {
 
   return (
     <AuthenticatedApp
+      activeView={activeView}
       budgetGroups={budgetGroups}
       categoryOptions={categoryOptions}
+      classificationRules={classificationRules}
       createBudgetGroup={createBudgetGroup}
+      createRuleManually={upsertClassificationRule}
       deleteBudgetGroup={deleteBudgetGroup}
+      deleteClassificationRule={deleteClassificationRule}
+      dismissRememberPrompt={dismissRememberPrompt}
+      editingTransaction={editingTransaction}
       error={error}
       feedback={feedback}
       filteredTransactions={filteredTransactions}
       groupOptions={groupOptions}
+      handleEditTransaction={openTransactionEditor}
       handleImport={handleImport}
-      handleSignOut={handleSignOut}
-      handleUpdate={handleUpdate}
+      handleSignOut={async () => {
+        setActiveView('dashboard')
+        await handleSignOut()
+      }}
       importLoading={importLoading}
       loading={loading}
       monthData={monthData}
       months={months}
+      openDashboardView={() => setActiveView('dashboard')}
+      openRulesView={() => setActiveView('classification-rules')}
+      promptTransaction={promptTransaction}
+      rememberClassification={rememberClassification}
+      saveTransactionEdit={saveTransactionEdit}
       savingGroupId={savingGroupId}
       savingId={savingId}
+      savingRuleId={savingRuleId}
       selectedMonth={activeMonth}
       setSelectedMonth={setSelectedMonth}
       setTransactionFilters={setTransactionFilters}
+      closeTransactionEditor={closeTransactionEditor}
       transactionFilters={transactionFilters}
       typeOptions={typeOptions}
       updateBudgetGroup={updateBudgetGroup}
+      updateClassificationRule={updateClassificationRule}
     />
   )
 }

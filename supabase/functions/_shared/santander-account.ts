@@ -55,10 +55,6 @@ function transactionStatus(): 'Confirmado' | 'Ignorar' {
   return 'Confirmado'
 }
 
-function isOwnTransfer(description: string): boolean {
-  return description.toUpperCase().includes('LEONARDO NAKAO')
-}
-
 function isCardPayment(description: string): boolean {
   return description.toUpperCase().includes('PAGAMENTO CARTAO CREDITO')
 }
@@ -67,21 +63,31 @@ function isInvestmentIncome(description: string): boolean {
   return description.toUpperCase().includes('REMUNERACAO APLICACAO AUTOMATICA')
 }
 
+function isRdbApplication(description: string): boolean {
+  return description.toUpperCase().includes('APLICAÇÃO RDB')
+}
+
+function isRdbRedemption(description: string): boolean {
+  return description.toUpperCase().includes('RESGATE RDB')
+}
+
 function categoryFor(description: string): string {
   const text = description.toUpperCase()
   if (isInvestmentIncome(description)) return 'Investimentos'
-  if (text.includes('VERO')) return 'Moradia'
-  if (['CHATGPT', 'OPENAI', 'WINDSURF', 'SPOTIFY', 'NETFLIX', 'APPLE.COM/BILL', 'IFOOD CLUB'].some((needle) => text.includes(needle))) {
+  if (isRdbApplication(description) || isRdbRedemption(description)) return 'Investimentos'
+  if (['SPOTIFY', 'NETFLIX', 'APPLE.COM/BILL', 'YOUTUBE', 'AMAZON PRIME'].some((needle) => text.includes(needle))) {
     return 'Assinaturas'
   }
-  if (['SEGURO VIDA', 'SEGURO CELULAR', 'YELUMSEG'].some((needle) => text.includes(needle))) return 'Saúde'
-  if (['UBER', 'POSTO'].some((needle) => text.includes(needle))) return 'Transporte'
-  if (['IFOOD', 'BAR', 'CAFE', 'PIZZARIA', 'LANCHES'].some((needle) => text.includes(needle))) return 'Alimentação'
+  if (['SEGURO', 'DROGARIA', 'DROGASIL', 'FARMACIA'].some((needle) => text.includes(needle))) return 'Saúde'
+  if (['UBER', 'POSTO', 'SEM PARAR', 'SEM*PARAR'].some((needle) => text.includes(needle))) return 'Transporte'
+  if (['IFOOD', 'BAR', 'CAFE', 'PIZZARIA', 'LANCHES', 'RESTAURANTE', 'PADARIA', 'MERCADO', 'SUPERMERCADO'].some((needle) => text.includes(needle))) return 'Alimentação'
   return 'Outros'
 }
 
 function typeFor(description: string, amount: number): 'Despesa' | 'Receita' | 'Transferência' {
-  if (isCardPayment(description) || isOwnTransfer(description)) return 'Transferência'
+  if (isCardPayment(description)) return 'Transferência'
+  if (isRdbApplication(description)) return 'Despesa'
+  if (isRdbRedemption(description)) return 'Receita'
   if (isInvestmentIncome(description)) return 'Receita'
   return amount < 0 ? 'Despesa' : 'Receita'
 }
@@ -99,7 +105,6 @@ function budgetGroupFor(
     if (['BAR', 'CAFE', 'PIZZARIA', 'LANCHES'].some((needle) => text.includes(needle))) return 'Desejos'
     return 'Necessidades'
   }
-  if (['VERO', 'OPENAI', 'CHATGPT', 'WINDSURF'].some((needle) => text.includes(needle))) return 'Necessidades'
   return 'Desejos'
 }
 

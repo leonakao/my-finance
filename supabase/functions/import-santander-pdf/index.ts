@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { resolveImportedTransactionBudgetGroups } from '../_shared/budget-groups.ts'
+import { applyUserClassificationRules, loadUserClassificationRules } from '../_shared/classification-rules.ts'
 import { parseSantanderAccountPdf } from '../_shared/santander-account.ts'
 import { inspectSantanderPdf, parseSantanderPdf } from '../_shared/santander.ts'
 
@@ -82,7 +83,9 @@ Deno.serve(async (request) => {
           filename: payload.filename,
         })
 
-  const transactions = await resolveImportedTransactionBudgetGroups(supabase, user.id, parsedTransactions)
+  const transactionsWithBudgetGroups = await resolveImportedTransactionBudgetGroups(supabase, user.id, parsedTransactions)
+  const rules = await loadUserClassificationRules(supabase, user.id)
+  const transactions = applyUserClassificationRules(transactionsWithBudgetGroups, rules)
 
   const { error: upsertError } = await supabase
     .from('transactions')

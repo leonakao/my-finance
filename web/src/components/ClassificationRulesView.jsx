@@ -1,0 +1,248 @@
+/* eslint-disable max-lines-per-function */
+import { useMemo, useState } from 'react'
+import { CATEGORY_OPTIONS, CLASSIFICATION_RULE_MATCH_MODE_OPTIONS, TYPE_OPTIONS } from '../constants'
+import { getRuleDescriptionWarning, nextBudgetGroupIdForType } from '../lib/transactions'
+
+function RuleForm({
+  budgetGroups,
+  initialValue,
+  onSubmit,
+  onCancel,
+  saving,
+  submitLabel,
+}) {
+  const [matchMode, setMatchMode] = useState(initialValue.matchMode)
+  const [matchDescription, setMatchDescription] = useState(initialValue.matchDescription)
+  const [matchAmount, setMatchAmount] = useState(
+    initialValue.matchAmount === null || initialValue.matchAmount === undefined ? '' : String(initialValue.matchAmount),
+  )
+  const [type, setType] = useState(initialValue.type)
+  const [category, setCategory] = useState(initialValue.category)
+  const [budgetGroupId, setBudgetGroupId] = useState(initialValue.budgetGroupId ?? '')
+
+  const groupDisabled = type === 'Receita' || type === 'Transferência'
+  const warning = useMemo(() => getRuleDescriptionWarning(matchDescription), [matchDescription])
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    const trimmedDescription = matchDescription.trim()
+    if (!trimmedDescription) {
+      return
+    }
+    if (matchMode === 'description_amount' && !matchAmount) {
+      return
+    }
+
+    const saved = await onSubmit({
+      matchMode,
+      matchDescription: trimmedDescription,
+      matchAmount: matchMode === 'description_amount' ? Number(matchAmount) : null,
+      type,
+      category,
+      budgetGroupId: nextBudgetGroupIdForType(type, budgetGroupId || null),
+    })
+
+    if (saved && onCancel) {
+      onCancel()
+    }
+  }
+
+  return (
+    <form className="rule-form" onSubmit={handleSubmit}>
+      <div className="modal-grid classification-grid">
+        <label>
+          Modo
+          <select value={matchMode} onChange={(event) => setMatchMode(event.target.value)} disabled={saving}>
+            {CLASSIFICATION_RULE_MATCH_MODE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="full-width">
+          Descricao
+          <input value={matchDescription} onChange={(event) => setMatchDescription(event.target.value)} disabled={saving} />
+        </label>
+        {matchMode === 'description_amount' ? (
+          <label>
+            Valor
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={matchAmount}
+              onChange={(event) => setMatchAmount(event.target.value)}
+              disabled={saving}
+            />
+          </label>
+        ) : null}
+        <label>
+          Tipo
+          <select value={type} onChange={(event) => setType(event.target.value)} disabled={saving}>
+            {TYPE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Categoria
+          <select value={category} onChange={(event) => setCategory(event.target.value)} disabled={saving}>
+            {CATEGORY_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Grupo
+          <select value={groupDisabled ? '' : budgetGroupId} onChange={(event) => setBudgetGroupId(event.target.value)} disabled={saving || groupDisabled}>
+            <option value="">Sem grupo</option>
+            {budgetGroups.map((budgetGroup) => (
+              <option key={budgetGroup.id} value={budgetGroup.id}>
+                {budgetGroup.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {warning ? <p className="feedback warning">{warning}</p> : null}
+      <div className="modal-actions">
+        {onCancel ? (
+          <button type="button" className="ghost" onClick={onCancel} disabled={saving}>
+            Cancelar
+          </button>
+        ) : null}
+        <button type="submit" disabled={saving}>
+          {submitLabel}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function RuleRow({ budgetGroups, rule, saving, onSave, onDelete }) {
+  const [editing, setEditing] = useState(false)
+
+  if (editing) {
+    return (
+      <div className="panel nested-panel">
+        <RuleForm
+          budgetGroups={budgetGroups}
+          initialValue={rule}
+          onSubmit={(payload) => onSave(rule.id, payload)}
+          onCancel={() => setEditing(false)}
+          saving={saving}
+          submitLabel="Salvar regra"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="rule-row">
+      <div>
+        <strong>{rule.matchDescription}</strong>
+        <div className="muted">
+          {rule.matchMode === 'description_amount' ? `Nome + valor (${rule.matchAmount?.toFixed(2) ?? '0.00'})` : 'Nome'}
+        </div>
+      </div>
+      <div className="rule-summary">
+        <span>{rule.type}</span>
+        <span>{rule.category}</span>
+        <span>{budgetGroups.find((budgetGroup) => budgetGroup.id === rule.budgetGroupId)?.name ?? 'Sem grupo'}</span>
+      </div>
+      <div className="rule-actions">
+        <button type="button" className="ghost" onClick={() => setEditing(true)} disabled={saving}>
+          Editar
+        </button>
+        <button type="button" className="danger" onClick={() => onDelete(rule.id)} disabled={saving}>
+          Excluir
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export function ClassificationRulesView({
+  budgetGroups,
+  classificationRules,
+  error,
+  feedback,
+  handleSignOut,
+  onBackToDashboard,
+  onCreateRule,
+  onDeleteRule,
+  onUpdateRule,
+  savingRuleId,
+}) {
+  return (
+    <main className="app-shell">
+      <header className="topbar">
+        <div>
+          <div className="eyebrow">Financas pessoais</div>
+          <h1>Regras de classificacao</h1>
+        </div>
+        <div className="toolbar">
+          <button type="button" className="ghost" onClick={onBackToDashboard}>
+            Dashboard
+          </button>
+          <button type="button" className="ghost" onClick={handleSignOut}>
+            Sair
+          </button>
+        </div>
+      </header>
+
+      {error ? <p className="feedback error">{error}</p> : null}
+      {feedback && !error ? <p className="feedback">{feedback}</p> : null}
+
+      <section className="panel">
+        <div className="panel-header compact">
+          <div>
+            <div className="eyebrow">Nova regra</div>
+            <h3>Adicionar regra manualmente</h3>
+          </div>
+        </div>
+        <RuleForm
+          budgetGroups={budgetGroups}
+          initialValue={{
+            matchMode: 'description',
+            matchDescription: '',
+            matchAmount: null,
+            type: 'Despesa',
+            category: 'Outros',
+            budgetGroupId: null,
+          }}
+          onSubmit={onCreateRule}
+          saving={savingRuleId === 'new'}
+          submitLabel="Criar regra"
+        />
+      </section>
+
+      <section className="panel">
+        <div className="panel-header compact">
+          <div>
+            <div className="eyebrow">Gerenciamento</div>
+            <h3>Regras salvas</h3>
+          </div>
+        </div>
+        <div className="rule-list">
+          {classificationRules.map((rule) => (
+            <RuleRow
+              key={rule.id}
+              budgetGroups={budgetGroups}
+              rule={rule}
+              saving={savingRuleId === rule.id}
+              onSave={onUpdateRule}
+              onDelete={onDeleteRule}
+            />
+          ))}
+          {!classificationRules.length ? <p className="muted">Nenhuma regra salva ainda.</p> : null}
+        </div>
+      </section>
+    </main>
+  )
+}

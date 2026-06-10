@@ -11,6 +11,7 @@
 
 - Refinar regras de categoria, `budget_group`, `status` e transferencias.
 - Reduzir retrabalho manual na revisao antes de enviar ao destino final.
+- Introduzir regras de classificacao por usuario com aprendizado a partir de edicoes manuais.
 
 ### 3. Supabase application
 

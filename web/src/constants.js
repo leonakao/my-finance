@@ -1,5 +1,9 @@
 export const TYPE_OPTIONS = ['Despesa', 'Receita', 'Transferência']
 export const UNGROUPED_FILTER_VALUE = '__ungrouped__'
+export const CLASSIFICATION_RULE_MATCH_MODE_OPTIONS = [
+  { value: 'description', label: 'Nome' },
+  { value: 'description_amount', label: 'Nome + valor' },
+]
 
 export const CATEGORY_OPTIONS = [
   'Alimentação',

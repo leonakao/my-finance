@@ -20,6 +20,69 @@ export function normalizeBudgetGroup(row) {
   }
 }
 
+export function normalizeRuleDescription(description) {
+  return String(description ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function getClassificationSnapshot(transaction) {
+  return {
+    type: transaction.type ?? 'Despesa',
+    category: transaction.category ?? 'Outros',
+    budget_group_id: transaction.budgetGroupId ?? transaction.budget_group_id ?? null,
+  }
+}
+
+export function classificationSnapshotsEqual(left, right) {
+  return left.type === right.type && left.category === right.category && (left.budget_group_id ?? null) === (right.budget_group_id ?? null)
+}
+
+export function normalizeClassificationRule(row) {
+  return {
+    id: row.id,
+    matchMode: row.match_mode ?? 'description',
+    matchDescription: row.match_description ?? '',
+    matchDescriptionNormalized: row.match_description_normalized ?? '',
+    matchAmount: row.match_amount === null || row.match_amount === undefined ? null : Number(row.match_amount),
+    type: row.type ?? 'Despesa',
+    category: row.category ?? 'Outros',
+    budgetGroupId: row.budget_group_id ?? null,
+    updatedAt: row.updated_at ?? '',
+  }
+}
+
+export function sortClassificationRules(rules) {
+  return [...rules].sort((left, right) => {
+    if (left.matchMode !== right.matchMode) {
+      return left.matchMode === 'description_amount' ? -1 : 1
+    }
+
+    const lengthDelta = right.matchDescriptionNormalized.length - left.matchDescriptionNormalized.length
+    if (lengthDelta !== 0) {
+      return lengthDelta
+    }
+
+    return (right.updatedAt ?? '').localeCompare(left.updatedAt ?? '')
+  })
+}
+
+export function getRuleDescriptionWarning(description) {
+  const normalized = normalizeRuleDescription(description)
+  if (normalized.length < 4) {
+    return 'Descrições muito curtas podem classificar transações demais.'
+  }
+
+  if (!normalized.includes(' ') && normalized.length < 6) {
+    return 'Descrições muito genéricas podem gerar matches parciais amplos.'
+  }
+
+  return ''
+}
+
 export function normalizeTransaction(row) {
   return {
     id: row.id,

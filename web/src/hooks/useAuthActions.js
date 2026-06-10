@@ -19,7 +19,7 @@ async function updatePassword(password) {
   return supabase.auth.updateUser({ password })
 }
 
-export function useAuthActions(setBudgetGroups, setTransactions, setSelectedMonth, setError, setFeedback) {
+export function useAuthActions(setBudgetGroups, setClassificationRules, setTransactions, setSelectedMonth, setError, setFeedback) {
   const [signInLoading, setSignInLoading] = useState(false)
 
   async function runAuthAction(action, successMessage) {
@@ -71,6 +71,7 @@ export function useAuthActions(setBudgetGroups, setTransactions, setSelectedMont
   async function handleSignOut() {
     await supabase.auth.signOut()
     setBudgetGroups([])
+    setClassificationRules([])
     setTransactions([])
     setSelectedMonth('')
   }

@@ -1,24 +1,70 @@
-import { useState } from 'react'
+/* eslint-disable max-lines-per-function */
+import { useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { nextBudgetGroupIdForType } from '../lib/transactions'
+import {
+  classificationSnapshotsEqual,
+  getClassificationSnapshot,
+} from '../lib/transactions'
 
-export function useTransactionEditing(transactions, setTransactions, setError) {
+function buildTransactionPatch(payload) {
+  return {
+    type: payload.type,
+    category: payload.category,
+    budgetGroupId:
+      payload.type === 'Receita' || payload.type === 'Transferência' ? null : (payload.budgetGroupId ?? null),
+  }
+}
+
+export function useTransactionEditing(transactions, setTransactions, setError, createRuleFromTransaction) {
   const [savingId, setSavingId] = useState('')
+  const [editingTransactionId, setEditingTransactionId] = useState('')
+  const [promptTransactionId, setPromptTransactionId] = useState('')
 
-  async function handleUpdate(id, field, value) {
-    setSavingId(id)
+  const editingTransaction = useMemo(
+    () => transactions.find((transaction) => transaction.id === editingTransactionId) ?? null,
+    [editingTransactionId, transactions],
+  )
+
+  const promptTransaction = useMemo(
+    () => transactions.find((transaction) => transaction.id === promptTransactionId) ?? null,
+    [promptTransactionId, transactions],
+  )
+
+  function openTransactionEditor(transactionId) {
+    setEditingTransactionId(transactionId)
+  }
+
+  function closeTransactionEditor() {
+    if (!savingId) {
+      setEditingTransactionId('')
+    }
+  }
+
+  function dismissRememberPrompt() {
+    setPromptTransactionId('')
+  }
+
+  async function saveTransactionEdit(transactionId, payload) {
+    setSavingId(transactionId)
     setError('')
 
-    const currentTransaction = transactions.find((transaction) => transaction.id === id)
-    const updates =
-      field === 'type'
-        ? {
-            type: value,
-            budget_group_id: nextBudgetGroupIdForType(value, currentTransaction?.budgetGroupId ?? null),
-          }
-        : { [field]: value }
+    const currentTransaction = transactions.find((transaction) => transaction.id === transactionId)
+    if (!currentTransaction) {
+      setSavingId('')
+      setEditingTransactionId('')
+      return
+    }
 
-    const { error: updateError } = await supabase.from('transactions').update(updates).eq('id', id)
+    const nextPatch = buildTransactionPatch(payload)
+    const previousSnapshot = getClassificationSnapshot(currentTransaction)
+    const nextSnapshot = getClassificationSnapshot(nextPatch)
+    const databasePatch = {
+      type: nextPatch.type,
+      category: nextPatch.category,
+      budget_group_id: nextPatch.budgetGroupId,
+    }
+
+    const { error: updateError } = await supabase.from('transactions').update(databasePatch).eq('id', transactionId)
     if (updateError) {
       setError(updateError.message)
       setSavingId('')
@@ -27,26 +73,46 @@ export function useTransactionEditing(transactions, setTransactions, setError) {
 
     setTransactions((current) =>
       current.map((transaction) =>
-        transaction.id === id
+        transaction.id === transactionId
           ? {
               ...transaction,
-              ...(field === 'type'
-                ? {
-                    type: value,
-                    budgetGroupId: nextBudgetGroupIdForType(value, transaction.budgetGroupId),
-                  }
-                : {
-                    [field === 'budget_group_id' ? 'budgetGroupId' : field]: value,
-                  }),
+              type: nextPatch.type,
+              category: nextPatch.category,
+              budgetGroupId: nextPatch.budgetGroupId,
             }
           : transaction,
       ),
     )
+
+    setEditingTransactionId('')
+    if (!classificationSnapshotsEqual(previousSnapshot, nextSnapshot)) {
+      setPromptTransactionId(transactionId)
+    }
     setSavingId('')
+  }
+
+  async function rememberClassification(matchMode, overrides = {}) {
+    if (!promptTransaction) {
+      return false
+    }
+
+    const savedRule = await createRuleFromTransaction(promptTransaction, matchMode, overrides)
+    if (!savedRule) {
+      return false
+    }
+
+    setPromptTransactionId('')
+    return true
   }
 
   return {
     savingId,
-    handleUpdate,
+    editingTransaction,
+    promptTransaction,
+    openTransactionEditor,
+    closeTransactionEditor,
+    saveTransactionEdit,
+    dismissRememberPrompt,
+    rememberClassification,
   }
 }

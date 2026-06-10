@@ -18,13 +18,14 @@ export function DashboardView({
   deleteBudgetGroup,
   filteredTransactions,
   savingId,
-  handleUpdate,
+  handleEditTransaction,
   transactionFilters,
   setTransactionFilters,
   typeOptions,
   categoryOptions,
   groupOptions,
   setSelectedMonth,
+  openRulesView,
 }) {
   return (
     <main className="app-shell">
@@ -34,6 +35,9 @@ export function DashboardView({
           <h1>Resumo mensal e revisao</h1>
         </div>
         <div className="toolbar">
+          <button type="button" className="ghost" onClick={openRulesView}>
+            Regras
+          </button>
           <select value={activeMonth} onChange={(event) => setSelectedMonth(event.target.value)}>
             {months.map((month) => (
               <option key={month} value={month}>
@@ -62,7 +66,7 @@ export function DashboardView({
           deleteBudgetGroup={deleteBudgetGroup}
           filteredTransactions={filteredTransactions}
           groupOptions={groupOptions}
-          handleUpdate={handleUpdate}
+          handleEditTransaction={handleEditTransaction}
           monthData={monthData}
           onFiltersChange={(field, value) =>
             setTransactionFilters((current) => ({
