@@ -26,13 +26,29 @@ lint_targets=$(
   printf '%s\n' "$candidate_files" \
     | awk '
         /^web\/eslint\.config\.js$/ { print; next }
-        /^web\/src\/.*\.(js|jsx)$/ { print }
+        /^web\/src\/.*\.(ts|tsx)$/ { print; next }
+        /^web\/e2e\/.*\.ts$/ { print; next }
+        /^web\/(vite|playwright)\.config\.ts$/ { print }
       '
 )
 
-if [ -z "$lint_targets" ]; then
-  exit 0
+typecheck_targets=$(
+  printf '%s\n' "$candidate_files" \
+    | awk '
+        /^web\/src\/.*\.(ts|tsx)$/ { print; next }
+        /^web\/e2e\/.*\.ts$/ { print; next }
+        /^web\/(vite|playwright)\.config\.ts$/ { print; next }
+        /^web\/tsconfig\.json$/ { print; next }
+        /^web\/package\.json$/ { print; next }
+        /^web\/eslint\.config\.js$/ { print }
+      '
+)
+
+if [ -n "$lint_targets" ]; then
+  set -- $lint_targets
+  npm --prefix web exec eslint -- "$@"
 fi
 
-set -- $lint_targets
-npm --prefix web exec eslint -- "$@"
+if [ -n "$typecheck_targets" ]; then
+  npm --prefix web run typecheck
+fi
