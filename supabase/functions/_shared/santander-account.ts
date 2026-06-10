@@ -1,10 +1,11 @@
-import { getDocument } from 'npm:pdfjs-dist@6.0.227/legacy/build/pdf.mjs'
+import { inflate } from 'npm:pako@2.1.0'
 import type { DefaultBudgetGroupName, ParsedImportedTransaction } from './budget-groups.ts'
 
-type PdfTextItem = {
-  str: string
-  transform: number[]
-  width: number
+type TextEvent = {
+  page: number
+  y: number
+  x: number
+  text: string
 }
 
 type PdfLine = {
@@ -25,8 +26,170 @@ const datePrefixRe = /^(?<date>\d{2}\/\d{2})\s+(?<rest>.*)$/
 const amountSuffixRe =
   /(?<description>.*?)(?:\s+|^)-?\s*(?<amount>\d{1,3}(?:\.\d{3})*,\d{2})(?<signal>-?)(?:\s+(?<balance>\d{1,3}(?:\.\d{3})*,\d{2}))?$/
 
+function binaryStringFromBytes(bytes: Uint8Array): string {
+  let out = ''
+  const chunkSize = 0x8000
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    out += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+  }
+  return out
+}
+
+function bytesFromBinaryString(value: string): Uint8Array {
+  const out = new Uint8Array(value.length)
+  for (let index = 0; index < value.length; index += 1) out[index] = value.charCodeAt(index) & 0xff
+  return out
+}
+
+function decodePdfString(raw: string): string {
+  const out: number[] = []
+  let index = 0
+  while (index < raw.length) {
+    const code = raw.charCodeAt(index)
+    if (code === 92) {
+      index += 1
+      if (index >= raw.length) break
+      const next = raw.charCodeAt(index)
+      const escapes: Record<number, number> = {
+        [110]: 10,
+        [114]: 13,
+        [116]: 9,
+        [98]: 8,
+        [102]: 12,
+      }
+      if (escapes[next]) {
+        out.push(escapes[next])
+        index += 1
+      } else if ([40, 41, 92].includes(next)) {
+        out.push(next)
+        index += 1
+      } else if (next >= 48 && next <= 55) {
+        let end = index
+        while (end < raw.length && end < index + 3 && raw.charCodeAt(end) >= 48 && raw.charCodeAt(end) <= 55) end += 1
+        out.push(Number.parseInt(raw.slice(index, end), 8))
+        index = end
+      } else {
+        out.push(next)
+        index += 1
+      }
+    } else {
+      out.push(code)
+      index += 1
+    }
+  }
+  return binaryStringFromBytes(new Uint8Array(out))
+}
+
+function textFromTjArray(raw: string): string {
+  const parts = raw.match(/\((?:\\.|[^\\)])*\)/gs) ?? []
+  return parts.map((part) => decodePdfString(part.slice(1, -1))).join('')
+}
+
+function inflateStreams(pdfBytes: Uint8Array): string[] {
+  const pdf = binaryStringFromBytes(pdfBytes)
+  const streams: string[] = []
+  const regex = /stream\r?\n([\s\S]*?)\r?\nendstream/g
+  let match: RegExpExecArray | null
+
+  while ((match = regex.exec(pdf))) {
+    try {
+      const inflated = inflate(bytesFromBinaryString(match[1]))
+      streams.push(binaryStringFromBytes(inflated))
+    } catch {
+      continue
+    }
+  }
+
+  return streams
+}
+
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
+}
+
+function extractTextEvents(pdfBytes: Uint8Array): TextEvent[] {
+  const events: TextEvent[] = []
+  let page = 0
+  const commandRe =
+    /BT|ET|\/F\d+\s+1\s+Tf|[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+Tm|[-\d.]+\s+[-\d.]+\s+Td|\[(?:\\.|[^\]])*\]TJ/gs
+
+  for (const stream of inflateStreams(pdfBytes)) {
+    if (!stream.includes('TJ')) continue
+    page += 1
+    let inText = false
+    let x = 0
+    let y = 0
+
+    for (const match of stream.matchAll(commandRe)) {
+      const token = match[0]
+      if (token === 'BT') {
+        inText = true
+        continue
+      }
+      if (token === 'ET') {
+        inText = false
+        continue
+      }
+      if (!inText) continue
+      if (token.startsWith('/F')) continue
+      if (token.endsWith(' Tm')) {
+        const parts = token.trim().split(/\s+/)
+        x = Number(parts[4])
+        y = Number(parts[5])
+        continue
+      }
+      if (token.endsWith(' Td')) {
+        const parts = token.trim().split(/\s+/)
+        x += Number(parts[0])
+        y += Number(parts[1])
+        continue
+      }
+      if (token.endsWith('TJ')) {
+        const text = normalizeWhitespace(textFromTjArray(token.slice(0, -2)))
+        if (text) {
+          events.push({ page, x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, text })
+        }
+      }
+    }
+  }
+
+  return events
+}
+
+function eventsToLines(events: TextEvent[]): PdfLine[] {
+  const rows = new Map<string, TextEvent[]>()
+
+  for (const event of events) {
+    const key = `${event.page}:${event.y}`
+    rows.set(key, [...(rows.get(key) ?? []), event])
+  }
+
+  return [...rows.entries()]
+    .map(([key, rowEvents]) => {
+      const [pageText, yText] = key.split(':')
+      let text = ''
+      let endX = -Infinity
+
+      for (const event of [...rowEvents].sort((left, right) => left.x - right.x)) {
+        const gap = event.x - endX
+        if (text && gap > 3 && !text.endsWith(' ') && !event.text.startsWith(' ')) {
+          text += ' '
+        }
+        text += event.text
+        endX = Math.max(endX, event.x + event.text.length)
+      }
+
+      return {
+        page: Number(pageText),
+        y: Number(yText),
+        text: normalizeWhitespace(text),
+      }
+    })
+    .filter((line) => line.text)
+    .sort((left, right) => {
+      if (left.page !== right.page) return left.page - right.page
+      return right.y - left.y
+    })
 }
 
 function decimalFromBrl(value: string): number {
@@ -104,7 +267,7 @@ function budgetGroupFor(
   type: 'Despesa' | 'Receita' | 'Transferência',
   category: string,
   description: string,
-) : DefaultBudgetGroupName | null {
+): DefaultBudgetGroupName | null {
   const text = description.toUpperCase()
   if (type === 'Receita') return null
   if (type === 'Transferência') return category === 'Investimentos' ? 'Futuro' : null
@@ -116,62 +279,12 @@ function budgetGroupFor(
   return 'Desejos'
 }
 
-function joinLineItems(items: Array<{ x: number; width: number; str: string }>): string {
-  let text = ''
-  let endX = -Infinity
-
-  for (const item of items.sort((left, right) => left.x - right.x)) {
-    if (!item.str) continue
-    const gap = item.x - endX
-    if (text && gap > 3 && !text.endsWith(' ') && !item.str.startsWith(' ')) text += ' '
-    text += item.str
-    endX = Math.max(endX, item.x + item.width)
-  }
-
-  return normalizeWhitespace(text)
-}
-
-async function extractPdfLines(pdfBytes: Uint8Array): Promise<PdfLine[]> {
-  const document = await getDocument({
-    data: pdfBytes,
-    disableFontFace: true,
-    isEvalSupported: false,
-    useWorkerFetch: false,
-  }).promise
-
-  const lines: PdfLine[] = []
-
-  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-    const page = await document.getPage(pageNumber)
-    const content = await page.getTextContent()
-    const rows = new Map<number, Array<{ x: number; width: number; str: string }>>()
-
-    for (const item of content.items as PdfTextItem[]) {
-      const y = Math.round(item.transform[5] * 10) / 10
-      rows.set(y, [...(rows.get(y) ?? []), { x: item.transform[4], width: item.width, str: item.str }])
-    }
-
-    for (const [y, rowItems] of [...rows.entries()].sort((left, right) => right[0] - left[0])) {
-      const text = joinLineItems(rowItems)
-      if (!text) continue
-      lines.push({ page: pageNumber, y, text })
-    }
-  }
-
-  return lines
-}
-
 function extractMovementLines(lines: PdfLine[]): string[] {
-  const pageLines = [...lines].sort((left, right) => {
-    if (left.page !== right.page) return left.page - right.page
-    return right.y - left.y
-  })
-
   const movementLines: string[] = []
   let inSection = false
   let movementPage = 0
 
-  for (const line of pageLines) {
+  for (const line of lines) {
     if (line.text === 'Movimentação') {
       inSection = true
       movementPage = line.page
@@ -287,7 +400,8 @@ export async function parseSantanderAccountPdf(params: {
   pdfBytes: Uint8Array
   filename?: string
 }): Promise<ParsedImportedTransaction[]> {
-  const lines = await extractPdfLines(params.pdfBytes)
+  const events = extractTextEvents(params.pdfBytes)
+  const lines = eventsToLines(events)
   const statementYear = inferStatementYear(lines)
   const movementLines = extractMovementLines(lines)
   const parsedTransactions = parseMovementTransactions(movementLines, statementYear)
