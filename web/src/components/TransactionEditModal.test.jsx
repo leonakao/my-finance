@@ -45,7 +45,7 @@ describe('TransactionEditModal', () => {
     })
   })
 
-  it('clears the budget group when type becomes transferência', async () => {
+  it('keeps the budget group when type becomes transferência', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn()
 
@@ -64,6 +64,30 @@ describe('TransactionEditModal', () => {
 
     expect(onSave).toHaveBeenCalledWith('tx-1', {
       type: 'Transferência',
+      category: 'Outros',
+      budgetGroupId: 'group-1',
+    })
+  })
+
+  it('normalizes the category when the type changes to a different catalog', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn()
+
+    render(
+      <TransactionEditModal
+        budgetGroups={budgetGroups}
+        saving={false}
+        transaction={{ ...baseTransaction, category: 'Alimentação' }}
+        onClose={() => {}}
+        onSave={onSave}
+      />,
+    )
+
+    await user.selectOptions(screen.getByLabelText('Tipo'), 'Receita')
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+
+    expect(onSave).toHaveBeenCalledWith('tx-1', {
+      type: 'Receita',
       category: 'Outros',
       budgetGroupId: null,
     })

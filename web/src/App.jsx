@@ -5,6 +5,7 @@ import { ClassificationRulePrompt } from './components/ClassificationRulePrompt'
 import { ClassificationRulesView } from './components/ClassificationRulesView'
 import { DashboardView } from './components/DashboardView'
 import { MissingConfig } from './components/MissingConfig'
+import { ReclassificationPromptModal } from './components/ReclassificationPromptModal'
 import { SignIn } from './components/SignIn'
 import { TransactionEditModal } from './components/TransactionEditModal'
 import { useAuthActions } from './hooks/useAuthActions'
@@ -26,6 +27,7 @@ function AuthenticatedApp({
   createRuleManually,
   deleteBudgetGroup,
   deleteClassificationRule,
+  dismissReclassificationPrompt,
   dismissRememberPrompt,
   editingTransaction,
   error,
@@ -42,6 +44,9 @@ function AuthenticatedApp({
   openDashboardView,
   openRulesView,
   promptTransaction,
+  reclassificationCandidate,
+  reclassifyExistingTransactions,
+  reclassifying,
   rememberClassification,
   saveTransactionEdit,
   savingGroupId,
@@ -119,6 +124,13 @@ function AuthenticatedApp({
           void rememberClassification(matchMode, overrides)
         }}
       />
+      {reclassificationCandidate ? (
+        <ReclassificationPromptModal
+          onDismiss={dismissReclassificationPrompt}
+          onReclassify={reclassifyExistingTransactions}
+          reclassifying={reclassifying}
+        />
+      ) : null}
     </>
   )
 }
@@ -181,11 +193,22 @@ function App() {
 
   const {
     savingRuleId,
+    reclassificationCandidate,
+    reclassifying,
     createRuleFromTransaction,
     upsertClassificationRule,
     updateClassificationRule,
     deleteClassificationRule,
-  } = useClassificationRuleManagement(setClassificationRules, setError, setFeedback)
+    dismissReclassificationPrompt,
+    reclassifyExistingTransactions,
+  } = useClassificationRuleManagement(
+    classificationRules,
+    setClassificationRules,
+    transactions,
+    setTransactions,
+    setError,
+    setFeedback,
+  )
 
   const {
     savingId,
@@ -244,6 +267,7 @@ function App() {
       createRuleManually={upsertClassificationRule}
       deleteBudgetGroup={deleteBudgetGroup}
       deleteClassificationRule={deleteClassificationRule}
+      dismissReclassificationPrompt={dismissReclassificationPrompt}
       dismissRememberPrompt={dismissRememberPrompt}
       editingTransaction={editingTransaction}
       error={error}
@@ -263,6 +287,9 @@ function App() {
       openDashboardView={() => setActiveView('dashboard')}
       openRulesView={() => setActiveView('classification-rules')}
       promptTransaction={promptTransaction}
+      reclassificationCandidate={reclassificationCandidate}
+      reclassifyExistingTransactions={reclassifyExistingTransactions}
+      reclassifying={reclassifying}
       rememberClassification={rememberClassification}
       saveTransactionEdit={saveTransactionEdit}
       savingGroupId={savingGroupId}

@@ -207,7 +207,8 @@ function categoryFor(description: string): string {
   const rules: Array<[string, string[]]> = [
     ['Assinaturas', ['AMAZONPRIME', 'AMAZON PRIME', 'AMAZON MUSIC', 'YOUTUBE', 'SPOTIFY', 'NETFLIX', 'APPLE.COM/BILL']],
     ['Transporte', ['UBER', 'POSTO', 'SEM PARAR', 'SEM*PARAR', 'AZUL', 'AEREAS']],
-    ['Saúde', ['DROGASIL', 'DROGARIA', 'FARMACIA', 'SEGURO']],
+    ['Seguros', ['SEGURO', 'SEGURO VIDA', 'SEGURO CELULAR', 'SEGURO AUTO']],
+    ['Saúde', ['DROGASIL', 'DROGARIA', 'FARMACIA']],
     ['Lazer', ['INGRESSO', 'MULTIPLEX', 'AIRBNB']],
     [
       'Alimentação',
@@ -233,7 +234,7 @@ function categoryFor(description: string): string {
 function budgetGroupFor(category: string, description: string): DefaultBudgetGroupName | null {
   const text = description.toUpperCase()
   if (text.includes('ANUIDADE')) return 'Necessidades'
-  if (['Saúde', 'Moradia'].includes(category)) return 'Necessidades'
+  if (['Saúde', 'Seguros', 'Moradia'].includes(category)) return 'Necessidades'
   if (category === 'Transporte') return text.includes('AZUL') || text.includes('AEREAS') ? 'Desejos' : 'Necessidades'
   if (category === 'Alimentação') {
     if (['SUSHI', 'PASTEL', 'ROOFTOP', 'LANCHES', 'LIBANESA', 'CAFE', 'PUB', 'PIZZARIA', 'LOS BRUTOS', 'MONTANA', 'SALGADOS', 'BOUCHERIE'].some((needle) => text.includes(needle))) {

@@ -21,7 +21,7 @@ export function CategorySection({ group, revenue }) {
         <thead>
           <tr>
             <th>Categoria</th>
-            <th>Total gasto</th>
+            <th>Total alocado</th>
             <th>% da receita</th>
           </tr>
         </thead>

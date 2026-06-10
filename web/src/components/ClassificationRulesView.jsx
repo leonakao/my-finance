@@ -1,7 +1,13 @@
 /* eslint-disable max-lines-per-function */
 import { useMemo, useState } from 'react'
-import { CATEGORY_OPTIONS, CLASSIFICATION_RULE_MATCH_MODE_OPTIONS, TYPE_OPTIONS } from '../constants'
-import { getRuleDescriptionWarning, nextBudgetGroupIdForType } from '../lib/transactions'
+import { CLASSIFICATION_RULE_MATCH_MODE_OPTIONS, TYPE_OPTIONS } from '../constants'
+import {
+  getCategoryOptionsForType,
+  getDefaultCategoryForType,
+  getRuleDescriptionWarning,
+  nextBudgetGroupIdForType,
+  normalizeCategoryForType,
+} from '../lib/transactions'
 
 function RuleForm({
   budgetGroups,
@@ -17,11 +23,20 @@ function RuleForm({
     initialValue.matchAmount === null || initialValue.matchAmount === undefined ? '' : String(initialValue.matchAmount),
   )
   const [type, setType] = useState(initialValue.type)
-  const [category, setCategory] = useState(initialValue.category)
+  const [category, setCategory] = useState(normalizeCategoryForType(initialValue.type, initialValue.category))
   const [budgetGroupId, setBudgetGroupId] = useState(initialValue.budgetGroupId ?? '')
 
-  const groupDisabled = type === 'Receita' || type === 'Transferência'
+  const groupDisabled = type === 'Receita'
   const warning = useMemo(() => getRuleDescriptionWarning(matchDescription), [matchDescription])
+  const categoryOptions = getCategoryOptionsForType(type)
+
+  function handleTypeChange(nextType) {
+    setType(nextType)
+    setCategory((currentCategory) => normalizeCategoryForType(nextType, currentCategory))
+    if (nextType === 'Receita') {
+      setBudgetGroupId('')
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -79,7 +94,7 @@ function RuleForm({
         ) : null}
         <label>
           Tipo
-          <select value={type} onChange={(event) => setType(event.target.value)} disabled={saving}>
+          <select value={type} onChange={(event) => handleTypeChange(event.target.value)} disabled={saving}>
             {TYPE_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -90,7 +105,7 @@ function RuleForm({
         <label>
           Categoria
           <select value={category} onChange={(event) => setCategory(event.target.value)} disabled={saving}>
-            {CATEGORY_OPTIONS.map((option) => (
+            {categoryOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
@@ -213,7 +228,7 @@ export function ClassificationRulesView({
             matchDescription: '',
             matchAmount: null,
             type: 'Despesa',
-            category: 'Outros',
+            category: getDefaultCategoryForType('Despesa'),
             budgetGroupId: null,
           }}
           onSubmit={onCreateRule}

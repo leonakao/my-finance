@@ -4,14 +4,17 @@ import { supabase } from '../lib/supabase'
 import {
   classificationSnapshotsEqual,
   getClassificationSnapshot,
+  normalizeCategoryForType,
 } from '../lib/transactions'
 
 function buildTransactionPatch(payload) {
+  const normalizedType = payload.type
+  const normalizedCategory = normalizeCategoryForType(normalizedType, payload.category)
+
   return {
-    type: payload.type,
-    category: payload.category,
-    budgetGroupId:
-      payload.type === 'Receita' || payload.type === 'Transferência' ? null : (payload.budgetGroupId ?? null),
+    type: normalizedType,
+    category: normalizedCategory,
+    budgetGroupId: normalizedType === 'Receita' ? null : (payload.budgetGroupId ?? null),
   }
 }
 

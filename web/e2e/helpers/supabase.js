@@ -111,6 +111,78 @@ export async function seedTransactionWithNoGroup(client, userId) {
   }
 }
 
+export async function seedTransaction(client, userId, overrides = {}) {
+  const transaction = {
+    user_id: userId,
+    date: '2026-06-10',
+    description: 'Compra e2e supermercado',
+    amount: 59.9,
+    type: 'Despesa',
+    category: 'Outros',
+    budget_group_id: null,
+    account: 'Conta principal',
+    institution: 'Nubank',
+    status: 'Confirmado',
+    notes: 'Seed E2E',
+    invoice: '',
+    installment: '',
+    external_id: `e2e:${Date.now()}:${Math.random().toString(16).slice(2)}`,
+    source: 'E2E',
+    ...overrides,
+  }
+
+  const { data, error } = await client
+    .from('transactions')
+    .insert(transaction)
+    .select('id, budget_group_id, category, type, description')
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function getBudgetGroups(client) {
+  const { data, error } = await client
+    .from('budget_groups')
+    .select('id, name')
+    .order('name', { ascending: true })
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function seedClassificationRule(client, userId, overrides = {}) {
+  const rule = {
+    user_id: userId,
+    match_mode: 'description',
+    match_description: 'supermercado',
+    match_description_normalized: 'supermercado',
+    match_amount: null,
+    type: 'Despesa',
+    category: 'Outros',
+    budget_group_id: null,
+    ...overrides,
+  }
+
+  const { data, error } = await client
+    .from('transaction_classification_rules')
+    .insert(rule)
+    .select('id, match_description')
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
 export async function fetchTransaction(client, transactionId) {
   const { data, error } = await client
     .from('transactions')
@@ -130,6 +202,19 @@ export async function fetchRules(client) {
     .from('transaction_classification_rules')
     .select('match_mode, match_description, match_amount, type, category, budget_group_id')
     .order('updated_at', { ascending: false })
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function fetchTransactions(client) {
+  const { data, error } = await client
+    .from('transactions')
+    .select('id, description, budget_group_id, category, type')
+    .order('created_at', { ascending: true })
 
   if (error) {
     throw error

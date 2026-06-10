@@ -1,6 +1,7 @@
 /* eslint-disable max-lines-per-function */
 import { useState } from 'react'
-import { CATEGORY_OPTIONS, TYPE_OPTIONS } from '../constants'
+import { TYPE_OPTIONS } from '../constants'
+import { getCategoryOptionsForType, normalizeCategoryForType } from '../lib/transactions'
 import { toCurrency } from '../lib/formatters'
 
 function ReadOnlyField({ label, value }) {
@@ -14,13 +15,16 @@ function ReadOnlyField({ label, value }) {
 
 export function TransactionEditModal({ budgetGroups, saving, transaction, onClose, onSave }) {
   const [type, setType] = useState(transaction.type)
+  const [category, setCategory] = useState(normalizeCategoryForType(transaction.type, transaction.category))
   const [budgetGroupId, setBudgetGroupId] = useState(transaction.budgetGroupId ?? '')
 
-  const groupDisabled = type === 'Receita' || type === 'Transferência'
+  const groupDisabled = type === 'Receita'
+  const categoryOptions = getCategoryOptionsForType(type)
 
   function handleTypeChange(nextType) {
     setType(nextType)
-    if (nextType === 'Receita' || nextType === 'Transferência') {
+    setCategory((currentCategory) => normalizeCategoryForType(nextType, currentCategory))
+    if (nextType === 'Receita') {
       setBudgetGroupId('')
     }
   }
@@ -29,13 +33,13 @@ export function TransactionEditModal({ budgetGroups, saving, transaction, onClos
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
     const nextType = String(formData.get('type') ?? transaction.type)
-    const nextCategory = String(formData.get('category') ?? transaction.category)
+    const nextCategory = normalizeCategoryForType(nextType, String(formData.get('category') ?? transaction.category))
     const nextBudgetGroupId = String(formData.get('budgetGroupId') ?? '')
 
     void onSave(transaction.id, {
       type: nextType,
       category: nextCategory,
-      budgetGroupId: nextType === 'Receita' || nextType === 'Transferência' ? null : (nextBudgetGroupId || null),
+      budgetGroupId: nextType === 'Receita' ? null : (nextBudgetGroupId || null),
     })
   }
 
@@ -73,8 +77,8 @@ export function TransactionEditModal({ budgetGroups, saving, transaction, onClos
             </label>
             <label>
               Categoria
-              <select name="category" defaultValue={transaction.category} disabled={saving}>
-                {CATEGORY_OPTIONS.map((option) => (
+              <select name="category" value={category} onChange={(event) => setCategory(event.target.value)} disabled={saving}>
+                {categoryOptions.map((option) => (
                   <option key={option} value={option}>
                     {option}
                   </option>

@@ -110,12 +110,21 @@ function isRdbRedemption(description: string): boolean {
   return description.toUpperCase().includes('RESGATE RDB')
 }
 
+function isSalaryIncome(description: string): boolean {
+  const text = description.toUpperCase()
+  return text.includes('SALARIO') || text.includes('SALÁRIO') || text.includes('FOLHA') || text.includes('PROVENTO')
+}
+
 function categoryFor(description: string, amount: number): string {
   const text = description.toUpperCase()
+  if (text.includes('PAGAMENTO DE FATURA')) return 'Pagamento de fatura'
+  if (isSalaryIncome(description) && amount >= 0) return 'Salário'
+  if (isRdbApplication(description) || isRdbRedemption(description)) return 'Investimentos'
   const rules: Array<[string, string[]]> = [
     ['Moradia', ['DÉBITO EM CONTA', 'DEBITO EM CONTA']],
     ['Assinaturas', ['SPOTIFY', 'NETFLIX', 'APPLE.COM/BILL', 'YOUTUBE', 'AMAZON PRIME']],
-    ['Saúde', ['SEGURO', 'DROGARIA', 'DROGASIL', 'FARMACIA']],
+    ['Seguros', ['SEGURO', 'SEGURO VIDA', 'SEGURO CELULAR', 'SEGURO AUTO']],
+    ['Saúde', ['DROGARIA', 'DROGASIL', 'FARMACIA']],
     ['Telefone', ['TIM', 'VIVO', 'CLARO', 'OI ']],
     ['Alimentação', ['IFOOD', 'RESTAURANTE', 'LANCHES', 'PADARIA', 'MERCADO', 'SUPERMERCADO']],
     ['Investimentos', ['RDB', 'CDB', 'TESOURO', 'CORRETORA', 'INVEST']],
@@ -137,8 +146,8 @@ function transactionType(amount: number, description: string, source: ImportKind
     return ['Despesa', 'Confirmado']
   }
 
-  if (isRdbApplication(description)) return ['Despesa', 'Confirmado']
-  if (isRdbRedemption(description)) return ['Receita', 'Confirmado']
+  if (isRdbApplication(description)) return ['Transferência', 'Confirmado']
+  if (isRdbRedemption(description)) return ['Transferência', 'Confirmado']
   if (text.includes('TRANSFERÊNCIA RECEBIDA')) return ['Receita', 'Confirmado']
   if (text.includes('PAGAMENTO DE FATURA')) {
     return ['Transferência', 'Confirmado']
@@ -167,7 +176,7 @@ function budgetGroupFor(
     }
     return null
   }
-  if (['Saúde', 'Moradia', 'Telefone'].includes(category)) return 'Necessidades'
+  if (['Saúde', 'Seguros', 'Moradia', 'Telefone'].includes(category)) return 'Necessidades'
   if (category === 'Transporte') return 'Necessidades'
   if (category === 'Alimentação') {
     if (['BAR', 'CAFE', 'PUB', 'SUSHI', 'PIZZARIA', 'LANCHES'].some((needle) => text.includes(needle))) {

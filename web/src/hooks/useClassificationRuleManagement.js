@@ -2,6 +2,8 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import {
+  reclassifyTransactionsWithRules,
+  normalizeCategoryForType,
   getClassificationSnapshot,
   normalizeClassificationRule,
   normalizeRuleDescription,
@@ -10,6 +12,8 @@ import {
 
 function buildRulePayload(payload, userId) {
   const normalizedDescription = normalizeRuleDescription(payload.matchDescription)
+  const normalizedType = payload.type
+  const normalizedCategory = normalizeCategoryForType(normalizedType, payload.category)
 
   return {
     user_id: userId,
@@ -17,10 +21,9 @@ function buildRulePayload(payload, userId) {
     match_description: payload.matchDescription.trim(),
     match_description_normalized: normalizedDescription,
     match_amount: payload.matchMode === 'description_amount' ? Number(payload.matchAmount) : null,
-    type: payload.type,
-    category: payload.category,
-    budget_group_id:
-      payload.type === 'Receita' || payload.type === 'Transferência' ? null : (payload.budgetGroupId ?? null),
+    type: normalizedType,
+    category: normalizedCategory,
+    budget_group_id: normalizedType === 'Receita' ? null : (payload.budgetGroupId ?? null),
   }
 }
 
@@ -54,8 +57,10 @@ async function getAuthenticatedUserId() {
   return user.id
 }
 
-export function useClassificationRuleManagement(setClassificationRules, setError, setFeedback) {
+export function useClassificationRuleManagement(classificationRules, setClassificationRules, transactions, setTransactions, setError, setFeedback) {
   const [savingRuleId, setSavingRuleId] = useState('')
+  const [reclassificationCandidate, setReclassificationCandidate] = useState(null)
+  const [reclassifying, setReclassifying] = useState(false)
 
   async function upsertClassificationRule(payload, options = {}) {
     let userId
@@ -98,11 +103,15 @@ export function useClassificationRuleManagement(setClassificationRules, setError
     }
 
     const normalizedRule = normalizeClassificationRule(data)
-    setClassificationRules((current) => {
-      const next = existingRule
-        ? current.map((rule) => (rule.id === normalizedRule.id ? normalizedRule : rule))
-        : [...current, normalizedRule]
-      return sortClassificationRules(next)
+    const nextRules = sortClassificationRules(
+      existingRule
+        ? classificationRules.map((rule) => (rule.id === normalizedRule.id ? normalizedRule : rule))
+        : [...classificationRules, normalizedRule],
+    )
+    setClassificationRules(nextRules)
+    setReclassificationCandidate({
+      ruleId: normalizedRule.id,
+      rules: nextRules,
     })
     setFeedback(existingRule ? 'Regra atualizada com sucesso.' : 'Regra criada com sucesso.')
     setSavingRuleId('')
@@ -152,9 +161,12 @@ export function useClassificationRuleManagement(setClassificationRules, setError
     }
 
     const normalizedRule = normalizeClassificationRule(data)
-    setClassificationRules((current) =>
-      sortClassificationRules(current.map((rule) => (rule.id === id ? normalizedRule : rule))),
-    )
+    const nextRules = sortClassificationRules(classificationRules.map((rule) => (rule.id === id ? normalizedRule : rule)))
+    setClassificationRules(nextRules)
+    setReclassificationCandidate({
+      ruleId: normalizedRule.id,
+      rules: nextRules,
+    })
     setFeedback('Regra atualizada com sucesso.')
     setSavingRuleId('')
     return true
@@ -178,11 +190,78 @@ export function useClassificationRuleManagement(setClassificationRules, setError
     return true
   }
 
+  function dismissReclassificationPrompt() {
+    if (!reclassifying) {
+      setReclassificationCandidate(null)
+    }
+  }
+
+  async function reclassifyExistingTransactions() {
+    if (!reclassificationCandidate) {
+      return false
+    }
+
+    setReclassifying(true)
+    setError('')
+
+    const { changedCount, transactions: nextTransactions } = reclassifyTransactionsWithRules(
+      transactions,
+      reclassificationCandidate.rules,
+    )
+
+    if (!changedCount) {
+      setFeedback('Nenhuma transação existente precisou ser reclassificada.')
+      setReclassificationCandidate(null)
+      setReclassifying(false)
+      return true
+    }
+
+    const changedTransactions = nextTransactions.filter((transaction, index) => {
+      const previousTransaction = transactions[index]
+      return (
+        transaction.type !== previousTransaction.type
+        || transaction.category !== previousTransaction.category
+        || (transaction.budgetGroupId ?? null) !== (previousTransaction.budgetGroupId ?? null)
+      )
+    })
+
+    for (const transaction of changedTransactions) {
+      const { error } = await supabase
+        .from('transactions')
+        .update({
+          type: transaction.type,
+          category: transaction.category,
+          budget_group_id: transaction.budgetGroupId,
+        })
+        .eq('id', transaction.id)
+
+      if (error) {
+        setError(error.message)
+        setReclassifying(false)
+        return false
+      }
+    }
+
+    setTransactions(nextTransactions)
+    setFeedback(
+      changedCount === 1
+        ? '1 transação existente foi reclassificada.'
+        : `${changedCount} transações existentes foram reclassificadas.`,
+    )
+    setReclassificationCandidate(null)
+    setReclassifying(false)
+    return true
+  }
+
   return {
     savingRuleId,
+    reclassificationCandidate,
+    reclassifying,
     upsertClassificationRule,
     createRuleFromTransaction,
     updateClassificationRule,
     deleteClassificationRule,
+    dismissReclassificationPrompt,
+    reclassifyExistingTransactions,
   }
 }

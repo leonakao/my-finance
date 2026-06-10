@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test'
-import { createUserSession, fetchRules, fetchTransaction, seedTransactionWithNoGroup } from './helpers/supabase'
+import {
+  createUserSession,
+  fetchRules,
+  fetchTransaction,
+  fetchTransactions,
+  getBudgetGroups,
+  seedClassificationRule,
+  seedTransaction,
+  seedTransactionWithNoGroup,
+} from './helpers/supabase'
 
 async function signIn(page, email, password) {
   await page.goto('/')
@@ -63,4 +72,76 @@ test('creates a user rule from the remember-classification flow', async ({ page 
 
   const rules = await fetchRules(supabase)
   expect(rules.some((rule) => rule.match_mode === 'description_amount' && rule.match_description === 'supermercado')).toBe(true)
+})
+
+test('shows reclassification CTA after remember-classification and updates matching transactions', async ({ page }) => {
+  const { email, password, supabase, userId } = await createUserSession()
+  const { transactionId, selectableBudgetGroup } = await seedTransactionWithNoGroup(supabase, userId)
+  const matchingTransaction = await seedTransaction(supabase, userId, {
+    description: 'Compra e2e supermercado extra',
+    amount: 88.4,
+  })
+
+  await signIn(page, email, password)
+
+  const transactions = await fetchTransactions(supabase)
+  const editableTransaction = transactions.find((transaction) => transaction.id === transactionId)
+
+  await page
+    .locator('tr')
+    .filter({ has: page.getByText(editableTransaction.description, { exact: true }) })
+    .getByRole('button', { name: 'Editar' })
+    .click()
+  const dialog = page.getByRole('dialog', { name: 'Editar classificacao' })
+  await dialog.getByLabel('Categoria').selectOption('Alimentação')
+  await dialog.getByLabel('Grupo').selectOption(selectableBudgetGroup.id)
+  await dialog.getByRole('button', { name: 'Salvar' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Lembrar esta classificacao?' })).toBeVisible()
+  await page.getByLabel('Nome da regra').fill('supermercado')
+  await page.getByRole('button', { name: 'Lembrar pelo nome', exact: true }).click()
+
+  await expect(page.getByText('Reclassificar transações existentes?')).toBeVisible()
+  await page.getByRole('button', { name: 'Reclassificar' }).click()
+  await expect(page.getByText(/reclassificada/)).toBeVisible()
+
+  const updatedTransaction = await fetchTransaction(supabase, matchingTransaction.id)
+  expect(updatedTransaction).toMatchObject({
+    type: 'Despesa',
+    category: 'Alimentação',
+    budget_group_id: selectableBudgetGroup.id,
+  })
+})
+
+test('shows reclassification CTA after editing a saved rule and updates matching transactions', async ({ page }) => {
+  const { email, password, supabase, userId } = await createUserSession()
+  const [selectableBudgetGroup] = await getBudgetGroups(supabase)
+  const matchingTransaction = await seedTransaction(supabase, userId, {
+    description: 'Compra e2e supermercado central',
+    amount: 73.2,
+  })
+  await seedClassificationRule(supabase, userId, {
+    match_description: 'supermercado',
+    match_description_normalized: 'supermercado',
+  })
+
+  await signIn(page, email, password)
+  await page.getByRole('button', { name: 'Regras' }).click()
+  await expect(page.getByRole('heading', { name: 'Regras de classificacao' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Editar' }).first().click()
+  await page.getByLabel('Categoria').last().selectOption('Alimentação')
+  await page.getByLabel('Grupo').last().selectOption(selectableBudgetGroup.id)
+  await page.getByRole('button', { name: 'Salvar regra' }).click()
+
+  await expect(page.getByText('Reclassificar transações existentes?')).toBeVisible()
+  await page.getByRole('button', { name: 'Reclassificar' }).click()
+  await expect(page.getByText(/reclassificada/)).toBeVisible()
+
+  const updatedTransaction = await fetchTransaction(supabase, matchingTransaction.id)
+  expect(updatedTransaction).toMatchObject({
+    type: 'Despesa',
+    category: 'Alimentação',
+    budget_group_id: selectableBudgetGroup.id,
+  })
 })
