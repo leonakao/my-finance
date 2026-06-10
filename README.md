@@ -203,6 +203,38 @@ sh tools/check_supabase_functions.sh
 
 O check das Edge Functions exige a stack local do Supabase ativa via `supabase start`.
 
+## Deploy no Render
+
+O frontend também está publicado como Static Site no Render.
+
+Serviço atual:
+
+- nome: `my-finance-web`
+- URL pública: `https://my-finance-web-sski.onrender.com`
+- dashboard: `https://dashboard.render.com/static/srv-d8krrlojs32c73bng0tg`
+
+Configuração usada no Render:
+
+- branch: `main`
+- build command: `sh tools/build_render_static_site.sh`
+- publish path: `dist`
+- auto deploy: habilitado
+
+Variáveis públicas configuradas no serviço:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Sempre que o frontend mudar, validar localmente antes do push:
+
+```sh
+cd web
+npm run lint
+npm run typecheck
+npm run build
+npm test
+```
+
 Schema mínimo esperado em `transactions`:
 
 - `id`
