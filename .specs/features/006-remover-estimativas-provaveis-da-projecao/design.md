@@ -1,7 +1,7 @@
 # Remover Estimativas Provaveis Da Projecao Design
 
 **Spec**: `.specs/features/006-remover-estimativas-provaveis-da-projecao/spec.md`
-**Status**: Draft
+**Status**: Approved
 
 ---
 
@@ -122,7 +122,7 @@ Depois de uma remocao bem-sucedida, um feedback acionavel oferece `Desfazer`. A 
 
 Migration proposta:
 
-`supabase/migrations/20260611NNNNNN_create_projection_exclusions.sql`
+`supabase/migrations/20260611120000_create_projection_exclusions.sql`
 
 ```sql
 create table if not exists public.projection_exclusions (

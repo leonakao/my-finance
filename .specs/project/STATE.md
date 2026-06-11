@@ -31,6 +31,8 @@
 - As exclusoes da feature `006` deverao alimentar o mesmo `buildFinancialAnalysis` usado pela dashboard e pela pagina `Mensal`, evitando divergencia entre resumo, detalhe e indicadores.
 - As mutacoes de exclusao e restauracao serao otimistas com rollback; a remocao tambem oferecera `Desfazer` sem expiracao automatica.
 - As estimativas removidas da feature `006` ficarao recolhidas por padrao sob o controle `Ocultando X estimativa(s)`; a lista com restauracao sera exibida sob demanda e o estado aberto sera refletido na URL.
+- O design da feature `006-remover-estimativas-provaveis-da-projecao` foi aprovado ao avancar para Tasks.
+- A feature `006` possui 11 tarefas planejadas, 25 requisitos mapeados e gate final de migration/RLS, Vitest, lint, typecheck, build e Playwright.
 
 ## Current Facts
 
@@ -51,7 +53,7 @@
 
 ## Paused Work
 
-- A feature `006-remover-estimativas-provaveis-da-projecao` foi pausada em 2026-06-11 ao final do design, ainda em status `Draft`; retomar pela revisao/aprovacao do `design.md` e depois criar `tasks.md`.
+- Nenhum trabalho pausado registrado.
 
 ## Deferred Ideas
 
