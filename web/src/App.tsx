@@ -30,6 +30,7 @@ import type {
   FinancialOverview,
   GroupOption,
   MonthData,
+  MonthlyProjectionInsight,
   ReclassificationCandidate,
   RulePromptOverrides,
   Transaction,
@@ -145,6 +146,7 @@ type AuthenticatedAppProps = {
   loading: boolean
   monthData: MonthData | null
   months: string[]
+  monthlyProjectionInsight: MonthlyProjectionInsight | null
   navigateTo: (pathname: AuthenticatedPath) => void
   openMonthlyAnalysis: (monthKey: string) => void
   orphanedCount: number
@@ -213,6 +215,7 @@ function AuthenticatedApp({
   loading,
   monthData,
   months,
+  monthlyProjectionInsight,
   navigateTo,
   openMonthlyAnalysis,
   orphanedCount,
@@ -258,6 +261,7 @@ function AuthenticatedApp({
         loading={loading}
         monthData={monthData}
         months={months}
+        projectionInsight={monthlyProjectionInsight}
         savingId={savingId}
         setSelectedMonth={setSelectedMonth}
         setTransactionFilters={setTransactionFilters}
@@ -444,8 +448,18 @@ function App() {
     useAuthActions(setBudgetGroups, setClassificationRules, setTransactions, setSelectedMonth, setError, setFeedback)
 
   const { importLoading, handleImport } = useTransactionsImport(loadTransactions, setError, setFeedback)
-  const { activeMonth, currentMonth, financialOverview, monthData, filteredTransactions, months, typeOptions, categoryOptions, groupOptions } =
-    useDashboardState(budgetGroups, transactions, selectedMonth, transactionFilters)
+  const {
+    activeMonth,
+    currentMonth,
+    financialOverview,
+    monthlyProjectionInsight,
+    monthData,
+    filteredTransactions,
+    months,
+    typeOptions,
+    categoryOptions,
+    groupOptions,
+  } = useDashboardState(budgetGroups, transactions, selectedMonth, transactionFilters)
 
   useEffect(() => {
     const handlePopState = () => {
@@ -474,6 +488,10 @@ function App() {
   }, [currentPath, selectedMonth, setSelectedMonth])
 
   useEffect(() => {
+    if (loading) {
+      return
+    }
+
     if (isRecoveryMode) {
       document.title = 'Finanças | Recuperar acesso'
       return
@@ -492,7 +510,7 @@ function App() {
       writePath(authenticatedPath, true)
     }
     document.title = `Finanças | ${getPageMetadata(authenticatedPath).title}`
-  }, [currentPath, isRecoveryMode, session])
+  }, [currentPath, isRecoveryMode, loading, session])
 
   const orphanedCount = transactions.filter((transaction) => transaction.type === 'Despesa' && transaction.budgetGroupId === null).length
 
@@ -576,6 +594,7 @@ function App() {
       loading={loading}
       monthData={monthData}
       months={months}
+      monthlyProjectionInsight={monthlyProjectionInsight}
       navigateTo={(pathname) => {
         setError('')
         setFeedback('')

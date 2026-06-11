@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { addMonths, monthKeyFor, signIn } from './helpers/app'
+import { addMonths, monthKeyFor, monthLabel, signIn } from './helpers/app'
 import {
   createUserSession,
   fetchTransaction,
@@ -8,9 +8,67 @@ import {
   seedTransactionWithNoGroup,
 } from './helpers/supabase'
 
-test('navigates monthly view into a future month and shows planned transactions', async ({ page }) => {
+function dateKeyFor(date: Date) {
+  return `${monthKeyFor(date)}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+test('shows current-month remaining projections and keeps registered items editable below', async ({ page }) => {
   const { email, password, supabase, userId } = await createUserSession()
-  const nextMonth = addMonths(new Date(), 1)
+  const now = new Date()
+  const currentMonth = addMonths(now, 0)
+  const previousMonth = addMonths(now, -1)
+  const secondPreviousMonth = addMonths(now, -2)
+  const remainingDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2)
+  const expectedDay = String(remainingDate.getDate()).padStart(2, '0')
+
+  await seedTransaction(supabase, userId, {
+    date: dateKeyFor(new Date(now.getFullYear(), now.getMonth(), Math.max(1, now.getDate() - 1))),
+    description: 'Salário realizado e2e',
+    amount: 5000,
+    type: 'Receita',
+    category: 'Salário',
+  })
+  await seedTransaction(supabase, userId, {
+    date: dateKeyFor(remainingDate),
+    description: 'Conta restante e2e',
+    amount: 420,
+    type: 'Despesa',
+    category: 'Moradia',
+  })
+  await seedTransaction(supabase, userId, {
+    date: `${monthKeyFor(secondPreviousMonth)}-${expectedDay}`,
+    description: 'Internet provável e2e',
+    amount: 140,
+    type: 'Despesa',
+    category: 'Moradia',
+  })
+  await seedTransaction(supabase, userId, {
+    date: `${monthKeyFor(previousMonth)}-${expectedDay}`,
+    description: 'Internet provável e2e',
+    amount: 160,
+    type: 'Despesa',
+    category: 'Moradia',
+  })
+
+  await signIn(page, email, password)
+  await page.getByRole('link', { name: 'Mensal' }).click()
+
+  await expect(page.getByRole('region', { name: `Projeção restante de ${monthLabel(currentMonth)}` })).toBeVisible()
+  await expect(page.getByText('Saldo realizado até hoje')).toBeVisible()
+  await expect(page.getByText('Sugestão por semana')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Resumo da projeção' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Itens que compõem a projeção' })).toBeVisible()
+  await expect(page.getByText('Conta restante e2e')).toHaveCount(2)
+  await expect(page.getByText('Internet provável e2e')).toHaveCount(1)
+  await expect(page.getByRole('heading', { name: 'Lançamentos do mês' })).toBeVisible()
+})
+
+test('opens a future projection by direct URL and separates registered from probable items', async ({ page }) => {
+  const { email, password, supabase, userId } = await createUserSession()
+  const now = new Date()
+  const previousMonth = addMonths(now, -1)
+  const secondPreviousMonth = addMonths(now, -2)
+  const nextMonth = addMonths(now, 1)
 
   await seedTransaction(supabase, userId, {
     date: `${monthKeyFor(nextMonth)}-10`,
@@ -20,13 +78,100 @@ test('navigates monthly view into a future month and shows planned transactions'
     category: 'Compras',
     installment: '02/05',
   })
+  await seedTransaction(supabase, userId, {
+    date: `${monthKeyFor(secondPreviousMonth)}-18`,
+    description: 'Seguro provável e2e',
+    amount: 200,
+    type: 'Despesa',
+    category: 'Moradia',
+  })
+  await seedTransaction(supabase, userId, {
+    date: `${monthKeyFor(previousMonth)}-18`,
+    description: 'Seguro provável e2e',
+    amount: 220,
+    type: 'Despesa',
+    category: 'Moradia',
+  })
+
+  await signIn(page, email, password)
+  await page.goto(`/app/mensal?month=${monthKeyFor(nextMonth)}`)
+
+  await expect(page).toHaveURL(new RegExp(`/app/mensal\\?month=${monthKeyFor(nextMonth)}$`))
+  await expect(page.getByLabel('Selecionar mês')).toHaveValue(monthKeyFor(nextMonth))
+  await expect(page.getByText('Meses futuros combinam lançamentos registrados e estimativas recorrentes.')).toBeVisible()
+  await expect(page.getByRole('region', { name: `Projeção de ${monthLabel(nextMonth)}` })).toBeVisible()
+  await expect(page.getByText('Parcela futura e2e')).toHaveCount(2)
+  await expect(page.getByText('Seguro provável e2e')).toHaveCount(1)
+  await expect(
+    page.getByRole('table', { name: 'Estimativas prováveis' }).getByText('Provável', { exact: true }),
+  ).toBeVisible()
+})
+
+test('keeps the monthly empty state visible below an empty projection', async ({ page }) => {
+  const { email, password } = await createUserSession()
 
   await signIn(page, email, password)
   await page.getByRole('link', { name: 'Mensal' }).click()
-  await page.getByRole('button', { name: 'Próximo mês' }).click()
 
-  await expect(page.getByText('Meses futuros mostram apenas o que já está previsto na base.')).toBeVisible()
-  await expect(page.getByText('Parcela futura e2e')).toBeVisible()
+  await expect(page.getByText('Nenhum lançamento registrado ou provável para este período.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Nenhum lançamento no período' })).toBeVisible()
+})
+
+test('does not render projection blocks for past months', async ({ page }) => {
+  const { email, password, supabase, userId } = await createUserSession()
+  const previousMonth = addMonths(new Date(), -1)
+
+  await seedTransaction(supabase, userId, {
+    date: `${monthKeyFor(previousMonth)}-10`,
+    description: 'Compra passada sem projeção e2e',
+    amount: 90,
+  })
+
+  await signIn(page, email, password)
+  await page.goto(`/app/mensal?month=${monthKeyFor(previousMonth)}`)
+
+  await expect(page.getByText('Compra passada sem projeção e2e')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Resumo da projeção' })).not.toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Itens que compõem a projeção' })).not.toBeVisible()
+})
+
+test('keeps projection layout contained on mobile, laptop and ultra-wide viewports', async ({ page }) => {
+  const { email, password, supabase, userId } = await createUserSession()
+  const now = new Date()
+  const remainingDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2)
+
+  await seedTransaction(supabase, userId, {
+    date: dateKeyFor(remainingDate),
+    description: 'Conteúdo responsivo mensal e2e',
+    amount: 240,
+    type: 'Despesa',
+    category: 'Compras',
+  })
+
+  await signIn(page, email, password)
+  await page.getByRole('link', { name: 'Mensal' }).click()
+
+  for (const viewport of [
+    { width: 390, height: 844, columns: 1 },
+    { width: 1280, height: 900, columns: 3 },
+    { width: 2560, height: 1440, columns: 3 },
+  ]) {
+    await page.setViewportSize(viewport)
+    await expect(page.getByRole('heading', { name: 'Itens que compõem a projeção' })).toBeVisible()
+
+    const layout = await page.evaluate(() => {
+      const metrics = document.querySelector('.monthly-projection-metrics')
+      return {
+        columns: metrics ? getComputedStyle(metrics).gridTemplateColumns.split(' ').length : 0,
+        hasPageOverflow: document.documentElement.scrollWidth > window.innerWidth,
+      }
+    })
+
+    expect(layout).toEqual({
+      columns: viewport.columns,
+      hasPageOverflow: false,
+    })
+  }
 })
 
 test('filters transactions in the monthly view', async ({ page }) => {

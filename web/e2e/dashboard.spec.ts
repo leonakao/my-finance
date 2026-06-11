@@ -78,6 +78,7 @@ test('shows projected and probable commitments on the dashboard', async ({ page 
 
   await signIn(page, email, password)
 
+  await expect(page.locator('.projection-card')).toHaveCount(3)
   const nextMonthCard = page.locator('.projection-card').filter({ hasText: monthLabel(nextMonth) })
   await expect(nextMonthCard).toContainText('1 previstos')
   await expect(nextMonthCard).toContainText('1 prováveis')

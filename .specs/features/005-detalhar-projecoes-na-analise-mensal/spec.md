@@ -6,11 +6,11 @@ Hoje a pagina `Mensal` permite abrir o mes atual e meses futuros, mas nao mostra
 
 ## Goals
 
-- [ ] Expor na pagina `Mensal` um detalhamento das projecoes para o mes atual e meses futuros.
-- [ ] Permitir ao usuario distinguir o que ja esta persistido na base do que e apenas estimativa recorrente.
-- [ ] Preservar o fluxo atual de navegacao Dashboard -> Mensal sem obrigar o usuario a voltar para a dashboard para entender uma projecao.
-- [ ] Mostrar no mes atual quanto saldo ainda resta considerando o que falta acontecer e sugerir quanto ainda pode ser gasto por semana.
-- [ ] Manter a experiencia acessivel, responsiva e coerente com os guardrails definidos em `AGENTS.md`.
+- [x] Expor na pagina `Mensal` um detalhamento das projecoes para o mes atual e meses futuros.
+- [x] Permitir ao usuario distinguir o que ja esta persistido na base do que e apenas estimativa recorrente.
+- [x] Preservar o fluxo atual de navegacao Dashboard -> Mensal sem obrigar o usuario a voltar para a dashboard para entender uma projecao.
+- [x] Mostrar no mes atual quanto saldo ainda resta considerando o que falta acontecer e sugerir quanto ainda pode ser gasto por semana.
+- [x] Manter a experiencia acessivel, responsiva e coerente com os guardrails definidos em `AGENTS.md`.
 
 ## Out of Scope
 
@@ -94,17 +94,17 @@ Each requirement gets a unique ID for tracking across design, tasks, and validat
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| MPROJ-01 | P1: Ver a composicao da projecao no mes analisado | Tasks | In Tasks |
-| MPROJ-02 | P1: Ver a composicao da projecao no mes analisado | Tasks | In Tasks |
-| MPROJ-03 | P1: Ver a composicao da projecao no mes analisado | Tasks | In Tasks |
-| MPROJ-04 | P1: Ver a composicao da projecao no mes analisado | Tasks | In Tasks |
-| MPROJ-05 | P1: Distinguir claramente registrado vs estimado | Tasks | In Tasks |
-| MPROJ-06 | P1: Distinguir claramente registrado vs estimado | Tasks | In Tasks |
-| MPROJ-07 | P1: Distinguir claramente registrado vs estimado | Tasks | In Tasks |
-| MPROJ-08 | P2: Usar o detalhamento como apoio a revisao do mes atual | Tasks | In Tasks |
-| MPROJ-09 | P2: Usar o detalhamento como apoio a revisao do mes atual | Tasks | In Tasks |
-| MPROJ-10 | P2: Usar o detalhamento como apoio a revisao do mes atual | Tasks | In Tasks |
-| MPROJ-11 | P2: Usar o detalhamento como apoio a revisao do mes atual | Tasks | In Tasks |
+| MPROJ-01 | P1: Ver a composicao da projecao no mes analisado | Execute | Verified |
+| MPROJ-02 | P1: Ver a composicao da projecao no mes analisado | Execute | Verified |
+| MPROJ-03 | P1: Ver a composicao da projecao no mes analisado | Execute | Verified |
+| MPROJ-04 | P1: Ver a composicao da projecao no mes analisado | Execute | Verified |
+| MPROJ-05 | P1: Distinguir claramente registrado vs estimado | Execute | Verified |
+| MPROJ-06 | P1: Distinguir claramente registrado vs estimado | Execute | Verified |
+| MPROJ-07 | P1: Distinguir claramente registrado vs estimado | Execute | Verified |
+| MPROJ-08 | P2: Usar o detalhamento como apoio a revisao do mes atual | Execute | Verified |
+| MPROJ-09 | P2: Usar o detalhamento como apoio a revisao do mes atual | Execute | Verified |
+| MPROJ-10 | P2: Usar o detalhamento como apoio a revisao do mes atual | Execute | Verified |
+| MPROJ-11 | P2: Usar o detalhamento como apoio a revisao do mes atual | Execute | Verified |
 
 **Coverage:** 11 total, 11 mapped to tasks, 0 unmapped
 
@@ -114,7 +114,7 @@ Each requirement gets a unique ID for tracking across design, tasks, and validat
 
 How we know the feature is successful:
 
-- [ ] O usuario consegue abrir `Mensal` no mes atual ou futuro e entender a projecao sem voltar para a dashboard.
-- [ ] A pagina deixa claro quais valores estao registrados e quais sao apenas provaveis.
-- [ ] O detalhamento funciona para cenarios com itens persistidos, itens recorrentes e ausencia de projecao.
-- [ ] A feature preserva acessibilidade por teclado, feedback de estado e responsividade.
+- [x] O usuario consegue abrir `Mensal` no mes atual ou futuro e entender a projecao sem voltar para a dashboard.
+- [x] A pagina deixa claro quais valores estao registrados e quais sao apenas provaveis.
+- [x] O detalhamento funciona para cenarios com itens persistidos, itens recorrentes e ausencia de projecao.
+- [x] A feature preserva acessibilidade por teclado, feedback de estado e responsividade.

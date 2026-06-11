@@ -25,7 +25,7 @@
 - Definir prioridades entre fluxo Notion legado e fluxo Supabase atual.
 - Documentar comandos de validacao e testes usados em cada area.
 - Planejar e implementar a feature `003-importar-parcelas-por-mes` na worktree dedicada.
-- Especificar a feature `005-detalhar-projecoes-na-analise-mensal` para aprofundar a leitura de projecoes na tela `Mensal`.
+- Feature `005-detalhar-projecoes-na-analise-mensal` concluida em 2026-06-11.
 
 ## Open Product Decisions
 

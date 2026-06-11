@@ -21,6 +21,7 @@
 - O design da feature `005-detalhar-projecoes-na-analise-mensal` foi aprovado em 2026-06-11.
 - Nessa feature, transacoes registradas no dia atual contam como realizadas; deficit zera a sugestao semanal; meses futuros alem do horizonte da dashboard recebem detalhe; e itens registrados podem aparecer tanto na projecao quanto na tabela mensal.
 - A feature `005-detalhar-projecoes-na-analise-mensal` possui 9 tarefas planejadas, com componentes de apresentacao paralelizaveis e gate final unitario, lint, typecheck, build e Playwright.
+- A feature `005-detalhar-projecoes-na-analise-mensal` foi implementada e validada em 2026-06-11 com 53 testes unitarios e 19 testes Playwright.
 
 ## Current Facts
 
@@ -30,7 +31,7 @@
 - O schema real ja possui `budget_groups` e `transactions.budget_group_id` via migrations de 2026-06-09, mesmo que a documentacao anterior em `.specs/features/001-gerenciar-budget-groups/` ainda reflita um estado mais antigo.
 - O parser de cartao Santander ja identifica `installment` e hoje persiste apenas a parcela presente na fatura importada.
  - O parser de cartao Santander ja identifica `installment` e hoje persiste apenas a parcela presente na fatura importada.
-- A dashboard ja mostra `projectedMonths` de forma resumida, mas a pagina `Mensal` ainda nao expoe detalhamento dos itens previstos e provaveis por mes.
+- A dashboard mantem o horizonte resumido de tres meses, enquanto a pagina `Mensal` expoe totais, agregados e itens registrados/provaveis para o mes atual e meses futuros.
 
 ## Blockers
 

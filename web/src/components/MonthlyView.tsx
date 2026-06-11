@@ -2,10 +2,20 @@
 /* eslint-disable complexity */
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Dispatch, SetStateAction } from 'react'
-import type { DecoratedTransaction, GroupOption, MonthData, TransactionFilters, TransactionType } from '../types'
+import type {
+  DecoratedTransaction,
+  GroupOption,
+  MonthData,
+  MonthlyProjectionInsight,
+  TransactionFilters,
+  TransactionType,
+} from '../types'
 import { isFutureMonth } from '../lib/transactions'
 import { monthLabel } from '../lib/formatters'
 import { DashboardContent } from './DashboardContent'
+import { MonthlyProjectionBreakdown } from './MonthlyProjectionBreakdown'
+import { MonthlyProjectionItems } from './MonthlyProjectionItems'
+import { MonthlyProjectionSummary } from './MonthlyProjectionSummary'
 
 type MonthlyViewProps = {
   activeMonth: string
@@ -19,6 +29,7 @@ type MonthlyViewProps = {
   loading: boolean
   monthData: MonthData | null
   months: string[]
+  projectionInsight: MonthlyProjectionInsight | null
   savingId: string
   setSelectedMonth: Dispatch<SetStateAction<string>>
   setTransactionFilters: Dispatch<SetStateAction<TransactionFilters>>
@@ -38,6 +49,7 @@ export function MonthlyView({
   loading,
   monthData,
   months,
+  projectionInsight,
   savingId,
   setSelectedMonth,
   setTransactionFilters,
@@ -98,22 +110,48 @@ export function MonthlyView({
           </div>
           <p className="muted">
             {futureMonth
-              ? 'Meses futuros mostram apenas o que já está previsto na base.'
+              ? 'Meses futuros combinam lançamentos registrados e estimativas recorrentes.'
               : 'Esta área combina leitura do mês, revisão e edição dos lançamentos confirmados.'}
           </p>
         </div>
       </section>
 
       {loading ? (
-        <section className="panel skeleton-panel" role="status" aria-label="Carregando dados">
-          <div className="skeleton-line narrow" />
-          <div className="skeleton-line" />
-          <div className="skeleton-line wide" />
-          <div className="skeleton-line wide" />
-        </section>
+        <div className="page-stack" role="status" aria-label="Carregando análise mensal" aria-busy="true">
+          <section className="panel skeleton-panel" aria-hidden="true">
+            <div className="skeleton-line narrow" />
+            <div className="monthly-projection-metrics">
+              {Array.from({ length: 6 }, (_, index) => (
+                <div className="monthly-projection-metric" key={index}>
+                  <div className="skeleton-line" />
+                  <div className="skeleton-line wide" />
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="panel skeleton-panel" aria-hidden="true">
+            <div className="skeleton-line narrow" />
+            <div className="skeleton-line wide" />
+            <div className="skeleton-line" />
+          </section>
+          <section className="panel skeleton-panel" aria-hidden="true">
+            <div className="skeleton-line narrow" />
+            <div className="skeleton-line" />
+            <div className="skeleton-line wide" />
+            <div className="skeleton-line" />
+          </section>
+        </div>
       ) : null}
       {error ? <p className="feedback error" role="alert">{error}</p> : null}
       {feedback && !error ? <p className="feedback" role="status">{feedback}</p> : null}
+
+      {!loading && projectionInsight !== null ? (
+        <>
+          <MonthlyProjectionSummary insight={projectionInsight} />
+          <MonthlyProjectionBreakdown insight={projectionInsight} />
+          <MonthlyProjectionItems insight={projectionInsight} />
+        </>
+      ) : null}
 
       {!loading ? (
         <DashboardContent

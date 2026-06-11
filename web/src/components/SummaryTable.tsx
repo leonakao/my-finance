@@ -33,28 +33,30 @@ export function SummaryTable({ monthData }: SummaryTableProps) {
           <strong>{toCurrency(monthData.revenue)}</strong>
         </div>
       </div>
-      <table className="summary-table">
-        <thead>
-          <tr>
-            <th>Grupo</th>
-            <th>Total alocado</th>
-            <th>% da receita</th>
-            <th>Meta</th>
-            <th>Diferença</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.groupId}>
-              <td>{row.groupName}</td>
-              <td>{toCurrency(row.total)}</td>
-              <td>{toPercent(row.percent)}</td>
-              <td>{toPercent(row.target)}</td>
-              <td className={row.difference > 0 ? 'negative' : 'positive'}>{toPercent(row.difference)}</td>
+      <div className="table-wrap">
+        <table className="summary-table">
+          <thead>
+            <tr>
+              <th>Grupo</th>
+              <th>Total alocado</th>
+              <th>% da receita</th>
+              <th>Meta</th>
+              <th>Diferença</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.groupId}>
+                <td>{row.groupName}</td>
+                <td>{toCurrency(row.total)}</td>
+                <td>{toPercent(row.percent)}</td>
+                <td>{toPercent(row.target)}</td>
+                <td className={row.difference > 0 ? 'negative' : 'positive'}>{toPercent(row.difference)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   )
 }

@@ -270,6 +270,11 @@ textarea,
   gap: var(--space-6);
 }
 
+.page-stack > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .panel {
   padding: 24px;
 }
@@ -710,6 +715,9 @@ button.danger {
 }
 
 .table-wrap {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
 }
 

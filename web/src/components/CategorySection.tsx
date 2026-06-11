@@ -23,32 +23,34 @@ export function CategorySection({ group, revenue }: CategorySectionProps) {
           <h3>{group.name}</h3>
         </div>
       </div>
-      <table className="summary-table">
-        <thead>
-          <tr>
-            <th>Categoria</th>
-            <th>Total alocado</th>
-            <th>% da receita</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length ? (
-            rows.map((row) => (
-              <tr key={`${group.id}-${row.category}`}>
-                <td>{row.category}</td>
-                <td>{toCurrency(row.total)}</td>
-                <td>{toPercent(row.percent)}</td>
-              </tr>
-            ))
-          ) : (
+      <div className="table-wrap">
+        <table className="summary-table">
+          <thead>
             <tr>
-              <td colSpan={3} className="empty-cell">
-                Nenhum lançamento neste grupo.
-              </td>
+              <th>Categoria</th>
+              <th>Total alocado</th>
+              <th>% da receita</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.length ? (
+              rows.map((row) => (
+                <tr key={`${group.id}-${row.category}`}>
+                  <td>{row.category}</td>
+                  <td>{toCurrency(row.total)}</td>
+                  <td>{toPercent(row.percent)}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={3} className="empty-cell">
+                  Nenhum lançamento neste grupo.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </section>
   )
 }

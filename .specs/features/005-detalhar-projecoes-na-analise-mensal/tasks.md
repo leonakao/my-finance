@@ -1,7 +1,7 @@
 # Detalhar Projecoes Na Analise Mensal Tasks
 
 **Design**: `.specs/features/005-detalhar-projecoes-na-analise-mensal/design.md`
-**Status**: In Progress
+**Status**: Complete
 **Baseline unitario**: 3 arquivos, 10 testes passando em 2026-06-11
 
 ---
@@ -393,18 +393,18 @@ Expected: todos os comandos terminam com exit code `0`.
 
 **Done when**:
 
-- [ ] Mes passado preserva a pagina atual sem bloco de projecao
-- [ ] Mes atual mostra resumo, breakdown e listas antes do conteudo mensal existente
-- [ ] Mes futuro mostra projecao completa sem sugestao semanal
-- [ ] Item registrado restante aparece na projecao e continua na tabela mensal editavel
-- [ ] Item provavel aparece somente na projecao
-- [ ] Estado vazio nao oculta `DashboardContent`
-- [ ] Texto de meses futuros menciona registrados e estimativas recorrentes
-- [ ] URL direta e navegacao dashboard -> mensal continuam funcionando
-- [ ] `monthly.spec.ts` cobre mes atual, futuro, vazio, duplicacao intencional e URL
-- [ ] `dashboard.spec.ts` confirma horizonte e totais atuais sem regressao
-- [ ] Suite unitaria final tem pelo menos 50 testes, sem remover os 10 existentes
-- [ ] Gate completo passa
+- [x] Mes passado preserva a pagina atual sem bloco de projecao
+- [x] Mes atual mostra resumo, breakdown e listas antes do conteudo mensal existente
+- [x] Mes futuro mostra projecao completa sem sugestao semanal
+- [x] Item registrado restante aparece na projecao e continua na tabela mensal editavel
+- [x] Item provavel aparece somente na projecao
+- [x] Estado vazio nao oculta `DashboardContent`
+- [x] Texto de meses futuros menciona registrados e estimativas recorrentes
+- [x] URL direta e navegacao dashboard -> mensal continuam funcionando
+- [x] `monthly.spec.ts` cobre mes atual, futuro, vazio, duplicacao intencional e URL
+- [x] `dashboard.spec.ts` confirma horizonte e totais atuais sem regressao
+- [x] Suite unitaria final tem pelo menos 50 testes, sem remover os 10 existentes
+- [x] Gate completo passa
 
 **Tests**: E2E
 **Gate**: Full
@@ -427,6 +427,16 @@ Expected:
 - todos os testes Playwright passam
 
 **Commit**: `feat(monthly-projection): integrate detailed monthly analysis`
+
+---
+
+## Validation Result
+
+- 9 arquivos e 53 testes unitarios passaram.
+- Lint, typecheck e build passaram.
+- 19 testes Playwright passaram.
+- Viewports de 390px, 1280px e 2560px foram validados sem overflow da pagina.
+- Nenhum `SPEC_DEVIATION` foi necessario.
 
 ---
 
