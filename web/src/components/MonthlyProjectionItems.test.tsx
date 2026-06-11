@@ -62,6 +62,7 @@ function insight(overrides: Partial<MonthlyProjectionInsight> = {}): MonthlyProj
     weeklySpendingSuggestion: null,
     registeredItems: [registeredItem],
     probableItems: [probableItem],
+    removedProbableItems: [],
     groupSummaries: [],
     categorySummaries: [],
     ...overrides,

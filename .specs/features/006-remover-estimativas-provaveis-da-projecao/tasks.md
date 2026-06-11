@@ -112,12 +112,14 @@ Expected: migration aplicada; constraints e RLS validadas; script imprime `Teste
 
 **Done when**:
 
-- [ ] Os cinco contratos descritos no design sao exportados
-- [ ] Transferencias sao excluidas do tipo de recorrencia
-- [ ] O record preserva nomes snake_case da borda Supabase
-- [ ] O dominio usa nomes camelCase
-- [ ] `MonthlyProjectionInsight` inclui removidos sem alterar transacoes registradas
+- [x] Os cinco contratos descritos no design sao exportados
+- [x] Transferencias sao excluidas do tipo de recorrencia
+- [x] O record preserva nomes snake_case da borda Supabase
+- [x] O dominio usa nomes camelCase
+- [x] `MonthlyProjectionInsight` inclui removidos sem alterar transacoes registradas
 - [ ] `npm run typecheck` passa
+
+**Gate note**: bloqueado por imports Deno adicionados em trabalho paralelo nos testes `santanderAccountParser.test.ts` e `santanderAccountRealPdf.test.ts`; a unica falha introduzida pela feature foi corrigida.
 
 **Tests**: typecheck
 **Gate**: Type

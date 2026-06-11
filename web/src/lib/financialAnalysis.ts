@@ -562,6 +562,7 @@ function buildMonthlyProjectionInsight(
     weeklySpendingSuggestion: weeklyBalance === null ? null : Math.max(0, weeklyBalance),
     registeredItems,
     probableItems,
+    removedProbableItems: [],
     groupSummaries: buildGroupSummaries(allItems, budgetGroups),
     categorySummaries: buildCategorySummaries(allItems),
   }

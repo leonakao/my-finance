@@ -200,6 +200,41 @@ export type ProjectionLineItem = {
   basis: ProjectionItemBasis | null
 }
 
+export type ProjectionExclusionScope = 'month' | 'from_month'
+
+export type ProjectionExclusion = {
+  id: string
+  type: Exclude<TransactionType, 'Transferência'>
+  description: string
+  normalizedDescription: string
+  scope: ProjectionExclusionScope
+  monthStart: string
+  createdAt: string
+}
+
+export type ProjectionExclusionRecord = {
+  id: string
+  type: Exclude<TransactionType, 'Transferência'> | null
+  description: string | null
+  normalized_description: string | null
+  scope: ProjectionExclusionScope | null
+  month_start: string | null
+  created_at: string | null
+}
+
+export type ProjectionExclusionPayload = {
+  type: Exclude<TransactionType, 'Transferência'>
+  description: string
+  normalizedDescription: string
+  scope: ProjectionExclusionScope
+  monthKey: string
+}
+
+export type RemovedProjectionItem = {
+  exclusion: ProjectionExclusion
+  currentEstimate: ProjectionLineItem | null
+}
+
 export type ProjectionGroupSummary = {
   budgetGroupId: string | null
   budgetGroupName: string
@@ -241,6 +276,7 @@ export type MonthlyProjectionInsight = {
   weeklySpendingSuggestion: number | null
   registeredItems: ProjectionLineItem[]
   probableItems: ProjectionLineItem[]
+  removedProbableItems: RemovedProjectionItem[]
   groupSummaries: ProjectionGroupSummary[]
   categorySummaries: ProjectionCategorySummary[]
 }
