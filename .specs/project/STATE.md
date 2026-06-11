@@ -22,6 +22,7 @@
 - Nessa feature, transacoes registradas no dia atual contam como realizadas; deficit zera a sugestao semanal; meses futuros alem do horizonte da dashboard recebem detalhe; e itens registrados podem aparecer tanto na projecao quanto na tabela mensal.
 - A feature `005-detalhar-projecoes-na-analise-mensal` possui 9 tarefas planejadas, com componentes de apresentacao paralelizaveis e gate final unitario, lint, typecheck, build e Playwright.
 - A feature `005-detalhar-projecoes-na-analise-mensal` foi implementada e validada em 2026-06-11 com 53 testes unitarios e 19 testes Playwright.
+- O Static Site `my-finance-web` no Render usa rewrite `/*` -> `/index.html` para suportar acesso direto as rotas da SPA sem 404.
 
 ## Current Facts
 
