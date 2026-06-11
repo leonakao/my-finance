@@ -12,7 +12,9 @@ type TextEvent = {
 
 const dateRe = /(?<day>\d{2})\/(?<month>\d{2})/
 const moneyRe = /^-?\d{1,3}(?:\.\d{3})*,\d{2}$|^-?\d+,\d{2}$/
-const parcelRe = /^\d{2}\/\d{2}$/
+const moneyFindRe = /-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2}/g
+const rowTailWithInstallmentRe = /^(.*?)(\d{2}\/\d{2})(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})$/
+const rowTailAmountOnlyRe = /^(.*?)(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})$/
 
 function binaryStringFromBytes(bytes: Uint8Array): string {
   let out = ''
@@ -73,6 +75,11 @@ function textFromTjArray(raw: string): string {
   return parts.map((part) => decodePdfString(part.slice(1, -1))).join('')
 }
 
+function textFromTjOperator(raw: string): string {
+  const match = raw.match(/^\((.*)\)\s*Tj$/s)
+  return match ? decodePdfString(match[1]) : ''
+}
+
 function inflateStreams(pdfBytes: Uint8Array): string[] {
   const pdf = binaryStringFromBytes(pdfBytes)
   const streams: string[] = []
@@ -95,10 +102,10 @@ function extractTextEvents(pdfBytes: Uint8Array): TextEvent[] {
   const events: TextEvent[] = []
   let page = 0
   const commandRe =
-    /BT|ET|\/F\d+\s+1\s+Tf|[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+Tm|[-\d.]+\s+[-\d.]+\s+Td|\[(?:\\.|[^\]])*\]TJ/gs
+    /BT|ET|\/[A-Za-z0-9]+\s+1\s+Tf|[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+Tm|[-\d.]+\s+[-\d.]+\s+Td|\((?:\\.|[^\\)])*\)\s*Tj|\[(?:\\.|[^\]])*\]TJ/gs
 
   for (const stream of inflateStreams(pdfBytes)) {
-    if (!stream.includes('TJ')) continue
+    if (!stream.includes('TJ') && !stream.includes('Tj')) continue
     page += 1
     let inText = false
     let x = 0
@@ -116,7 +123,7 @@ function extractTextEvents(pdfBytes: Uint8Array): TextEvent[] {
         continue
       }
       if (!inText) continue
-      if (token.startsWith('/F')) {
+      if (token.endsWith(' Tf')) {
         font = token.split(/\s+/)[0]
         continue
       }
@@ -132,6 +139,13 @@ function extractTextEvents(pdfBytes: Uint8Array): TextEvent[] {
         y += Number(parts[1])
         continue
       }
+      if (token.endsWith('Tj')) {
+        const text = textFromTjOperator(token).trim()
+        if (text) {
+          events.push({ page, x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, font, text })
+        }
+        continue
+      }
       if (token.endsWith('TJ')) {
         const text = textFromTjArray(token.slice(0, -2)).trim()
         if (text) {
@@ -144,22 +158,30 @@ function extractTextEvents(pdfBytes: Uint8Array): TextEvent[] {
   return events
 }
 
+function rowTextFromEvents(rowEvents: TextEvent[]): string {
+  return rowEvents.map((event) => event.text).join('').replace(/\s+/g, ' ').trim()
+}
+
 function decimalFromBrl(value: string): number {
   return Number(value.replace(/\./g, '').replace(',', '.'))
 }
 
-function inferClosingMonth(events: TextEvent[]): number {
-  for (const event of events) {
-    const match = event.text.match(/até\s+(\d{2})\/(\d{2})/)
-    if (match) return Number(match[2])
+function inferClosingMonth(rows: Map<string, TextEvent[]>): number {
+  for (const [, rowEvents] of rows) {
+    const rowText = rowTextFromEvents(rowEvents)
+    const match = rowText.match(/até\s*(\d{2})\/(\d{2})|\b\d{2}\/\d{2}\/\d{2,4}\s*a\s*\d{2}\/(\d{2})\/\d{2,4}\b/i)
+    if (match) return Number(match[2] ?? match[3])
   }
   return 12
 }
 
-function inferYear(events: TextEvent[]): number {
-  for (const event of events) {
-    const match = event.text.match(/\b\d{2}\/\d{2}\/(\d{4})\b/)
-    if (match) return Number(match[1])
+function inferYear(rows: Map<string, TextEvent[]>): number {
+  for (const [, rowEvents] of rows) {
+    const rowText = rowTextFromEvents(rowEvents)
+    const fullYearMatch = rowText.match(/\b\d{2}\/\d{2}\/(\d{4})\b/)
+    if (fullYearMatch) return Number(fullYearMatch[1])
+    const shortYearMatch = rowText.match(/\b\d{2}\/\d{2}\/(\d{2})\b/)
+    if (shortYearMatch) return 2000 + Number(shortYearMatch[1])
   }
   return 2026
 }
@@ -189,17 +211,16 @@ function detectCandidatePages(rows: Map<string, TextEvent[]>) {
   const pageScores = new Map<number, number>()
 
   for (const [, rowEvents] of rows) {
-    const texts = [...rowEvents].sort((left, right) => left.x - right.x).map((event) => event.text)
-    const rowText = texts.join(' ')
+    const rowText = rowTextFromEvents(rowEvents)
     const hasDate = dateRe.test(rowText)
-    const hasAmount = texts.some((text) => moneyRe.test(text) && !text.startsWith('-'))
+    const hasAmount = [...rowText.matchAll(moneyFindRe)].some((match) => !match[0].startsWith('-'))
     if (!hasDate || !hasAmount) continue
     const page = rowEvents[0]?.page
     if (!page) continue
     pageScores.set(page, (pageScores.get(page) ?? 0) + 1)
   }
 
-  return new Set(pageScores.keys())
+  return new Set([...pageScores.entries()].filter(([, score]) => score >= 3).map(([page]) => page))
 }
 
 function categoryFor(description: string): string {
@@ -249,6 +270,24 @@ function budgetGroupFor(category: string, description: string): DefaultBudgetGro
   return 'Desejos'
 }
 
+function isPaymentRow(description: string): boolean {
+  return description.replace(/\s+/g, '').toUpperCase().includes('PAGAMENTODEFATURA')
+}
+
+function normalizeDescriptionAndAmount(description: string, amountText: string, installment: string) {
+  if (!installment && description.endsWith('/')) {
+    const [integerPart, cents] = amountText.split(',')
+    if (integerPart.length > 2) {
+      return {
+        description: `${description}${integerPart.slice(0, 2)}`,
+        amountText: `${integerPart.slice(2)},${cents}`,
+      }
+    }
+  }
+
+  return { description, amountText }
+}
+
 export function parseSantanderPdf(params: {
   userId: string
   pdfBytes: Uint8Array
@@ -256,9 +295,9 @@ export function parseSantanderPdf(params: {
   invoice?: string
 }): ParsedImportedTransaction[] {
   const events = extractTextEvents(params.pdfBytes)
-  const closingMonth = inferClosingMonth(events)
-  const statementYear = inferYear(events)
   const rows = buildCandidateRows(events)
+  const closingMonth = inferClosingMonth(rows)
+  const statementYear = inferYear(rows)
   const candidatePages = detectCandidatePages(rows)
   const pageCards: Record<number, string> = {}
 
@@ -274,35 +313,23 @@ export function parseSantanderPdf(params: {
   for (const [, rowEvents] of [...rows.entries()].sort((left, right) => left[0].localeCompare(right[0]))) {
     if (!candidatePages.has(rowEvents[0]?.page ?? 0)) continue
     const ordered = [...rowEvents].sort((left, right) => left.x - right.x)
-    const texts = ordered.map((event) => event.text)
-    const rowText = texts.join(' ')
+    const rowText = rowTextFromEvents(rowEvents)
     const dateMatch = rowText.match(dateRe)
     if (!dateMatch?.groups) continue
 
-    const positiveAmounts = texts.filter((text) => moneyRe.test(text) && !text.startsWith('-'))
-    if (!positiveAmounts.length) continue
-    const amountText = positiveAmounts.at(-1) ?? ''
+    const descriptionStart = (dateMatch.index ?? 0) + dateMatch[0].length
+    const tail = rowText.slice(descriptionStart).trim()
+    const installmentTailMatch = tail.match(rowTailWithInstallmentRe)
+    const amountOnlyTailMatch = tail.match(rowTailAmountOnlyRe)
+    const tailMatch = installmentTailMatch ?? amountOnlyTailMatch
+    if (!tailMatch) continue
 
-    const firstDateIndex = texts.findIndex((text) => dateRe.test(text))
-    const afterDate = texts[firstDateIndex].replace(dateRe, '').trim()
-    const descriptionParts: string[] = []
-    if (afterDate) descriptionParts.push(afterDate)
-    for (const text of texts.slice(firstDateIndex + 1)) {
-      if (moneyRe.test(text) || parcelRe.test(text)) continue
-      if (['VALOR TOTAL', 'Descrição', 'R$', 'US$'].includes(text)) continue
-      descriptionParts.push(text)
-    }
+    const rawDescription = tailMatch[1].trim()
+    const installment = installmentTailMatch?.[2] ?? ''
+    const rawAmountText = installmentTailMatch?.[3] ?? amountOnlyTailMatch?.[2] ?? ''
+    const { description, amountText } = normalizeDescriptionAndAmount(rawDescription, rawAmountText, installment)
 
-    const description = descriptionParts.join(' ').trim()
-    if (!description || description.includes('PAGAMENTO DE FATURA')) continue
-
-    let installment = ''
-    for (const text of texts.slice(firstDateIndex + 1)) {
-      if (parcelRe.test(text)) {
-        installment = text
-        break
-      }
-    }
+    if (!description || isPaymentRow(description)) continue
 
     const day = Number(dateMatch.groups.day)
     const month = Number(dateMatch.groups.month)

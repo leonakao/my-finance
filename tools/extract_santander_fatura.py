@@ -22,7 +22,9 @@ from pathlib import Path
 
 DATE_RE = re.compile(r"(?P<day>\d{2})/(?P<month>\d{2})")
 MONEY_RE = re.compile(r"^-?\d{1,3}(?:\.\d{3})*,\d{2}$|^-?\d+,\d{2}$")
-PARCEL_RE = re.compile(r"^\d{2}/\d{2}$")
+MONEY_FIND_RE = re.compile(r"-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2}")
+ROW_TAIL_WITH_INSTALLMENT_RE = re.compile(r"^(.*?)(\d{2}/\d{2})(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})$")
+ROW_TAIL_AMOUNT_ONLY_RE = re.compile(r"^(.*?)(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})$")
 
 
 @dataclass(frozen=True)
@@ -88,6 +90,11 @@ def text_from_tj_array(raw: bytes) -> str:
     return "".join(decode_pdf_string(part.group(0)[1:-1]) for part in parts)
 
 
+def text_from_tj_operator(raw: bytes) -> str:
+    match = re.match(rb"^\((.*)\)\s*Tj$", raw, re.S)
+    return decode_pdf_string(match.group(1)) if match else ""
+
+
 def inflate_streams(pdf: bytes) -> list[bytes]:
     streams: list[bytes] = []
     for match in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", pdf, re.S):
@@ -104,15 +111,16 @@ def extract_text_events(pdf_path: Path) -> list[TextEvent]:
     page = 0
     command_re = re.compile(
         rb"BT|ET|"
-        rb"/F\d+\s+1\s+Tf|"
+        rb"/[A-Za-z0-9]+\s+1\s+Tf|"
         rb"[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+Tm|"
         rb"[-\d.]+\s+[-\d.]+\s+Td|"
+        rb"\((?:\\.|[^\\)])*\)\s*Tj|"
         rb"\[(?:\\.|[^\]])*\]TJ",
         re.S,
     )
 
     for stream in inflate_streams(pdf):
-        if b"TJ" not in stream:
+        if b"TJ" not in stream and b"Tj" not in stream:
             continue
         page += 1
         in_text = False
@@ -129,7 +137,7 @@ def extract_text_events(pdf_path: Path) -> list[TextEvent]:
                 continue
             if not in_text:
                 continue
-            if token.startswith(b"/F"):
+            if token.endswith(b" Tf"):
                 font = token.split()[0].decode("ascii", "replace")
                 continue
             if token.endswith(b" Tm"):
@@ -142,11 +150,20 @@ def extract_text_events(pdf_path: Path) -> list[TextEvent]:
                 x += float(parts[0])
                 y += float(parts[1])
                 continue
+            if token.endswith(b"Tj"):
+                text = text_from_tj_operator(token).strip()
+                if text:
+                    events.append(TextEvent(page=page, y=round(y, 2), x=round(x, 2), font=font, text=text))
+                continue
             if token.endswith(b"TJ"):
                 text = text_from_tj_array(token[:-2]).strip()
                 if text:
                     events.append(TextEvent(page=page, y=round(y, 2), x=round(x, 2), font=font, text=text))
     return events
+
+
+def row_text_from_events(row_events: list[TextEvent]) -> str:
+    return re.sub(r"\s+", " ", "".join(event.text for event in row_events)).strip()
 
 
 def decimal_from_brl(value: str) -> Decimal:
@@ -163,19 +180,24 @@ def brl_from_decimal(value: Decimal) -> str:
     return f"{'.'.join(reversed(groups))},{cents}"
 
 
-def infer_closing_month(events: list[TextEvent]) -> int:
-    for event in events:
-        match = re.search(r"até\s+(\d{2})/(\d{2})", event.text)
+def infer_closing_month(rows: dict[tuple[int, float], list[TextEvent]]) -> int:
+    for row_events in rows.values():
+        row_text = row_text_from_events(row_events)
+        match = re.search(r"até\s*(\d{2})/(\d{2})|\b\d{2}/\d{2}/\d{2,4}\s*a\s*\d{2}/(\d{2})/\d{2,4}\b", row_text, re.I)
         if match:
-            return int(match.group(2))
+            return int(match.group(2) or match.group(3))
     return 12
 
 
-def infer_year(events: list[TextEvent]) -> int:
-    for event in events:
-        match = re.search(r"\b\d{2}/\d{2}/(\d{4})\b", event.text)
-        if match:
-            return int(match.group(1))
+def infer_year(rows: dict[tuple[int, float], list[TextEvent]]) -> int:
+    for row_events in rows.values():
+        row_text = row_text_from_events(row_events)
+        full_year_match = re.search(r"\b\d{2}/\d{2}/(\d{4})\b", row_text)
+        if full_year_match:
+            return int(full_year_match.group(1))
+        short_year_match = re.search(r"\b\d{2}/\d{2}/(\d{2})\b", row_text)
+        if short_year_match:
+            return 2000 + int(short_year_match.group(1))
     return 2026
 
 
@@ -252,63 +274,67 @@ def budget_group_for(category: str, description: str) -> str:
     return "30 Desejos"
 
 
-def parse_transactions(events: list[TextEvent]) -> list[Transaction]:
-    closing_month = infer_closing_month(events)
-    statement_year = infer_year(events)
+def normalize_description_and_amount(description: str, amount: str, installment: str) -> tuple[str, str]:
+    if not installment and description.endswith("/"):
+        integer_part, cents = amount.split(",")
+        if len(integer_part) > 2:
+            return f"{description}{integer_part[:2]}", f"{integer_part[2:]},{cents}"
 
+    return description, amount
+
+
+def parse_transactions(events: list[TextEvent]) -> list[Transaction]:
     rows: dict[tuple[int, float], list[TextEvent]] = {}
     active_cards = {128: "0128", 5480: "5480"}
 
     for event in events:
         if "XXXX XXXX 8713" in event.text:
             active_cards[5480] = "8713"
-        if event.page not in {2, 3}:
-            continue
-        if event.font == "/F10":
-            continue
         rows.setdefault((event.page, event.y), []).append(event)
+
+    closing_month = infer_closing_month(rows)
+    statement_year = infer_year(rows)
+    candidate_pages: set[int] = set()
+    for row_events in rows.values():
+        row_text = row_text_from_events(row_events)
+        has_date = bool(DATE_RE.search(row_text))
+        has_amount = any(not match.group(0).startswith("-") for match in MONEY_FIND_RE.finditer(row_text))
+        if has_date and has_amount:
+            candidate_pages.add(row_events[0].page)
+    page_scores = {page: 0 for page in candidate_pages}
+    for row_events in rows.values():
+        row_text = row_text_from_events(row_events)
+        has_date = bool(DATE_RE.search(row_text))
+        has_amount = any(not match.group(0).startswith("-") for match in MONEY_FIND_RE.finditer(row_text))
+        if has_date and has_amount:
+            page_scores[row_events[0].page] = page_scores.get(row_events[0].page, 0) + 1
+    candidate_pages = {page for page, score in page_scores.items() if score >= 3}
 
     transactions: list[Transaction] = []
     for (page, _y), row_events in sorted(rows.items()):
+        if page not in candidate_pages:
+            continue
         row_events = sorted(row_events, key=lambda event: event.x)
-        texts = [event.text for event in row_events]
-        row_text = " ".join(texts)
+        row_text = row_text_from_events(row_events)
 
         date_match = DATE_RE.search(row_text)
         if not date_match:
             continue
 
-        amounts = [text for text in texts if MONEY_RE.match(text)]
-        positive_amounts = [amount for amount in amounts if not amount.startswith("-")]
-        if not positive_amounts:
-            continue
-        amount = positive_amounts[-1]
-
-        # Headers and summary rows can contain dates or money-like values nearby;
-        # keep only rows that have a date and a merchant description.
-        first_date_index = next(i for i, text in enumerate(texts) if DATE_RE.search(text))
-        date_text = DATE_RE.search(texts[first_date_index]).group(0)
-        after_date = DATE_RE.sub("", texts[first_date_index], count=1).strip()
-
-        description_parts = []
-        if after_date:
-            description_parts.append(after_date)
-        for text in texts[first_date_index + 1 :]:
-            if MONEY_RE.match(text) or PARCEL_RE.match(text):
-                continue
-            if text in {"VALOR TOTAL", "Descrição", "R$", "US$"}:
-                continue
-            description_parts.append(text)
-
-        description = " ".join(description_parts).strip()
-        if not description or "PAGAMENTO DE FATURA" in description:
+        description_start = date_match.end()
+        tail = row_text[description_start:].strip()
+        installment_tail_match = ROW_TAIL_WITH_INSTALLMENT_RE.match(tail)
+        amount_only_tail_match = ROW_TAIL_AMOUNT_ONLY_RE.match(tail)
+        tail_match = installment_tail_match or amount_only_tail_match
+        if not tail_match:
             continue
 
-        installment = ""
-        for text in texts[first_date_index + 1 :]:
-            if PARCEL_RE.match(text):
-                installment = text
-                break
+        description = tail_match.group(1).strip()
+        installment = installment_tail_match.group(2) if installment_tail_match else ""
+        amount = installment_tail_match.group(3) if installment_tail_match else amount_only_tail_match.group(2)
+        description, amount = normalize_description_and_amount(description, amount, installment)
+        if not description or "PAGAMENTODEFATURA" in description.replace(" ", "").upper():
+            continue
 
         day = int(date_match.group("day"))
         month = int(date_match.group("month"))
