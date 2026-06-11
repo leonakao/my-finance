@@ -142,18 +142,18 @@ Expected: pelo menos `4` arquivos e `16` testes passam; typecheck termina com ex
 
 **Done when**:
 
-- [ ] `buildFinancialAnalysis()` retorna `overview` e `monthlyProjectionInsight`
-- [ ] `buildFinancialOverview()` continua disponivel e preserva os totais atuais
-- [ ] Receitas e despesas registradas/provaveis ficam separadas
-- [ ] Mes atual usa `date <= today` como realizado e `date > today` como restante registrado
-- [ ] Provavel com `expectedDate >= today` entra no restante quando nao houver match persistido
-- [ ] Transferencias nao alteram saldo nem listas de projecao
-- [ ] Mes futuro distante recebe insight sem ampliar os tres meses da dashboard
-- [ ] Saldo projetado, deficit e sugestao semanal seguem as formulas aprovadas
-- [ ] Itens, grupos e categorias sao ordenados conforme o design
-- [ ] Sao adicionados pelo menos 18 testes do engine
-- [ ] Suite total tem pelo menos 34 testes, sem remover cobertura existente
-- [ ] `npm run test && npm run typecheck` passa
+- [x] `buildFinancialAnalysis()` retorna `overview` e `monthlyProjectionInsight`
+- [x] `buildFinancialOverview()` continua disponivel e preserva os totais atuais
+- [x] Receitas e despesas registradas/provaveis ficam separadas
+- [x] Mes atual usa `date <= today` como realizado e `date > today` como restante registrado
+- [x] Provavel com `expectedDate >= today` entra no restante quando nao houver match persistido
+- [x] Transferencias nao alteram saldo nem listas de projecao
+- [x] Mes futuro distante recebe insight sem ampliar os tres meses da dashboard
+- [x] Saldo projetado, deficit e sugestao semanal seguem as formulas aprovadas
+- [x] Itens, grupos e categorias sao ordenados conforme o design
+- [x] Sao adicionados pelo menos 18 testes do engine
+- [x] Suite total tem pelo menos 34 testes, sem remover cobertura existente
+- [x] `npm run test && npm run typecheck` passa
 
 **Tests**: unit
 **Gate**: Unit

@@ -8,20 +8,16 @@ import type {
   ClassificationRuleRecord,
   ClassificationSnapshot,
   DecoratedTransaction,
-  FinancialOverview,
   GroupOption,
   MonthData,
   MonthGroupBucket,
-  MonthSummary,
-  ProjectionMonth,
-  RecurringCandidate,
-  TrendMonth,
   Transaction,
   TransactionFilters,
   TransactionRecord,
   TransactionType,
 } from '../types'
 import { addMonthsToMonthKey, compareMonthKeys, getCurrentMonthKey } from './monthKeys'
+export { buildFinancialAnalysis, buildFinancialOverview, buildMonthSummaries } from './financialAnalysis'
 
 type RuleLike = Partial<ClassificationRule> & Partial<ClassificationRuleRecord>
 type TransactionLike = Partial<Transaction> & { budget_group_id?: string | null }
@@ -48,10 +44,6 @@ export function buildMonthRange(transactions: Transaction[], monthsForward = PRO
 
 export function isFutureMonth(monthKey: string, now = new Date()): boolean {
   return compareMonthKeys(monthKey, getCurrentMonthKey(now)) > 0
-}
-
-function accumulateAmount(collection: Record<string, number>, key: string, amount: number): void {
-  collection[key] = (collection[key] ?? 0) + amount
 }
 
 export function matchesFilter(value: string, filter: string): boolean {
@@ -345,246 +337,6 @@ export function getAvailableMonths(transactions: Transaction[]): string[] {
   return [
     ...new Set(transactions.map((item) => item.date?.slice(0, 7)).filter((value): value is string => Boolean(value))),
   ].sort().reverse()
-}
-
-export function buildMonthSummaries(transactions: Transaction[]): MonthSummary[] {
-  const monthMap = new Map<string, MonthSummary>()
-
-  for (const transaction of transactions) {
-    const monthKey = transaction.date?.slice(0, 7)
-    if (monthKey === undefined || monthKey === '') {
-      continue
-    }
-
-    if (!monthMap.has(monthKey)) {
-      monthMap.set(monthKey, {
-        monthKey,
-        revenue: 0,
-        expenses: 0,
-        transferOut: 0,
-        net: 0,
-      })
-    }
-
-    const summary = monthMap.get(monthKey)
-    if (!summary) {
-      continue
-    }
-
-    if (transaction.type === 'Receita') {
-      summary.revenue += transaction.amount
-      summary.net += transaction.amount
-      continue
-    }
-
-    if (transaction.type === 'Transferência') {
-      summary.transferOut += transaction.amount
-      continue
-    }
-
-    summary.expenses += transaction.amount
-    summary.net -= transaction.amount
-  }
-
-  return [...monthMap.values()].sort((left, right) => left.monthKey.localeCompare(right.monthKey))
-}
-
-/* eslint-disable-next-line complexity */
-function buildRecurringCandidates(transactions: Transaction[], currentMonthKey: string): RecurringCandidate[] {
-  const recentMonths = Array.from({ length: 4 }, (_, index) => addMonthsToMonthKey(currentMonthKey, -index))
-  const recentMonthSet = new Set(recentMonths)
-  const grouped = new Map<string, { months: Set<string>; transactions: Transaction[] }>()
-
-  for (const transaction of transactions) {
-    const monthKey = transaction.date?.slice(0, 7)
-    if (
-      monthKey === undefined
-      || monthKey === ''
-      || !recentMonthSet.has(monthKey)
-      || transaction.type === 'Transferência'
-      || (transaction.installment ?? '') !== ''
-    ) {
-      continue
-    }
-
-    const normalizedDescription = normalizeRuleDescription(transaction.description)
-    if (!normalizedDescription) {
-      continue
-    }
-
-    const key = `${transaction.type}:${normalizedDescription}`
-    const current = grouped.get(key) ?? { months: new Set<string>(), transactions: [] }
-    current.months.add(monthKey)
-    current.transactions.push(transaction)
-    grouped.set(key, current)
-  }
-
-  return [...grouped.entries()]
-    .filter(([, entry]) => entry.months.size >= 2)
-    .map(([key, entry]) => {
-      const [type] = key.split(':') as [Exclude<TransactionType, 'Transferência'>]
-      const latestTransaction = [...entry.transactions].sort((left, right) => (right.date ?? '').localeCompare(left.date ?? ''))[0]!
-      const averageAmount = entry.transactions.reduce((total, transaction) => total + transaction.amount, 0) / entry.transactions.length
-      const lastObservedDate = latestTransaction.date ?? ''
-
-      return {
-        description: latestTransaction.description,
-        normalizedDescription: normalizeRuleDescription(latestTransaction.description),
-        amount: averageAmount,
-        type,
-        category: latestTransaction.category,
-        budgetGroupId: latestTransaction.budgetGroupId,
-        occurrenceCount: entry.transactions.length,
-        observedMonthCount: entry.months.size,
-        lastObservedDate,
-        expectedDayOfMonth: Number(lastObservedDate.slice(8, 10)),
-      }
-    })
-}
-
-function hasPersistedRecurringMatch(transactions: Transaction[], candidate: RecurringCandidate, monthKey: string): boolean {
-  return transactions.some((transaction) => {
-    if (transaction.type !== candidate.type || transaction.date?.slice(0, 7) !== monthKey) {
-      return false
-    }
-
-    return normalizeRuleDescription(transaction.description) === candidate.normalizedDescription
-  })
-}
-
-// eslint-disable-next-line complexity
-function buildTrendMonth(
-  monthKey: string,
-  currentMonthKey: string,
-  summaryByMonth: Map<string, MonthSummary>,
-  projectionByMonth: Map<string, ProjectionMonth>,
-): TrendMonth {
-  const summary = summaryByMonth.get(monthKey)
-  const projection = projectionByMonth.get(monthKey)
-
-  if (compareMonthKeys(monthKey, currentMonthKey) > 0 && projection) {
-    return {
-      monthKey,
-      revenue: projection.revenue,
-      expenses: projection.confirmedExpenses + projection.probableExpenses,
-      transferOut: 0,
-      net: projection.net,
-      isCurrent: false,
-      isProjected: true,
-    }
-  }
-
-  return {
-    monthKey,
-    revenue: summary?.revenue ?? 0,
-    expenses: summary?.expenses ?? 0,
-    transferOut: summary?.transferOut ?? 0,
-    net: summary?.net ?? 0,
-    isCurrent: monthKey === currentMonthKey,
-    isProjected: false,
-  }
-}
-
-/* eslint-disable-next-line max-lines-per-function, complexity */
-export function buildFinancialOverview(transactions: Transaction[], budgetGroups: BudgetGroup[], now = new Date()): FinancialOverview {
-  const currentMonthKey = getCurrentMonthKey(now)
-  const monthSummaries = buildMonthSummaries(transactions)
-  const recentMonths = monthSummaries.slice(-6)
-  const recurringCandidates = buildRecurringCandidates(transactions, currentMonthKey)
-  const currentMonthWindow = Array.from({ length: PROJECTION_HORIZON_MONTHS }, (_, index) => addMonthsToMonthKey(currentMonthKey, index))
-  const projectedMonths: ProjectionMonth[] = currentMonthWindow.map((monthKey) => ({
-    monthKey,
-    revenue: 0,
-    confirmedExpenses: 0,
-    probableExpenses: 0,
-    net: 0,
-    plannedTransactionsCount: 0,
-    probableTransactionsCount: 0,
-    plannedByGroup: {},
-    probableByGroup: {},
-  }))
-
-  const projectionByMonth = new Map(projectedMonths.map((projection) => [projection.monthKey, projection]))
-
-  for (const transaction of transactions) {
-    const monthKey = transaction.date?.slice(0, 7)
-    if (monthKey === undefined || monthKey === '') {
-      continue
-    }
-
-    const projection = projectionByMonth.get(monthKey)
-    if (!projection) {
-      continue
-    }
-
-    projection.plannedTransactionsCount += 1
-    if (transaction.type === 'Receita') {
-      projection.revenue += transaction.amount
-      projection.net += transaction.amount
-      continue
-    }
-
-    if (transaction.type === 'Transferência') {
-      continue
-    }
-
-    projection.confirmedExpenses += transaction.amount
-    projection.net -= transaction.amount
-    accumulateAmount(projection.plannedByGroup, transaction.budgetGroupId ?? 'ungrouped', transaction.amount)
-  }
-
-  for (const candidate of recurringCandidates) {
-    for (const monthKey of currentMonthWindow) {
-      if (hasPersistedRecurringMatch(transactions, candidate, monthKey)) {
-        continue
-      }
-
-      const projection = projectionByMonth.get(monthKey)
-      if (!projection) {
-        continue
-      }
-
-      if (candidate.type === 'Receita') {
-        projection.revenue += candidate.amount
-        projection.net += candidate.amount
-        continue
-      }
-
-      projection.probableTransactionsCount += 1
-      projection.probableExpenses += candidate.amount
-      projection.net -= candidate.amount
-      accumulateAmount(projection.probableByGroup, candidate.budgetGroupId ?? 'ungrouped', candidate.amount)
-    }
-  }
-
-  const trailingMonths = recentMonths.slice(-3)
-  const averageRevenue = trailingMonths.length
-    ? trailingMonths.reduce((total, month) => total + month.revenue, 0) / trailingMonths.length
-    : 0
-  const averageExpenses = trailingMonths.length
-    ? trailingMonths.reduce((total, month) => total + month.expenses, 0) / trailingMonths.length
-    : 0
-  const averageNet = trailingMonths.length
-    ? trailingMonths.reduce((total, month) => total + month.net, 0) / trailingMonths.length
-    : 0
-
-  const plannedCommitments = projectedMonths.reduce((total, month) => total + month.confirmedExpenses, 0)
-  const probableCommitments = projectedMonths.reduce((total, month) => total + month.probableExpenses, 0)
-  const summaryByMonth = new Map(monthSummaries.map((summary) => [summary.monthKey, summary]))
-  const trendMonths = Array.from({ length: 5 }, (_, index) => addMonthsToMonthKey(currentMonthKey, index - 2))
-    .map((monthKey) => buildTrendMonth(monthKey, currentMonthKey, summaryByMonth, projectionByMonth))
-
-  return {
-    currentMonthKey,
-    recentMonths,
-    trendMonths,
-    projectedMonths,
-    averageRevenue,
-    averageExpenses,
-    averageNet,
-    plannedCommitments,
-    probableCommitments,
-  }
 }
 
 export function getMonthTransactions(transactions: DecoratedTransaction[], activeMonth: string): DecoratedTransaction[] {
