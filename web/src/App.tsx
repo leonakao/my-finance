@@ -66,6 +66,22 @@ function writePath(pathname: string, replace = false) {
   window.history.pushState(null, '', nextUrl)
 }
 
+function writePathWithSearch(pathname: string, searchParams: URLSearchParams, replace = false) {
+  const search = searchParams.toString()
+  const nextUrl = `${pathname}${search ? `?${search}` : ''}${window.location.hash}`
+  if (replace) {
+    window.history.replaceState(null, '', nextUrl)
+    return
+  }
+
+  window.history.pushState(null, '', nextUrl)
+}
+
+function readMonthFromSearch(search: string): string {
+  const month = new URLSearchParams(search).get('month') ?? ''
+  return /^\d{4}-\d{2}$/.test(month) ? month : ''
+}
+
 function getPageMetadata(pathname: AuthenticatedPath) {
   switch (pathname) {
     case '/app/mensal':
@@ -130,6 +146,7 @@ type AuthenticatedAppProps = {
   monthData: MonthData | null
   months: string[]
   navigateTo: (pathname: AuthenticatedPath) => void
+  openMonthlyAnalysis: (monthKey: string) => void
   orphanedCount: number
   promptTransaction: Transaction | null
   reclassificationCandidate: ReclassificationCandidate | null
@@ -197,6 +214,7 @@ function AuthenticatedApp({
   monthData,
   months,
   navigateTo,
+  openMonthlyAnalysis,
   orphanedCount,
   promptTransaction,
   reclassificationCandidate,
@@ -221,6 +239,7 @@ function AuthenticatedApp({
   let currentView = (
     <DashboardOverviewView
       budgetGroups={budgetGroups}
+      onOpenMonth={openMonthlyAnalysis}
       overview={financialOverview}
     />
   )
@@ -429,10 +448,30 @@ function App() {
     useDashboardState(budgetGroups, transactions, selectedMonth, transactionFilters)
 
   useEffect(() => {
-    const handlePopState = () => setCurrentPath(window.location.pathname || '/')
+    const handlePopState = () => {
+      const pathname = window.location.pathname || '/'
+      setCurrentPath(pathname)
+      if (pathname === '/app/mensal') {
+        const monthFromSearch = readMonthFromSearch(window.location.search)
+        if (monthFromSearch) {
+          setSelectedMonth(monthFromSearch)
+        }
+      }
+    }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
+
+  useEffect(() => {
+    if (currentPath !== '/app/mensal') {
+      return
+    }
+
+    const monthFromSearch = readMonthFromSearch(window.location.search)
+    if (monthFromSearch !== '' && monthFromSearch !== selectedMonth) {
+      setSelectedMonth(monthFromSearch)
+    }
+  }, [currentPath, selectedMonth, setSelectedMonth])
 
   useEffect(() => {
     if (isRecoveryMode) {
@@ -494,6 +533,18 @@ function App() {
   }
 
   const authenticatedPath = normalizeAuthenticatedPath(currentPath)
+  const navigateToMonth: Dispatch<SetStateAction<string>> = (value) => {
+    const nextMonth = typeof value === 'function' ? value(activeMonth) : value
+    setSelectedMonth(nextMonth)
+    const searchParams = new URLSearchParams(window.location.search)
+    if (nextMonth !== '') {
+      searchParams.set('month', nextMonth)
+    } else {
+      searchParams.delete('month')
+    }
+    writePathWithSearch('/app/mensal', searchParams)
+    setCurrentPath('/app/mensal')
+  }
 
   return (
     <AuthenticatedApp
@@ -528,8 +579,25 @@ function App() {
       navigateTo={(pathname) => {
         setError('')
         setFeedback('')
-        writePath(pathname)
+        if (pathname === '/app/mensal') {
+          const searchParams = new URLSearchParams(window.location.search)
+          if (activeMonth !== '') {
+            searchParams.set('month', activeMonth)
+          }
+          writePathWithSearch(pathname, searchParams)
+        } else {
+          writePath(pathname)
+        }
         setCurrentPath(pathname)
+      }}
+      openMonthlyAnalysis={(monthKey) => {
+        setError('')
+        setFeedback('')
+        setSelectedMonth(monthKey)
+        const searchParams = new URLSearchParams(window.location.search)
+        searchParams.set('month', monthKey)
+        writePathWithSearch('/app/mensal', searchParams)
+        setCurrentPath('/app/mensal')
       }}
       orphanedCount={orphanedCount}
       promptTransaction={promptTransaction}
@@ -542,7 +610,7 @@ function App() {
       savingId={savingId}
       savingRuleId={savingRuleId}
       selectedMonth={activeMonth}
-      setSelectedMonth={setSelectedMonth}
+      setSelectedMonth={navigateToMonth}
       setTransactionFilters={setTransactionFilters}
       closeTransactionEditor={closeTransactionEditor}
       transactionFilters={transactionFilters}

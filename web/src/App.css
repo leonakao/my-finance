@@ -760,6 +760,23 @@ button.danger {
   font-weight: 600;
 }
 
+.month-link {
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.month-link:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.month-link:focus-visible {
+  outline: 2px solid var(--color-primary-hover);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
 .trend-badge {
   display: inline-flex;
   min-height: 24px;
@@ -784,6 +801,13 @@ button.danger {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.04);
   color: var(--color-text-muted);
+}
+
+.projection-link {
+  display: inline-flex;
+  margin-bottom: 4px;
+  font-size: 1.02rem;
+  font-weight: 700;
 }
 
 .summary-table th:not(:first-child),

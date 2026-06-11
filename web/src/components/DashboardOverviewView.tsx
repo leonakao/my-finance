@@ -5,6 +5,7 @@ import type { BudgetGroup, FinancialOverview } from '../types'
 
 type DashboardOverviewViewProps = {
   budgetGroups: BudgetGroup[]
+  onOpenMonth: (monthKey: string) => void
   overview: FinancialOverview
 }
 
@@ -18,7 +19,7 @@ function KpiCard({ label, value, detail }: { detail: string; label: string; valu
   )
 }
 
-export function DashboardOverviewView({ budgetGroups, overview }: DashboardOverviewViewProps) {
+export function DashboardOverviewView({ budgetGroups, onOpenMonth, overview }: DashboardOverviewViewProps) {
   const adjustableGroups = budgetGroups.filter((budgetGroup) => budgetGroup.name.trim() !== '')
   const [selectedGroupId, setSelectedGroupId] = useState(adjustableGroups[0]?.id ?? '')
   const [adjustmentPercent, setAdjustmentPercent] = useState('-10')
@@ -95,7 +96,16 @@ export function DashboardOverviewView({ budgetGroups, overview }: DashboardOverv
                   className={month.isCurrent ? 'trend-row is-current' : month.isProjected ? 'trend-row is-projected' : 'trend-row'}
                 >
                   <td className="trend-month-cell">
-                    <span>{monthLabel(month.monthKey)}</span>
+                    <a
+                      href={`/app/mensal?month=${month.monthKey}`}
+                      className="month-link"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        onOpenMonth(month.monthKey)
+                      }}
+                    >
+                      {monthLabel(month.monthKey)}
+                    </a>
                     {month.isCurrent ? <span className="trend-badge current">Atual</span> : null}
                     {month.isProjected ? <span className="trend-badge projected">Previsto</span> : null}
                   </td>
@@ -121,7 +131,16 @@ export function DashboardOverviewView({ budgetGroups, overview }: DashboardOverv
             {overview.projectedMonths.map((month) => (
               <article key={month.monthKey} className="projection-card">
                 <div>
-                  <strong>{monthLabel(month.monthKey)}</strong>
+                  <a
+                    href={`/app/mensal?month=${month.monthKey}`}
+                    className="month-link projection-link"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      onOpenMonth(month.monthKey)
+                    }}
+                  >
+                    {monthLabel(month.monthKey)}
+                  </a>
                   <p className="muted">
                     {month.plannedTransactionsCount} previstos • {month.probableTransactionsCount} prováveis
                   </p>
