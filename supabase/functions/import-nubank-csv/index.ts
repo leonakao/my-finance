@@ -1,7 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { resolveImportedTransactionBudgetGroups } from '../_shared/budget-groups.ts'
-import { applyUserClassificationRules, loadUserClassificationRules } from '../_shared/classification-rules.ts'
-import { parseNubankCsv, type ImportKind } from '../_shared/nubank.ts'
+import { applyUserClassificationRulesWithCount, loadUserClassificationRules } from '../_shared/classification-rules.ts'
+import { dropTransactionsAlreadyImported } from '../_shared/installments.ts'
+import { ImportFormatError, parseNubankCsv, type ImportKind } from '../_shared/nubank.ts'
 
 type ImportPayload = {
   kind: ImportKind
@@ -61,35 +62,66 @@ Deno.serve(async (request) => {
     return json({ error: 'kind and csvText are required' }, 400)
   }
 
-  const parsedTransactions = parseNubankCsv({
-    userId: user.id,
-    kind: payload.kind,
-    csvText: payload.csvText,
-    invoice: payload.invoice,
-    filename: payload.filename,
-  })
-
-  const transactionsWithBudgetGroups = await resolveImportedTransactionBudgetGroups(supabase, user.id, parsedTransactions)
-  const rules = await loadUserClassificationRules(supabase, user.id)
-  const transactions = applyUserClassificationRules(transactionsWithBudgetGroups, rules)
-
-  const { error: upsertError } = await supabase
-    .from('transactions')
-    .upsert(transactions, { onConflict: 'user_id,external_id' })
-
-  if (upsertError) {
-    return json({ error: upsertError.message }, 400)
+  let parsedTransactions
+  try {
+    parsedTransactions = parseNubankCsv({
+      userId: user.id,
+      kind: payload.kind,
+      csvText: payload.csvText,
+      invoice: payload.invoice,
+      filename: payload.filename,
+    })
+  } catch (parseError) {
+    if (parseError instanceof ImportFormatError) {
+      return json({ error: parseError.message }, 400)
+    }
+    throw parseError
   }
 
-  const confirmed = transactions.filter((item) => item.status === 'Confirmado')
-  const ignored = transactions.filter((item) => item.status === 'Ignorar')
-  const total = confirmed.reduce((sum, item) => sum + item.amount, 0)
+  const imported = parsedTransactions.length
+  const transactionsWithBudgetGroups = await resolveImportedTransactionBudgetGroups(supabase, user.id, parsedTransactions)
+  const rules = await loadUserClassificationRules(supabase, user.id)
+  const { transactions: classifiedTransactions, classifiedCount } = applyUserClassificationRulesWithCount(
+    transactionsWithBudgetGroups,
+    rules,
+  )
+  const insertableTransactions = classifiedTransactions.filter((item) => item.status !== 'Ignorar')
+  const ignoredByStatusCount = classifiedTransactions.length - insertableTransactions.length
+  const { transactions: newTransactions, alreadyImportedCount } = await dropTransactionsAlreadyImported(
+    supabase,
+    user.id,
+    insertableTransactions,
+  )
+
+  const transactionsByExternalId = new Map(newTransactions.map((item) => [item.external_id, item]))
+  const transactions = [...transactionsByExternalId.values()]
+  const duplicatesDropped = newTransactions.length - transactions.length
+
+  let insertError: { message: string } | null = null
+  if (transactions.length > 0) {
+    const { error } = await supabase
+      .from('transactions')
+      .insert(transactions)
+    insertError = error
+  }
+
+  if (insertError) {
+    return json({ error: insertError.message }, 400)
+  }
+
+  const inserted = transactions.length
+  const ignored = ignoredByStatusCount + alreadyImportedCount + duplicatesDropped
+  const insertedTotal = transactions
+    .filter((item) => item.status === 'Confirmado')
+    .reduce((sum, item) => sum + item.amount, 0)
 
   return json({
-    imported: transactions.length,
-    confirmed: confirmed.length,
-    ignored: ignored.length,
-    confirmedTotal: total,
+    imported,
+    inserted,
+    ignored,
+    classified: classifiedCount,
+    duplicatesDropped,
+    insertedTotal,
     filename: payload.filename ?? '',
     kind: payload.kind,
   })

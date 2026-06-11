@@ -250,6 +250,7 @@ export function parseSantanderPdf(params: {
   userId: string
   pdfBytes: Uint8Array
   filename?: string
+  invoice?: string
 }): ParsedImportedTransaction[] {
   const events = extractTextEvents(params.pdfBytes)
   const closingMonth = inferClosingMonth(events)
@@ -327,7 +328,7 @@ export function parseSantanderPdf(params: {
       institution: 'Santander',
       status: 'Confirmado',
       notes,
-      invoice: params.filename ?? '',
+      invoice: params.invoice || (params.filename ?? ''),
       installment,
       external_id: purchaseKey,
       source: 'Santander',

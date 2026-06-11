@@ -86,3 +86,29 @@ export function applyUserClassificationRules(
   if (!rules.length) return transactions
   return transactions.map((transaction) => applyUserClassificationRule(transaction, rules))
 }
+
+export function applyUserClassificationRulesWithCount(
+  transactions: ImportedTransaction[],
+  rules: UserClassificationRule[],
+): { transactions: ImportedTransaction[]; classifiedCount: number } {
+  if (!rules.length) {
+    return {
+      transactions,
+      classifiedCount: 0,
+    }
+  }
+
+  let classifiedCount = 0
+  const classifiedTransactions = transactions.map((transaction) => {
+    const classifiedTransaction = applyUserClassificationRule(transaction, rules)
+    if (classifiedTransaction !== transaction) {
+      classifiedCount += 1
+    }
+    return classifiedTransaction
+  })
+
+  return {
+    transactions: classifiedTransactions,
+    classifiedCount,
+  }
+}

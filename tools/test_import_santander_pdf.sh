@@ -101,6 +101,10 @@ curl -sSf "$REST_URL/transactions?select=date,description,installment,external_i
 
 IMPORTED_1=$(jq -r '.imported // 0' "$IMPORT_RESPONSE_1")
 IMPORTED_2=$(jq -r '.imported // 0' "$IMPORT_RESPONSE_2")
+INSERTED_1=$(jq -r '.inserted // 0' "$IMPORT_RESPONSE_1")
+INSERTED_2=$(jq -r '.inserted // 0' "$IMPORT_RESPONSE_2")
+IGNORED_1=$(jq -r '.ignored // 0' "$IMPORT_RESPONSE_1")
+IGNORED_2=$(jq -r '.ignored // 0' "$IMPORT_RESPONSE_2")
 ROW_COUNT=$(jq 'length' "$TRANSACTIONS_RESPONSE")
 
 if [ "$INSTALLMENT_SOURCE_COUNT" -gt 0 ] && [ "$IMPORTED_1" -le "$BASE_COUNT" ]; then
@@ -111,13 +115,37 @@ fi
 
 if [ "$IMPORTED_2" -ne "$IMPORTED_1" ]; then
   cat "$IMPORT_RESPONSE_2" >&2
-  echo "Falha: a reimportacao deveria reenviar o mesmo total da primeira importacao ($IMPORTED_1), mas enviou $IMPORTED_2." >&2
+  echo "Falha: a reimportacao deveria identificar o mesmo total da primeira importacao ($IMPORTED_1), mas identificou $IMPORTED_2." >&2
   exit 1
 fi
 
-if [ "$ROW_COUNT" -ne "$IMPORTED_1" ]; then
+if [ "$INSERTED_1" -ne "$ROW_COUNT" ]; then
+  cat "$IMPORT_RESPONSE_1" >&2
+  echo "Falha: a primeira importacao deveria inserir $ROW_COUNT transacoes, mas inseriu $INSERTED_1." >&2
+  exit 1
+fi
+
+if [ "$INSERTED_2" -ne 0 ]; then
+  cat "$IMPORT_RESPONSE_2" >&2
+  echo "Falha: a reimportacao nao deveria inserir novas transacoes, mas inseriu $INSERTED_2." >&2
+  exit 1
+fi
+
+if [ "$IGNORED_1" -ne 0 ]; then
+  cat "$IMPORT_RESPONSE_1" >&2
+  echo "Falha: a primeira importacao nao deveria ignorar transacoes, mas ignorou $IGNORED_1." >&2
+  exit 1
+fi
+
+if [ "$IGNORED_2" -ne "$IMPORTED_2" ]; then
+  cat "$IMPORT_RESPONSE_2" >&2
+  echo "Falha: a reimportacao deveria ignorar todas as $IMPORTED_2 transacoes identificadas, mas ignorou $IGNORED_2." >&2
+  exit 1
+fi
+
+if [ "$ROW_COUNT" -ne "$INSERTED_1" ]; then
   jq 'length' "$TRANSACTIONS_RESPONSE" >&2
-  echo "Falha: a contagem final no banco deveria permanecer $IMPORTED_1 apos a reimportacao, mas ficou em $ROW_COUNT." >&2
+  echo "Falha: a contagem final no banco deveria permanecer $INSERTED_1 apos a reimportacao, mas ficou em $ROW_COUNT." >&2
   exit 1
 fi
 
@@ -177,6 +205,6 @@ fi
 
 echo "Teste OK."
 echo "Usuario local: $EMAIL"
-echo "Primeira importacao: $IMPORTED_1 transacoes enviadas"
-echo "Reimportacao: $IMPORTED_2 transacoes reenviadas"
+echo "Primeira importacao: $IMPORTED_1 identificadas, $INSERTED_1 inseridas, $IGNORED_1 ignoradas"
+echo "Reimportacao: $IMPORTED_2 identificadas, $INSERTED_2 inseridas, $IGNORED_2 ignoradas"
 echo "Linhas persistidas apos deduplicacao: $ROW_COUNT"

@@ -1,10 +1,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { resolveImportedTransactionBudgetGroups } from '../_shared/budget-groups.ts'
-import { applyUserClassificationRules, loadUserClassificationRules } from '../_shared/classification-rules.ts'
+import { applyUserClassificationRulesWithCount, loadUserClassificationRules } from '../_shared/classification-rules.ts'
+import { dropTransactionsAlreadyImported } from '../_shared/installments.ts'
 import { inspectSantanderPdf, parseSantanderPdf } from '../_shared/santander.ts'
 
 type ImportPayload = {
   filename?: string
+  invoice?: string
   pdfBase64: string
 }
 
@@ -71,31 +73,54 @@ Deno.serve(async (request) => {
     userId: user.id,
     pdfBytes,
     filename: payload.filename,
+    invoice: payload.invoice,
   })
 
+  const imported = parsedTransactions.length
   const transactionsWithBudgetGroups = await resolveImportedTransactionBudgetGroups(supabase, user.id, parsedTransactions)
   const rules = await loadUserClassificationRules(supabase, user.id)
-  const transactions = applyUserClassificationRules(transactionsWithBudgetGroups, rules)
+  const { transactions: classifiedTransactions, classifiedCount } = applyUserClassificationRulesWithCount(
+    transactionsWithBudgetGroups,
+    rules,
+  )
+  const insertableTransactions = classifiedTransactions.filter((item) => item.status !== 'Ignorar')
+  const ignoredByStatusCount = classifiedTransactions.length - insertableTransactions.length
+  const { transactions: newTransactions, alreadyImportedCount } = await dropTransactionsAlreadyImported(
+    supabase,
+    user.id,
+    insertableTransactions,
+  )
+  const transactionsByExternalId = new Map(newTransactions.map((item) => [item.external_id, item]))
+  const transactions = [...transactionsByExternalId.values()]
+  const duplicatesDropped = newTransactions.length - transactions.length
 
-  const { error: upsertError } = await supabase
-    .from('transactions')
-    .upsert(transactions, { onConflict: 'user_id,external_id' })
-
-  if (upsertError) {
-    return json({ error: upsertError.message }, 400)
+  let insertError: { message: string } | null = null
+  if (transactions.length > 0) {
+    const { error } = await supabase
+      .from('transactions')
+      .insert(transactions)
+    insertError = error
   }
 
-  const confirmed = transactions.filter((item) => item.status === 'Confirmado')
-  const ignored = transactions.filter((item) => item.status === 'Ignorar')
-  const total = confirmed.reduce((sum, item) => sum + item.amount, 0)
+  if (insertError) {
+    return json({ error: insertError.message }, 400)
+  }
+
+  const inserted = transactions.length
+  const ignored = ignoredByStatusCount + alreadyImportedCount + duplicatesDropped
+  const insertedTotal = transactions
+    .filter((item) => item.status === 'Confirmado')
+    .reduce((sum, item) => sum + item.amount, 0)
 
   return json({
-    imported: transactions.length,
-    confirmed: confirmed.length,
-    ignored: ignored.length,
-    confirmedTotal: total,
+    imported,
+    inserted,
+    ignored,
+    classified: classifiedCount,
+    duplicatesDropped,
+    insertedTotal,
     filename: payload.filename ?? '',
     kind: 'santander-card-pdf',
-    ...(transactions.length === 0 ? { debug: inspectSantanderPdf(pdfBytes) } : {}),
+    ...(imported === 0 ? { debug: inspectSantanderPdf(pdfBytes) } : {}),
   })
 })

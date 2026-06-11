@@ -133,8 +133,10 @@ export type ImportPayload = {
 
 export type ImportResponse = {
   imported: number
-  confirmed: number
+  inserted: number
   ignored: number
+  classified?: number
+  duplicatesDropped?: number
 }
 
 export type MonthGroupBucket = BudgetGroup & {

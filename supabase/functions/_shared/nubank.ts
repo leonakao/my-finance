@@ -3,6 +3,8 @@ import { addMonthsPreservingDay, expandInstallmentSchedule, parseInstallment } f
 
 export type ImportKind = 'account' | 'card'
 
+export class ImportFormatError extends Error {}
+
 const nubankInstallmentSuffixRe = /\s*-\s*Parcela\s+(?<current>\d{2})\/(?<total>\d{2})\s*$/i
 
 function parseCsv(text: string): string[][] {
@@ -195,8 +197,15 @@ export function parseNubankCsv(params: {
   filename?: string
 }): ParsedImportedTransaction[] {
   const invoice = params.invoice ?? ''
+  const headerLine = params.csvText.replace(/^\uFEFF/, '').split(/\r?\n/).find((line) => line.trim() !== '') ?? ''
+  const normalizedHeader = headerLine.trim().toLowerCase()
 
   if (params.kind === 'card') {
+    if (!normalizedHeader.startsWith('date,title,amount')) {
+      throw new ImportFormatError(
+        'O arquivo não parece ser uma fatura de cartão Nubank (cabeçalho esperado: "date,title,amount"). Confira se o tipo de arquivo selecionado está correto.',
+      )
+    }
     const rows = csvObjects(params.csvText)
     return rows.flatMap((row, index) => {
       const amount = decimalFromCsv(row.amount)
@@ -241,6 +250,12 @@ export function parseNubankCsv(params: {
         notes: `Importado de CSV de fatura do cartão Nubank via Edge Function. Compra original em ${originalDate}. Parcela ${expandedTransaction.installment}.`,
       }))
     })
+  }
+
+  if (!normalizedHeader.startsWith('data,valor,identificador')) {
+    throw new ImportFormatError(
+      'O arquivo não parece ser um extrato de conta Nubank (cabeçalho esperado: "Data,Valor,Identificador,Descrição"). Confira se o tipo de arquivo selecionado está correto.',
+    )
   }
 
   const rows = accountCsvObjects(params.csvText)

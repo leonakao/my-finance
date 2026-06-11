@@ -8,6 +8,7 @@ AUTH_URL="$PROJECT_URL/auth/v1/signup"
 REST_URL="$PROJECT_URL/rest/v1"
 PUBLISHABLE_KEY="sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH"
 CSV_PATH="${1:-/Users/leonakao/Downloads/Nubank_2025-12-09.csv}"
+IMPORT_KIND="${2:-}"
 SKIP_FUNCTIONS_SERVE="${SKIP_FUNCTIONS_SERVE:-0}"
 FUNCTION_LOG="${TMPDIR:-/tmp}/finance-nubank-import-test-functions.log"
 SIGNUP_RESPONSE="${TMPDIR:-/tmp}/finance-nubank-import-test-signup.json"
@@ -72,7 +73,14 @@ if [ -z "$ACCESS_TOKEN" ] || [ -z "$USER_ID" ]; then
 fi
 
 CSV_TEXT=$(cat "$CSV_PATH")
-PAYLOAD=$(jq -nc --arg filename "$(basename "$CSV_PATH")" --arg csvText "$CSV_TEXT" '{filename: $filename, kind: "card", csvText: $csvText}')
+if [ -z "$IMPORT_KIND" ]; then
+  case "$(basename "$CSV_PATH")" in
+    *conta*.csv) IMPORT_KIND="account" ;;
+    *) IMPORT_KIND="card" ;;
+  esac
+fi
+
+PAYLOAD=$(jq -nc --arg filename "$(basename "$CSV_PATH")" --arg csvText "$CSV_TEXT" --arg kind "$IMPORT_KIND" '{filename: $filename, kind: $kind, csvText: $csvText}')
 BASE_COUNT=$(awk 'END { print NR - 1 }' "$CSV_PATH")
 
 curl -sSf "$FUNCTIONS_URL/import-nubank-csv" \
@@ -93,9 +101,13 @@ curl -sSf "$REST_URL/transactions?select=date,description,installment,external_i
 
 IMPORTED_1=$(jq -r '.imported // 0' "$IMPORT_RESPONSE_1")
 IMPORTED_2=$(jq -r '.imported // 0' "$IMPORT_RESPONSE_2")
+INSERTED_1=$(jq -r '.inserted // 0' "$IMPORT_RESPONSE_1")
+INSERTED_2=$(jq -r '.inserted // 0' "$IMPORT_RESPONSE_2")
+IGNORED_1=$(jq -r '.ignored // 0' "$IMPORT_RESPONSE_1")
+IGNORED_2=$(jq -r '.ignored // 0' "$IMPORT_RESPONSE_2")
 ROW_COUNT=$(jq 'length' "$TRANSACTIONS_RESPONSE")
 
-if [ "$IMPORTED_1" -le "$BASE_COUNT" ]; then
+if [ "$IMPORT_KIND" = "card" ] && [ "$IMPORTED_1" -le "$BASE_COUNT" ]; then
   cat "$IMPORT_RESPONSE_1" >&2
   echo "Falha: o import do Nubank deveria expandir compras parceladas e produzir mais de $BASE_COUNT transacoes, mas enviou $IMPORTED_1." >&2
   exit 1
@@ -103,17 +115,35 @@ fi
 
 if [ "$IMPORTED_2" -ne "$IMPORTED_1" ]; then
   cat "$IMPORT_RESPONSE_2" >&2
-  echo "Falha: a reimportacao deveria reenviar o mesmo total da primeira importacao ($IMPORTED_1), mas enviou $IMPORTED_2." >&2
+  echo "Falha: a reimportacao deveria identificar o mesmo total da primeira importacao ($IMPORTED_1), mas identificou $IMPORTED_2." >&2
   exit 1
 fi
 
-if [ "$ROW_COUNT" -ne "$IMPORTED_1" ]; then
-  echo "Falha: a contagem final no banco deveria permanecer $IMPORTED_1 apos a reimportacao, mas ficou em $ROW_COUNT." >&2
+if [ "$INSERTED_1" -ne "$ROW_COUNT" ]; then
+  cat "$IMPORT_RESPONSE_1" >&2
+  echo "Falha: a primeira importacao deveria inserir $ROW_COUNT transacoes, mas inseriu $INSERTED_1." >&2
+  exit 1
+fi
+
+if [ "$INSERTED_2" -ne 0 ]; then
+  cat "$IMPORT_RESPONSE_2" >&2
+  echo "Falha: a reimportacao nao deveria inserir novas transacoes, mas inseriu $INSERTED_2." >&2
+  exit 1
+fi
+
+if [ "$IGNORED_2" -ne "$IMPORTED_2" ]; then
+  cat "$IMPORT_RESPONSE_2" >&2
+  echo "Falha: a reimportacao deveria ignorar todas as $IMPORTED_2 transacoes identificadas, mas ignorou $IGNORED_2." >&2
+  exit 1
+fi
+
+if [ "$ROW_COUNT" -ne "$INSERTED_1" ]; then
+  echo "Falha: a contagem final no banco deveria permanecer $INSERTED_1 apos a reimportacao, mas ficou em $ROW_COUNT." >&2
   exit 1
 fi
 
 CARLOS_COUNT=$(jq '[.[] | select(.description == "Pg *Carlos Levir F de")] | length' "$TRANSACTIONS_RESPONSE")
-if [ "$CARLOS_COUNT" -lt 12 ]; then
+if [ "$IMPORT_KIND" = "card" ] && [ "$CARLOS_COUNT" -lt 12 ]; then
   echo "Falha: a compra parcelada de Carlos Levir deveria gerar pelo menos 12 parcelas, mas gerou $CARLOS_COUNT." >&2
   exit 1
 fi
@@ -121,7 +151,7 @@ fi
 SERIES_HAS_FIRST=$(jq '[.[] | select(.description == "Pg *Carlos Levir F de" and .installment == "01/12")] | length > 0' "$TRANSACTIONS_RESPONSE")
 SERIES_HAS_LAST=$(jq '[.[] | select(.description == "Pg *Carlos Levir F de" and .installment == "12/12")] | length > 0' "$TRANSACTIONS_RESPONSE")
 
-if [ "$SERIES_HAS_FIRST" != "true" ] || [ "$SERIES_HAS_LAST" != "true" ]; then
+if [ "$IMPORT_KIND" = "card" ] && { [ "$SERIES_HAS_FIRST" != "true" ] || [ "$SERIES_HAS_LAST" != "true" ]; }; then
   echo "Falha: a serie parcelada do Nubank nao contem os extremos 01/12 e 12/12 para Pg *Carlos Levir F de." >&2
   jq '.[] | select(.description == "Pg *Carlos Levir F de")' "$TRANSACTIONS_RESPONSE" >&2
   exit 1
@@ -129,6 +159,7 @@ fi
 
 echo "Teste OK."
 echo "Usuario local: $EMAIL"
-echo "Primeira importacao: $IMPORTED_1 transacoes enviadas"
-echo "Reimportacao: $IMPORTED_2 transacoes reenviadas"
+echo "Kind: $IMPORT_KIND"
+echo "Primeira importacao: $IMPORTED_1 identificadas, $INSERTED_1 inseridas, $IGNORED_1 ignoradas"
+echo "Reimportacao: $IMPORTED_2 identificadas, $INSERTED_2 inseridas, $IGNORED_2 ignoradas"
 echo "Linhas persistidas apos deduplicacao: $ROW_COUNT"
