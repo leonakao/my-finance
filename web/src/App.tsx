@@ -1,19 +1,24 @@
 /* eslint-disable max-lines */
 /* eslint-disable max-lines-per-function */
-import { useState, type Dispatch, type SetStateAction } from 'react'
+/* eslint-disable complexity */
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import './App.css'
+import { BudgetGroupsView } from './components/BudgetGroupsView'
 import { ClassificationRulePrompt } from './components/ClassificationRulePrompt'
 import { ClassificationRulesView } from './components/ClassificationRulesView'
-import { DashboardView } from './components/DashboardView'
+import { DashboardOverviewView } from './components/DashboardOverviewView'
+import { ImportView } from './components/ImportView'
 import { MissingConfig } from './components/MissingConfig'
+import { MonthlyView } from './components/MonthlyView'
 import { ReclassificationPromptModal } from './components/ReclassificationPromptModal'
 import { SignIn } from './components/SignIn'
 import { TransactionEditModal } from './components/TransactionEditModal'
+import { WorkspaceLayout } from './components/WorkspaceLayout'
 import { useAuthActions } from './hooks/useAuthActions'
 import { useAuthSession } from './hooks/useAuthSession'
+import { useBudgetGroupManagement } from './hooks/useBudgetGroupManagement'
 import { useClassificationRuleManagement } from './hooks/useClassificationRuleManagement'
 import { useDashboardState } from './hooks/useDashboardState'
-import { useBudgetGroupManagement } from './hooks/useBudgetGroupManagement'
 import { useTransactionEditing } from './hooks/useTransactionEditing'
 import { useTransactionsData } from './hooks/useTransactionsData'
 import { useTransactionsImport } from './hooks/useTransactionsImport'
@@ -22,6 +27,7 @@ import type {
   BudgetGroup,
   ClassificationRule,
   DecoratedTransaction,
+  FinancialOverview,
   GroupOption,
   MonthData,
   ReclassificationCandidate,
@@ -32,10 +38,66 @@ import type {
   TransactionType,
 } from './types'
 
-type ActiveView = 'dashboard' | 'classification-rules'
+type AuthenticatedPath = '/app/dashboard' | '/app/mensal' | '/app/importar' | '/app/regras' | '/app/budget-groups'
+
+const DEFAULT_AUTHENTICATED_PATH: AuthenticatedPath = '/app/dashboard'
+
+function normalizeAuthenticatedPath(pathname: string): AuthenticatedPath {
+  if (
+    pathname === '/app/dashboard'
+    || pathname === '/app/mensal'
+    || pathname === '/app/importar'
+    || pathname === '/app/regras'
+    || pathname === '/app/budget-groups'
+  ) {
+    return pathname
+  }
+
+  return DEFAULT_AUTHENTICATED_PATH
+}
+
+function writePath(pathname: string, replace = false) {
+  const nextUrl = `${pathname}${window.location.search}${window.location.hash}`
+  if (replace) {
+    window.history.replaceState(null, '', nextUrl)
+    return
+  }
+
+  window.history.pushState(null, '', nextUrl)
+}
+
+function getPageMetadata(pathname: AuthenticatedPath) {
+  switch (pathname) {
+    case '/app/mensal':
+      return {
+        title: 'Mensal',
+        intro: 'Acompanhe o mês atual, revise transações confirmadas e navegue pelos próximos meses previstos.',
+      }
+    case '/app/importar':
+      return {
+        title: 'Importar',
+        intro: 'Envie novos arquivos com um fluxo mais claro e separado da análise financeira.',
+      }
+    case '/app/regras':
+      return {
+        title: 'Regras',
+        intro: 'Mantenha regras de classificação que reduzem retrabalho e reforçam consistência.',
+      }
+    case '/app/budget-groups':
+      return {
+        title: 'Budget groups',
+        intro: 'Gerencie os grupos e metas percentuais que aparecem na leitura mensal e nas projeções.',
+      }
+    case '/app/dashboard':
+    default:
+      return {
+        title: 'Dashboard',
+        intro: 'Uma leitura acolhedora da saúde financeira, com tendências, compromissos previstos e simulações rápidas.',
+      }
+  }
+}
 
 type AuthenticatedAppProps = {
-  activeView: ActiveView
   budgetGroups: BudgetGroup[]
   categoryOptions: string[]
   classificationRules: ClassificationRule[]
@@ -48,6 +110,8 @@ type AuthenticatedAppProps = {
     category: string
     budgetGroupId: string | null
   }) => Promise<ClassificationRule | null>
+  currentMonth: string
+  currentPath: AuthenticatedPath
   deleteBudgetGroup: (id: string) => Promise<boolean>
   deleteClassificationRule: (id: string) => Promise<boolean>
   dismissReclassificationPrompt: () => void
@@ -56,6 +120,7 @@ type AuthenticatedAppProps = {
   error: string
   feedback: string
   filteredTransactions: DecoratedTransaction[]
+  financialOverview: FinancialOverview
   groupOptions: GroupOption[]
   handleEditTransaction: (transactionId: string) => void
   handleImport: (payload: { kind: 'account' | 'card' | 'santander-card-pdf' | 'santander-account-pdf'; invoice: string; file: File }) => Promise<void>
@@ -64,8 +129,8 @@ type AuthenticatedAppProps = {
   loading: boolean
   monthData: MonthData | null
   months: string[]
-  openDashboardView: () => void
-  openRulesView: () => void
+  navigateTo: (pathname: AuthenticatedPath) => void
+  orphanedCount: number
   promptTransaction: Transaction | null
   reclassificationCandidate: ReclassificationCandidate | null
   reclassifyExistingTransactions: () => Promise<boolean>
@@ -95,10 +160,10 @@ type AuthenticatedAppProps = {
 type UnauthenticatedAppProps = {
   error: string
   feedback: string
-  handlePasswordReset: (email: string) => Promise<void>
+  handlePasswordReset: (email: string) => Promise<boolean | void>
   handlePasswordUpdate: (password: string, onSuccess: () => void) => Promise<void>
-  handleSignIn: (email: string, password: string) => Promise<void>
-  handleSignUp: (email: string, password: string) => Promise<void>
+  handleSignIn: (email: string, password: string) => Promise<boolean | void>
+  handleSignUp: (email: string, password: string) => Promise<boolean | void>
   isRecoveryMode: boolean
   setError: Dispatch<SetStateAction<string>>
   setFeedback: Dispatch<SetStateAction<string>>
@@ -107,12 +172,13 @@ type UnauthenticatedAppProps = {
 }
 
 function AuthenticatedApp({
-  activeView,
   budgetGroups,
   categoryOptions,
   classificationRules,
   createBudgetGroup,
   createRuleManually,
+  currentMonth,
+  currentPath,
   deleteBudgetGroup,
   deleteClassificationRule,
   dismissReclassificationPrompt,
@@ -121,6 +187,7 @@ function AuthenticatedApp({
   error,
   feedback,
   filteredTransactions,
+  financialOverview,
   groupOptions,
   handleEditTransaction,
   handleImport,
@@ -129,8 +196,8 @@ function AuthenticatedApp({
   loading,
   monthData,
   months,
-  openDashboardView,
-  openRulesView,
+  navigateTo,
+  orphanedCount,
   promptTransaction,
   reclassificationCandidate,
   reclassifyExistingTransactions,
@@ -149,54 +216,83 @@ function AuthenticatedApp({
   updateBudgetGroup,
   updateClassificationRule,
 }: AuthenticatedAppProps) {
-  const currentView = activeView === 'classification-rules'
-    ? (
-        <ClassificationRulesView
-          budgetGroups={budgetGroups}
-          classificationRules={classificationRules}
-          error={error}
-          feedback={feedback}
-          handleSignOut={handleSignOut}
-          onBackToDashboard={openDashboardView}
-          onCreateRule={createRuleManually}
-          onDeleteRule={deleteClassificationRule}
-          onUpdateRule={updateClassificationRule}
-          savingRuleId={savingRuleId}
-        />
-      )
-    : (
-        <DashboardView
-          activeMonth={selectedMonth}
-          months={months}
-          loading={loading}
-          error={error}
-          feedback={feedback}
-          importLoading={importLoading}
-          handleImport={handleImport}
-          handleSignOut={handleSignOut}
-          monthData={monthData}
-          budgetGroups={budgetGroups}
-          savingGroupId={savingGroupId}
-          createBudgetGroup={createBudgetGroup}
-          updateBudgetGroup={updateBudgetGroup}
-          deleteBudgetGroup={deleteBudgetGroup}
-          filteredTransactions={filteredTransactions}
-          savingId={savingId}
-          handleEditTransaction={handleEditTransaction}
-          transactionFilters={transactionFilters}
-          setTransactionFilters={setTransactionFilters}
-          typeOptions={typeOptions}
-          categoryOptions={categoryOptions}
-          groupOptions={groupOptions}
-          setSelectedMonth={setSelectedMonth}
-          openRulesView={openRulesView}
-        />
-      )
+  const pageMetadata = getPageMetadata(currentPath)
+
+  let currentView = (
+    <DashboardOverviewView
+      budgetGroups={budgetGroups}
+      overview={financialOverview}
+    />
+  )
+
+  if (currentPath === '/app/mensal') {
+    currentView = (
+      <MonthlyView
+        activeMonth={selectedMonth}
+        categoryOptions={categoryOptions}
+        currentMonth={currentMonth}
+        error={error}
+        feedback={feedback}
+        filteredTransactions={filteredTransactions}
+        groupOptions={groupOptions}
+        handleEditTransaction={handleEditTransaction}
+        loading={loading}
+        monthData={monthData}
+        months={months}
+        savingId={savingId}
+        setSelectedMonth={setSelectedMonth}
+        setTransactionFilters={setTransactionFilters}
+        transactionFilters={transactionFilters}
+        typeOptions={typeOptions}
+      />
+    )
+  } else if (currentPath === '/app/importar') {
+    currentView = (
+      <ImportView
+        error={error}
+        feedback={feedback}
+        handleImport={handleImport}
+        importLoading={importLoading}
+      />
+    )
+  } else if (currentPath === '/app/regras') {
+    currentView = (
+      <ClassificationRulesView
+        budgetGroups={budgetGroups}
+        classificationRules={classificationRules}
+        error={error}
+        feedback={feedback}
+        onCreateRule={createRuleManually}
+        onDeleteRule={deleteClassificationRule}
+        onUpdateRule={updateClassificationRule}
+        savingRuleId={savingRuleId}
+      />
+    )
+  } else if (currentPath === '/app/budget-groups') {
+    currentView = (
+      <BudgetGroupsView
+        budgetGroups={budgetGroups}
+        createBudgetGroup={createBudgetGroup}
+        deleteBudgetGroup={deleteBudgetGroup}
+        orphanedCount={orphanedCount}
+        savingGroupId={savingGroupId}
+        updateBudgetGroup={updateBudgetGroup}
+      />
+    )
+  }
 
   return (
     <>
-      {currentView}
-      {activeView === 'dashboard' && editingTransaction !== null ? (
+      <WorkspaceLayout
+        currentPath={currentPath}
+        intro={pageMetadata.intro}
+        onNavigate={(href) => navigateTo(normalizeAuthenticatedPath(href))}
+        onSignOut={handleSignOut}
+        title={pageMetadata.title}
+      >
+        {currentView}
+      </WorkspaceLayout>
+      {currentPath === '/app/mensal' && editingTransaction !== null ? (
         <TransactionEditModal
           key={editingTransaction.id}
           budgetGroups={budgetGroups}
@@ -206,7 +302,7 @@ function AuthenticatedApp({
           onSave={saveTransactionEdit}
         />
       ) : null}
-      {activeView === 'dashboard' ? (
+      {currentPath === '/app/mensal' ? (
         <ClassificationRulePrompt
           key={promptTransaction?.id ?? 'empty'}
           transaction={promptTransaction}
@@ -249,14 +345,14 @@ function UnauthenticatedApp({
       onPasswordUpdate={(password: string) =>
         handlePasswordUpdate(password, () => {
           setIsRecoveryMode(false)
-          window.history.replaceState(null, '', window.location.pathname + window.location.search)
+          writePath('/login', true)
         })
       }
       onDismissRecovery={() => {
         setIsRecoveryMode(false)
         setError('')
         setFeedback('')
-        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+        writePath('/login', true)
       }}
       loading={signInLoading}
       error={error || feedback}
@@ -268,7 +364,7 @@ function App() {
   const { session, loading, setLoading, isRecoveryMode, setIsRecoveryMode } = useAuthSession()
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState('')
-  const [activeView, setActiveView] = useState<ActiveView>('dashboard')
+  const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname || '/')
   const [transactionFilters, setTransactionFilters] = useState<TransactionFilters>({
     search: '',
     type: 'all',
@@ -329,11 +425,48 @@ function App() {
     useAuthActions(setBudgetGroups, setClassificationRules, setTransactions, setSelectedMonth, setError, setFeedback)
 
   const { importLoading, handleImport } = useTransactionsImport(loadTransactions, setError, setFeedback)
-  const { activeMonth, monthData, filteredTransactions, months, typeOptions, categoryOptions, groupOptions } =
+  const { activeMonth, currentMonth, financialOverview, monthData, filteredTransactions, months, typeOptions, categoryOptions, groupOptions } =
     useDashboardState(budgetGroups, transactions, selectedMonth, transactionFilters)
+
+  useEffect(() => {
+    const handlePopState = () => setCurrentPath(window.location.pathname || '/')
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  useEffect(() => {
+    if (isRecoveryMode) {
+      document.title = 'Finanças | Recuperar acesso'
+      return
+    }
+
+    if (!session) {
+      document.title = 'Finanças | Entrar'
+      if (currentPath !== '/login') {
+        writePath('/login', true)
+      }
+      return
+    }
+
+    const authenticatedPath = normalizeAuthenticatedPath(currentPath)
+    if (currentPath !== authenticatedPath) {
+      writePath(authenticatedPath, true)
+    }
+    document.title = `Finanças | ${getPageMetadata(authenticatedPath).title}`
+  }, [currentPath, isRecoveryMode, session])
+
+  const orphanedCount = transactions.filter((transaction) => transaction.status === 'Confirmado' && transaction.type === 'Despesa' && transaction.budgetGroupId === null).length
 
   if (!supabase) {
     return <MissingConfig />
+  }
+
+  if (loading && !isRecoveryMode && session === null) {
+    return (
+      <main className="auth-shell">
+        <p className="feedback" role="status">Carregando sessão…</p>
+      </main>
+    )
   }
 
   if (isRecoveryMode || !session) {
@@ -343,7 +476,13 @@ function App() {
         feedback={feedback}
         handlePasswordReset={handlePasswordReset}
         handlePasswordUpdate={handlePasswordUpdate}
-        handleSignIn={handleSignIn}
+        handleSignIn={async (email, password) => {
+          const ok = await handleSignIn(email, password)
+          if (ok) {
+            writePath(DEFAULT_AUTHENTICATED_PATH, true)
+            setCurrentPath(DEFAULT_AUTHENTICATED_PATH)
+          }
+        }}
         handleSignUp={handleSignUp}
         isRecoveryMode={isRecoveryMode}
         setError={setError}
@@ -354,14 +493,17 @@ function App() {
     )
   }
 
+  const authenticatedPath = normalizeAuthenticatedPath(currentPath)
+
   return (
     <AuthenticatedApp
-      activeView={activeView}
       budgetGroups={budgetGroups}
       categoryOptions={categoryOptions}
       classificationRules={classificationRules}
       createBudgetGroup={createBudgetGroup}
       createRuleManually={upsertClassificationRule}
+      currentMonth={currentMonth}
+      currentPath={authenticatedPath}
       deleteBudgetGroup={deleteBudgetGroup}
       deleteClassificationRule={deleteClassificationRule}
       dismissReclassificationPrompt={dismissReclassificationPrompt}
@@ -370,19 +512,24 @@ function App() {
       error={error}
       feedback={feedback}
       filteredTransactions={filteredTransactions}
+      financialOverview={financialOverview}
       groupOptions={groupOptions}
       handleEditTransaction={openTransactionEditor}
       handleImport={handleImport}
       handleSignOut={async () => {
-        setActiveView('dashboard')
         await handleSignOut()
+        writePath('/login', true)
+        setCurrentPath('/login')
       }}
       importLoading={importLoading}
       loading={loading}
       monthData={monthData}
       months={months}
-      openDashboardView={() => setActiveView('dashboard')}
-      openRulesView={() => setActiveView('classification-rules')}
+      navigateTo={(pathname) => {
+        writePath(pathname)
+        setCurrentPath(pathname)
+      }}
+      orphanedCount={orphanedCount}
       promptTransaction={promptTransaction}
       reclassificationCandidate={reclassificationCandidate}
       reclassifyExistingTransactions={reclassifyExistingTransactions}

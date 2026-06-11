@@ -47,7 +47,7 @@ export function ImportPanel({ onImport, loading }: ImportPanelProps) {
             type="text"
             value={invoice}
             onChange={(event) => setInvoice(event.target.value)}
-            placeholder="Opcional para cartão"
+            placeholder="Opcional para cartão…"
             disabled={kind !== 'card'}
           />
         </label>
@@ -60,7 +60,7 @@ export function ImportPanel({ onImport, loading }: ImportPanelProps) {
           />
         </label>
         <button type="submit" disabled={loading || !file}>
-          {loading ? 'Importando...' : 'Importar para o Supabase'}
+          {loading ? 'Importando…' : 'Importar para o Supabase'}
         </button>
       </form>
     </section>

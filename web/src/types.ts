@@ -33,6 +33,7 @@ export type Transaction = {
   institution?: string
   status?: string
   notes?: string
+  installment?: string
 }
 
 export type DecoratedTransaction = Transaction & {
@@ -52,6 +53,7 @@ export type TransactionRecord = {
   institution: string | null
   status: string | null
   notes: string | null
+  installment?: string | null
 }
 
 export type TransactionEditPayload = {
@@ -147,4 +149,45 @@ export type MonthData = {
   groupOrder: string[]
   orphanedTotal: number
   orphanedCount: number
+}
+
+export type MonthSummary = {
+  monthKey: string
+  revenue: number
+  expenses: number
+  transferOut: number
+  net: number
+}
+
+export type RecurringCandidate = {
+  description: string
+  normalizedDescription: string
+  amount: number
+  type: Exclude<TransactionType, 'Transferência'>
+  category: string
+  budgetGroupId: string | null
+}
+
+export type ProjectionMonth = {
+  monthKey: string
+  revenue: number
+  confirmedExpenses: number
+  probableExpenses: number
+  net: number
+  plannedTransactionsCount: number
+  probableTransactionsCount: number
+  plannedByGroup: Record<string, number>
+  probableByGroup: Record<string, number>
+}
+
+export type FinancialOverview = {
+  currentMonthKey: string
+  recentMonths: MonthSummary[]
+  projectedMonths: ProjectionMonth[]
+  averageRevenue: number
+  averageExpenses: number
+  averageNet: number
+  plannedCommitments: number
+  probableCommitments: number
+  futureAllocationRate: number
 }

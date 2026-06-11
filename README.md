@@ -168,6 +168,7 @@ Preencha:
 ```sh
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
+VITE_SITE_URL=
 ```
 
 Ou use os atalhos versionados para alternar entre Supabase local e remoto:
@@ -224,6 +225,15 @@ Variáveis públicas configuradas no serviço:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `VITE_SITE_URL`
+
+Para o fluxo de "esqueci minha senha", `VITE_SITE_URL` deve apontar para a URL pública do frontend no Render:
+
+```sh
+VITE_SITE_URL=https://my-finance-web-sski.onrender.com
+```
+
+Sem essa variável, o app usa `window.location.origin` como fallback. Isso funciona no navegador atual, mas pode gerar links de recuperação para `localhost` se alguém disparar o reset a partir de um frontend local conectado ao Supabase remoto.
 
 Sempre que o frontend mudar, validar localmente antes do push:
 

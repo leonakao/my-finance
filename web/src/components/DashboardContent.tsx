@@ -1,68 +1,56 @@
-import type { BudgetGroup, DecoratedTransaction, GroupOption, MonthData, TransactionFilters, TransactionType } from '../types'
-import { BudgetGroupManager } from './BudgetGroupManager'
+import type { DecoratedTransaction, GroupOption, MonthData, TransactionFilters, TransactionType } from '../types'
+import { isFutureMonth } from '../lib/transactions'
 import { CategorySection } from './CategorySection'
 import { SummaryTable } from './SummaryTable'
 import { TransactionTable } from './TransactionTable'
 
-function EmptyTransactionsState() {
+function EmptyTransactionsState({ futureMonth }: { futureMonth: boolean }) {
   return (
     <section className="panel">
-      <h2>Nenhum lançamento no período</h2>
-      <p className="muted">Importe dados ou cadastre transações para começar a preencher o painel.</p>
+      <h2>{futureMonth ? 'Nenhum lançamento previsto' : 'Nenhum lançamento no período'}</h2>
+      <p className="muted">
+        {futureMonth
+          ? 'Ainda não há transações futuras persistidas para este mês.'
+          : 'Importe dados ou cadastre transações para começar a preencher o painel.'}
+      </p>
     </section>
   )
 }
 
 type DashboardContentProps = {
   activeMonth: string
-  budgetGroups: BudgetGroup[]
   categoryOptions: string[]
-  createBudgetGroup: (payload: { name: string; targetPercentage: number }) => Promise<boolean>
-  deleteBudgetGroup: (id: string) => Promise<boolean>
   filteredTransactions: DecoratedTransaction[]
   groupOptions: GroupOption[]
   handleEditTransaction: (transactionId: string) => void
   monthData: MonthData | null
   onFiltersChange: (field: keyof TransactionFilters, value: string) => void
-  savingGroupId: string
   savingId: string
   transactionFilters: TransactionFilters
   typeOptions: TransactionType[]
-  updateBudgetGroup: (id: string, payload: { name: string; targetPercentage: number }) => Promise<boolean>
 }
 
 export function DashboardContent({
   activeMonth,
-  budgetGroups,
   categoryOptions,
-  createBudgetGroup,
-  deleteBudgetGroup,
   filteredTransactions,
   groupOptions,
   handleEditTransaction,
   monthData,
   onFiltersChange,
-  savingGroupId,
   savingId,
   transactionFilters,
   typeOptions,
-  updateBudgetGroup,
 }: DashboardContentProps) {
+  const futureMonth = isFutureMonth(activeMonth)
+
   return (
     <>
-      <BudgetGroupManager
-        budgetGroups={budgetGroups}
-        orphanedCount={monthData?.orphanedCount ?? 0}
-        savingGroupId={savingGroupId}
-        onCreate={createBudgetGroup}
-        onUpdate={updateBudgetGroup}
-        onDelete={deleteBudgetGroup}
-      />
       {monthData ? (
         <>
           <SummaryTable monthKey={activeMonth} monthData={monthData} />
           {monthData.orphanedCount ? (
-            <p className="feedback warning">
+            <p className="feedback warning" role="status">
               {monthData.orphanedCount} transações confirmadas estão sem grupo e fora dos totais por budget group.
             </p>
           ) : null}
@@ -83,7 +71,7 @@ export function DashboardContent({
           />
         </>
       ) : (
-        <EmptyTransactionsState />
+        <EmptyTransactionsState futureMonth={futureMonth} />
       )}
     </>
   )

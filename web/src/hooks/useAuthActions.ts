@@ -2,6 +2,17 @@ import { useState, type Dispatch, type SetStateAction } from 'react'
 import { getSupabaseOrThrow } from '../lib/supabase'
 import type { BudgetGroup, ClassificationRule, Transaction } from '../types'
 
+function getPasswordResetRedirectUrl() {
+  const env = import.meta.env
+  const siteUrl = typeof env.VITE_SITE_URL === 'string' ? env.VITE_SITE_URL : undefined
+
+  if (siteUrl !== undefined && siteUrl.trim() !== '') {
+    return siteUrl.replace(/\/+$/, '')
+  }
+
+  return window.location.origin
+}
+
 async function signInWithPassword(email: string, password: string) {
   return getSupabaseOrThrow().auth.signInWithPassword({ email, password })
 }
@@ -12,7 +23,7 @@ async function signUpWithPassword(email: string, password: string) {
 
 async function requestPasswordReset(email: string) {
   return getSupabaseOrThrow().auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin,
+    redirectTo: getPasswordResetRedirectUrl(),
   })
 }
 
@@ -51,18 +62,18 @@ export function useAuthActions(
   }
 
   async function handleSignIn(email: string, password: string) {
-    await runAuthAction(() => signInWithPassword(email, password), '')
+    return runAuthAction(() => signInWithPassword(email, password), '')
   }
 
   async function handleSignUp(email: string, password: string) {
-    await runAuthAction(
+    return runAuthAction(
       () => signUpWithPassword(email, password),
       'Conta criada com sucesso. Se a sessão não abrir automaticamente, faça login.',
     )
   }
 
   async function handlePasswordReset(email: string) {
-    await runAuthAction(
+    return runAuthAction(
       () => requestPasswordReset(email),
       'Email de recuperação enviado. Abra o link para definir uma nova senha.',
     )

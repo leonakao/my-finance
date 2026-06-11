@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { TYPE_OPTIONS } from '../constants'
 import { getCategoryOptionsForType, normalizeCategoryForType } from '../lib/transactions'
 import { toCurrency } from '../lib/formatters'
+import { useDialog } from '../hooks/useDialog'
 import type { BudgetGroup, Transaction, TransactionEditPayload, TransactionType } from '../types'
 
 type ReadOnlyFieldProps = {
@@ -33,6 +34,7 @@ function ReadOnlyField({ label, value }: ReadOnlyFieldProps) {
 }
 
 export function TransactionEditModal({ budgetGroups, saving, transaction, onClose, onSave }: TransactionEditModalProps) {
+  const dialogRef = useDialog(onClose)
   const [type, setType] = useState(transaction.type)
   const [category, setCategory] = useState(normalizeCategoryForType(transaction.type, transaction.category))
   const [budgetGroupId, setBudgetGroupId] = useState(transaction.budgetGroupId ?? '')
@@ -64,7 +66,7 @@ export function TransactionEditModal({ budgetGroups, saving, transaction, onClos
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <div className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="transaction-edit-title">
+      <div ref={dialogRef} className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="transaction-edit-title">
         <div className="panel-header compact">
           <div>
             <div className="eyebrow">Revisao</div>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import { getAvailableMonths, normalizeBudgetGroup, normalizeClassificationRule, normalizeTransaction, sortClassificationRules } from '../lib/transactions'
+import { getCurrentMonthKey, normalizeBudgetGroup, normalizeClassificationRule, normalizeTransaction, sortClassificationRules } from '../lib/transactions'
 import type { BudgetGroup, ClassificationRule, Transaction } from '../types'
 
 export function useTransactionsData(
@@ -46,7 +46,7 @@ export function useTransactionsData(
 
     const { data, error: queryError } = await supabase
       .from('transactions')
-      .select('id, date, description, amount, type, category, budget_group_id, account, institution, status, notes')
+      .select('id, date, description, amount, type, category, budget_group_id, account, institution, status, notes, installment')
       .order('date', { ascending: false })
 
     if (queryError) {
@@ -60,8 +60,7 @@ export function useTransactionsData(
     const normalized = data.map(normalizeTransaction)
     setTransactions(normalized)
 
-    const availableMonths = getAvailableMonths(normalized)
-    setSelectedMonth((current) => (current !== '' ? current : (availableMonths[0] ?? '')))
+    setSelectedMonth((current) => (current !== '' ? current : getCurrentMonthKey()))
     setLoading(false)
   }, [session, setError, setLoading])
 

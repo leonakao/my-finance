@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDialog } from '../hooks/useDialog'
 import type { RulePromptOverrides, Transaction } from '../types'
 
 type ClassificationRulePromptProps = {
@@ -8,6 +9,7 @@ type ClassificationRulePromptProps = {
 }
 
 export function ClassificationRulePrompt({ transaction, onDismiss, onRemember }: ClassificationRulePromptProps) {
+  const dialogRef = useDialog(onDismiss)
   const [matchDescription, setMatchDescription] = useState(transaction?.description ?? '')
   const [matchAmount, setMatchAmount] = useState(transaction ? String(transaction.amount) : '')
 
@@ -30,7 +32,7 @@ export function ClassificationRulePrompt({ transaction, onDismiss, onRemember }:
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <div className="modal-panel prompt-panel" role="dialog" aria-modal="true" aria-labelledby="rule-prompt-title">
+      <div ref={dialogRef} className="modal-panel prompt-panel" role="dialog" aria-modal="true" aria-labelledby="rule-prompt-title">
         <div className="panel-header compact">
           <div>
             <div className="eyebrow">Aprendizado</div>

@@ -1,7 +1,7 @@
 import type { BudgetGroup, ClassificationRule, Transaction } from '../types'
 /* eslint-disable max-lines-per-function */
 import { describe, expect, it } from 'vitest'
-import { buildMonthData, reclassifyTransactionsWithRules } from './transactions'
+import { buildFinancialOverview, buildMonthData, reclassifyTransactionsWithRules } from './transactions'
 
 describe('reclassifyTransactionsWithRules', () => {
   it('reclassifies matching transactions using the current sorted rules', () => {
@@ -126,5 +126,86 @@ describe('reclassifyTransactionsWithRules', () => {
 
     expect(monthData.get('2026-06')!.groups['group-future']!.total).toBe(200)
     expect(monthData.get('2026-06')!.revenue).toBe(1000)
+  })
+
+  it('builds financial overview using future installments and recurring probable expenses', () => {
+    const overview = buildFinancialOverview(
+      [
+        {
+          id: 'salary-may',
+          date: '2026-05-05',
+          description: 'Salário',
+          amount: 10000,
+          type: 'Receita',
+          category: 'Salário',
+          budgetGroupId: null,
+          status: 'Confirmado',
+        },
+        {
+          id: 'salary-jun',
+          date: '2026-06-05',
+          description: 'Salário',
+          amount: 10000,
+          type: 'Receita',
+          category: 'Salário',
+          budgetGroupId: null,
+          status: 'Confirmado',
+        },
+        {
+          id: 'rent-may',
+          date: '2026-05-10',
+          description: 'Aluguel apartamento',
+          amount: 3000,
+          type: 'Despesa',
+          category: 'Moradia',
+          budgetGroupId: 'needs',
+          status: 'Confirmado',
+        },
+        {
+          id: 'rent-jun',
+          date: '2026-06-10',
+          description: 'Aluguel apartamento',
+          amount: 3000,
+          type: 'Despesa',
+          category: 'Moradia',
+          budgetGroupId: 'needs',
+          status: 'Confirmado',
+        },
+        {
+          id: 'parcel-jul',
+          date: '2026-07-12',
+          description: 'Notebook',
+          amount: 800,
+          type: 'Despesa',
+          category: 'Compras',
+          budgetGroupId: 'wants',
+          status: 'Confirmado',
+          installment: '03/10',
+        },
+      ],
+      [
+        { id: 'needs', name: 'Necessidades', targetPercentage: 50 },
+        { id: 'wants', name: 'Desejos', targetPercentage: 30 },
+        { id: 'future', name: 'Futuro', targetPercentage: 20 },
+      ],
+      new Date('2026-06-15T12:00:00Z'),
+    )
+
+    expect(overview.currentMonthKey).toBe('2026-06')
+    expect(overview.projectedMonths).toHaveLength(3)
+    expect(overview.projectedMonths[0]).toMatchObject({
+      monthKey: '2026-06',
+      revenue: 10000,
+      confirmedExpenses: 3000,
+      probableExpenses: 0,
+    })
+    expect(overview.projectedMonths[1]).toMatchObject({
+      monthKey: '2026-07',
+      confirmedExpenses: 800,
+      probableExpenses: 3000,
+      probableTransactionsCount: 1,
+    })
+    expect(overview.plannedCommitments).toBe(3800)
+    expect(overview.probableCommitments).toBe(6000)
   })
 })

@@ -32,8 +32,6 @@ type ClassificationRulesViewProps = {
   classificationRules: ClassificationRule[]
   error: string
   feedback: string
-  handleSignOut: () => Promise<void>
-  onBackToDashboard: () => void
   onCreateRule: (payload: ClassificationRulePayload) => Promise<ClassificationRule | null>
   onDeleteRule: (id: string) => Promise<boolean>
   onUpdateRule: (id: string, payload: ClassificationRulePayload) => Promise<boolean>
@@ -157,7 +155,7 @@ function RuleForm({
           </select>
         </label>
       </div>
-      {warning ? <p className="feedback warning">{warning}</p> : null}
+      {warning ? <p className="feedback warning" role="status">{warning}</p> : null}
       <div className="modal-actions">
         {onCancel ? (
           <button type="button" className="ghost" onClick={onCancel} disabled={saving}>
@@ -220,32 +218,25 @@ export function ClassificationRulesView({
   classificationRules,
   error,
   feedback,
-  handleSignOut,
-  onBackToDashboard,
   onCreateRule,
   onDeleteRule,
   onUpdateRule,
   savingRuleId,
 }: ClassificationRulesViewProps) {
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div>
-          <div className="eyebrow">Financas pessoais</div>
-          <h1>Regras de classificacao</h1>
+    <div className="page-stack">
+      <section className="hero-panel compact-hero">
+        <div className="hero-copy">
+          <div className="eyebrow">Regras</div>
+          <h2>Regras de classificação</h2>
+          <p>
+            Defina regras manuais para reduzir retrabalho e manter consistência entre importações, revisões e
+            reclassificações.
+          </p>
         </div>
-        <div className="toolbar">
-          <button type="button" className="ghost" onClick={onBackToDashboard}>
-            Dashboard
-          </button>
-          <button type="button" className="ghost" onClick={handleSignOut}>
-            Sair
-          </button>
-        </div>
-      </header>
-
-      {error ? <p className="feedback error">{error}</p> : null}
-      {feedback && !error ? <p className="feedback">{feedback}</p> : null}
+      </section>
+      {error ? <p className="feedback error" role="alert">{error}</p> : null}
+      {feedback && !error ? <p className="feedback" role="status">{feedback}</p> : null}
 
       <section className="panel">
         <div className="panel-header compact">
@@ -291,6 +282,6 @@ export function ClassificationRulesView({
           {!classificationRules.length ? <p className="muted">Nenhuma regra salva ainda.</p> : null}
         </div>
       </section>
-    </main>
+    </div>
   )
 }

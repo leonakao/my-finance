@@ -48,10 +48,10 @@ type SignInProps = {
   isRecoveryMode: boolean
   loading: boolean
   onDismissRecovery: () => void
-  onPasswordReset: (email: string) => Promise<void>
+  onPasswordReset: (email: string) => Promise<boolean | void>
   onPasswordUpdate: (password: string) => Promise<void>
-  onSignIn: (email: string, password: string) => Promise<void>
-  onSignUp: (email: string, password: string) => Promise<void>
+  onSignIn: (email: string, password: string) => Promise<boolean | void>
+  onSignUp: (email: string, password: string) => Promise<boolean | void>
 }
 
 function PasswordFields({ confirmPassword, password, setConfirmPassword, setPassword }: PasswordFieldsProps) {
@@ -63,7 +63,7 @@ function PasswordFields({ confirmPassword, password, setConfirmPassword, setPass
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          placeholder="Sua senha"
+          placeholder="Sua senha…"
           minLength={6}
           required
         />
@@ -74,7 +74,7 @@ function PasswordFields({ confirmPassword, password, setConfirmPassword, setPass
           type="password"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
-          placeholder="Repita sua senha"
+          placeholder="Repita sua senha…"
           minLength={6}
           required
         />
@@ -124,8 +124,8 @@ function Panel({ children, copy, title }: PanelProps) {
 function AuthFeedback({ error, formError }: AuthFeedbackProps) {
   return (
     <>
-      {formError ? <p className="feedback error">{formError}</p> : null}
-      {error ? <p className="feedback error">{error}</p> : null}
+      {formError ? <p className="feedback error" role="alert">{formError}</p> : null}
+      {error ? <p className="feedback error" role="alert">{error}</p> : null}
     </>
   )
 }
@@ -184,7 +184,7 @@ function AuthFormBody({
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="voce@exemplo.com"
+            placeholder="voce@exemplo.com…"
             required
           />
         </label>
@@ -196,7 +196,7 @@ function AuthFormBody({
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="Sua senha"
+            placeholder="Sua senha…"
             minLength={6}
             required
           />

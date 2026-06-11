@@ -12,6 +12,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -19,6 +24,7 @@
 body {
   margin: 0;
   min-width: 320px;
+  color: #213126;
 }
 
 h1,

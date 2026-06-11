@@ -1,3 +1,5 @@
+import { useDialog } from '../hooks/useDialog'
+
 type ReclassificationPromptModalProps = {
   onDismiss: () => void
   onReclassify: () => Promise<boolean>
@@ -9,9 +11,17 @@ export function ReclassificationPromptModal({
   onReclassify,
   reclassifying,
 }: ReclassificationPromptModalProps) {
+  const dialogRef = useDialog(onDismiss)
+
   return (
     <div className="modal-backdrop" role="presentation">
-      <div className="modal-panel prompt-panel" role="dialog" aria-modal="true" aria-labelledby="reclassification-prompt-title">
+      <div
+        ref={dialogRef}
+        className="modal-panel prompt-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reclassification-prompt-title"
+      >
         <div className="panel-header compact">
           <div>
             <div className="eyebrow">Reclassificação</div>
