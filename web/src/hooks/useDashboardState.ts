@@ -1,6 +1,14 @@
-import type { BudgetGroup, GroupOption, MonthData, Transaction, TransactionFilters, TransactionType } from '../types'
+import type {
+  BudgetGroup,
+  GroupOption,
+  MonthData,
+  MonthlyProjectionInsight,
+  Transaction,
+  TransactionFilters,
+  TransactionType,
+} from '../types'
+import { buildFinancialAnalysis } from '../lib/financialAnalysis'
 import {
-  buildFinancialOverview,
   buildMonthRange,
   buildMonthData,
   decorateTransactions,
@@ -18,7 +26,8 @@ export function useDashboardState(
 ): {
   activeMonth: string
   currentMonth: string
-  financialOverview: ReturnType<typeof buildFinancialOverview>
+  financialOverview: ReturnType<typeof buildFinancialAnalysis>['overview']
+  monthlyProjectionInsight: MonthlyProjectionInsight | null
   monthData: MonthData | null
   filteredTransactions: ReturnType<typeof filterTransactions>
   months: string[]
@@ -35,12 +44,16 @@ export function useDashboardState(
   const monthTransactions = getMonthTransactions(visibleTransactions, activeMonth)
   const filteredTransactions = filterTransactions(monthTransactions, transactionFilters)
   const { typeOptions, categoryOptions, groupOptions } = getTransactionOptions(monthTransactions, budgetGroups)
-  const financialOverview = buildFinancialOverview(transactions, budgetGroups)
+  const {
+    overview: financialOverview,
+    monthlyProjectionInsight,
+  } = buildFinancialAnalysis(transactions, budgetGroups, activeMonth)
 
   return {
     activeMonth,
     currentMonth,
     financialOverview,
+    monthlyProjectionInsight,
     monthData,
     filteredTransactions,
     months,

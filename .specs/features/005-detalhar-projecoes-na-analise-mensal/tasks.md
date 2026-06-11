@@ -187,13 +187,13 @@ Expected: pelo menos `5` arquivos e `34` testes passam; typecheck termina com ex
 
 **Done when**:
 
-- [ ] O hook chama `buildFinancialAnalysis()` uma unica vez por execucao
-- [ ] `financialOverview` continua com o contrato atual
-- [ ] `monthlyProjectionInsight` e retornado para o mes ativo
-- [ ] Mes passado retorna insight `null`
-- [ ] Sao adicionados pelo menos 3 testes do estado derivado
-- [ ] Suite unitaria tem pelo menos 37 testes
-- [ ] `npm run test && npm run typecheck` passa
+- [x] O hook chama `buildFinancialAnalysis()` uma unica vez por execucao
+- [x] `financialOverview` continua com o contrato atual
+- [x] `monthlyProjectionInsight` e retornado para o mes ativo
+- [x] Mes passado retorna insight `null`
+- [x] Sao adicionados pelo menos 3 testes do estado derivado
+- [x] Suite unitaria tem pelo menos 37 testes
+- [x] `npm run test && npm run typecheck` passa
 
 **Tests**: unit regression
 **Gate**: Unit
