@@ -309,15 +309,15 @@ Expected: pelo menos `4` testes do componente passam; typecheck termina com exit
 
 **Done when**:
 
-- [ ] Registrados e provaveis aparecem em secoes textualmente distintas
-- [ ] Item registrado mostra data, tipo, categoria, grupo, valor e parcela quando existir
-- [ ] Item provavel mostra data estimada, valor medio e base da estimativa
-- [ ] Estados vazios parciais nao escondem a outra secao
-- [ ] Descricoes longas permanecem acessiveis
-- [ ] O componente nao oferece edicao de itens
-- [ ] Sao adicionados pelo menos 5 testes de componente
-- [ ] Suite isolada da branch tem pelo menos 39 testes
-- [ ] `npm run test && npm run typecheck` passa
+- [x] Registrados e provaveis aparecem em secoes textualmente distintas
+- [x] Item registrado mostra data, tipo, categoria, grupo, valor e parcela quando existir
+- [x] Item provavel mostra data estimada, valor medio e base da estimativa
+- [x] Estados vazios parciais nao escondem a outra secao
+- [x] Descricoes longas permanecem acessiveis
+- [x] O componente nao oferece edicao de itens
+- [x] Sao adicionados pelo menos 5 testes de componente
+- [x] Suite isolada da branch tem pelo menos 39 testes
+- [x] `npm run test && npm run typecheck` passa
 
 **Tests**: component
 **Gate**: Unit
