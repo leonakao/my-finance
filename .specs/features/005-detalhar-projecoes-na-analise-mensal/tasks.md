@@ -351,14 +351,14 @@ Expected: pelo menos `5` testes do componente passam; typecheck termina com exit
 
 **Done when**:
 
-- [ ] Mobile em 390px usa uma coluna e nao cria overflow da pagina
-- [ ] Laptop usa grid de duas ou tres colunas conforme espaco
-- [ ] Ultra-wide preserva largura de leitura
-- [ ] Valores monetarios usam numeros tabulares
-- [ ] Registrado/provavel possuem sinais redundantes alem de cor
-- [ ] Foco visivel e contraste aumentam em estados interativos
-- [ ] Nao existe `transition: all` nem animacao de propriedades de layout
-- [ ] `npm run lint && npm run typecheck && npm run build` passa
+- [x] Mobile em 390px usa uma coluna e nao cria overflow da pagina
+- [x] Laptop usa grid de duas ou tres colunas conforme espaco
+- [x] Ultra-wide preserva largura de leitura
+- [x] Valores monetarios usam numeros tabulares
+- [x] Registrado/provavel possuem sinais redundantes alem de cor
+- [x] Foco visivel e contraste aumentam em estados interativos
+- [x] Nao existe `transition: all` nem animacao de propriedades de layout
+- [x] `npm run lint && npm run typecheck && npm run build` passa
 
 **Tests**: none (CSS; validacao funcional pertence aos componentes e ao E2E da pagina)
 **Gate**: Build
