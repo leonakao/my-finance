@@ -191,5 +191,4 @@ export type FinancialOverview = {
   averageNet: number
   plannedCommitments: number
   probableCommitments: number
-  futureAllocationRate: number
 }

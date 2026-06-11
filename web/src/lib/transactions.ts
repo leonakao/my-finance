@@ -418,6 +418,7 @@ export function buildMonthSummaries(transactions: Transaction[]): MonthSummary[]
 
     if (transaction.type === 'Transferência') {
       summary.transferOut += transaction.amount
+      continue
     }
 
     summary.expenses += transaction.amount
@@ -524,6 +525,10 @@ export function buildFinancialOverview(transactions: Transaction[], budgetGroups
       continue
     }
 
+    if (transaction.type === 'Transferência') {
+      continue
+    }
+
     projection.confirmedExpenses += transaction.amount
     projection.net -= transaction.amount
     accumulateAmount(projection.plannedByGroup, transaction.budgetGroupId ?? 'ungrouped', transaction.amount)
@@ -566,19 +571,6 @@ export function buildFinancialOverview(transactions: Transaction[], budgetGroups
 
   const plannedCommitments = projectedMonths.reduce((total, month) => total + month.confirmedExpenses, 0)
   const probableCommitments = projectedMonths.reduce((total, month) => total + month.probableExpenses, 0)
-  const futureGroupIds = new Set(
-    budgetGroups
-      .filter((budgetGroup) => normalizeRuleDescription(budgetGroup.name) === 'futuro')
-      .map((budgetGroup) => budgetGroup.id),
-  )
-  const futureAllocationRate = averageRevenue
-    ? (projectedMonths.reduce((total, month) => {
-        const plannedFuture = Object.entries(month.plannedByGroup)
-          .filter(([groupId]) => futureGroupIds.has(groupId))
-          .reduce((subtotal, [, amount]) => subtotal + amount, 0)
-        return total + plannedFuture
-      }, 0) / (averageRevenue * projectedMonths.length)) * 100
-    : 0
 
   return {
     currentMonthKey,
@@ -589,7 +581,6 @@ export function buildFinancialOverview(transactions: Transaction[], budgetGroups
     averageNet,
     plannedCommitments,
     probableCommitments,
-    futureAllocationRate,
   }
 }
 
