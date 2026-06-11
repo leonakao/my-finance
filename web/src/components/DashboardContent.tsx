@@ -1,3 +1,4 @@
+import { UNGROUPED_FILTER_VALUE } from '../constants'
 import type { DecoratedTransaction, GroupOption, MonthData, TransactionFilters, TransactionType } from '../types'
 import { isFutureMonth } from '../lib/transactions'
 import { CategorySection } from './CategorySection'
@@ -48,13 +49,22 @@ export function DashboardContent({
     <>
       {monthData ? (
         <>
-          <SummaryTable monthKey={activeMonth} monthData={monthData} />
+          <SummaryTable monthData={monthData} />
           {monthData.orphanedCount ? (
             <p className="feedback warning" role="status">
-              {monthData.orphanedCount} transações confirmadas estão sem grupo e fora dos totais por budget group.
+              <span className="feedback-copy">
+                {monthData.orphanedCount} transações confirmadas estão sem grupo e fora dos totais por grupo.
+              </span>
+              <button
+                type="button"
+                className="ghost feedback-action"
+                onClick={() => onFiltersChange('group', UNGROUPED_FILTER_VALUE)}
+              >
+                Filtrar sem grupo
+              </button>
             </p>
           ) : null}
-          <div className="grid two-up">
+          <div className="grid group-grid">
             {monthData.groupOrder.map((groupId) => (
               <CategorySection key={groupId} group={monthData.groups[groupId]!} revenue={monthData.revenue} />
             ))}

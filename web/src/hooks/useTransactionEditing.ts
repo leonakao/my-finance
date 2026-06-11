@@ -98,7 +98,9 @@ export function useTransactionEditing(
     )
 
     setEditingTransactionId('')
-    if (!classificationSnapshotsEqual(previousSnapshot, nextSnapshot)) {
+    const shouldPromptForRule = previousSnapshot.type !== nextSnapshot.type || previousSnapshot.category !== nextSnapshot.category
+
+    if (shouldPromptForRule && !classificationSnapshotsEqual(previousSnapshot, nextSnapshot)) {
       setPromptTransactionId(transactionId)
     }
     setSavingId('')

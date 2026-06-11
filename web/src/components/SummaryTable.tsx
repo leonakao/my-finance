@@ -1,12 +1,11 @@
 import type { MonthData } from '../types'
-import { monthLabel, toCurrency, toPercent } from '../lib/formatters'
+import { toCurrency, toPercent } from '../lib/formatters'
 
 type SummaryTableProps = {
-  monthKey: string
   monthData: MonthData
 }
 
-export function SummaryTable({ monthKey, monthData }: SummaryTableProps) {
+export function SummaryTable({ monthData }: SummaryTableProps) {
   const rows = monthData.groupOrder.map((groupId) => {
     const group = monthData.groups[groupId]!
     const total = group.total
@@ -27,11 +26,10 @@ export function SummaryTable({ monthKey, monthData }: SummaryTableProps) {
     <section className="panel">
       <div className="panel-header">
         <div>
-          <div className="eyebrow">Resumo por grupo</div>
-          <h2>{monthLabel(monthKey)}</h2>
+          <h2>Resumo por grupo</h2>
         </div>
         <div className="revenue-chip">
-          Receita do mes
+          Receita do mês
           <strong>{toCurrency(monthData.revenue)}</strong>
         </div>
       </div>
@@ -42,7 +40,7 @@ export function SummaryTable({ monthKey, monthData }: SummaryTableProps) {
             <th>Total alocado</th>
             <th>% da receita</th>
             <th>Meta</th>
-            <th>Diferenca</th>
+            <th>Diferença</th>
           </tr>
         </thead>
         <tbody>
@@ -52,7 +50,7 @@ export function SummaryTable({ monthKey, monthData }: SummaryTableProps) {
               <td>{toCurrency(row.total)}</td>
               <td>{toPercent(row.percent)}</td>
               <td>{toPercent(row.target)}</td>
-              <td className={row.difference > 0 ? 'positive' : 'negative'}>{toPercent(row.difference)}</td>
+              <td className={row.difference > 0 ? 'negative' : 'positive'}>{toPercent(row.difference)}</td>
             </tr>
           ))}
         </tbody>

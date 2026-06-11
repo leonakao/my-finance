@@ -1,5 +1,6 @@
 /* eslint-disable max-lines-per-function */
 /* eslint-disable complexity */
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { DecoratedTransaction, GroupOption, MonthData, TransactionFilters, TransactionType } from '../types'
 import { isFutureMonth } from '../lib/transactions'
@@ -52,19 +53,11 @@ export function MonthlyView({
     <div className="page-stack">
       <section className="panel month-toolbar-panel">
         <div className="month-toolbar">
-          <div>
-            <div className="eyebrow">Mensal</div>
-            <h2>{monthLabel(activeMonth)}</h2>
-            <p className="muted">
-              {futureMonth
-                ? 'Meses futuros mostram apenas o que já está previsto na base.'
-                : 'Esta área combina leitura do mês, revisão e edição dos lançamentos confirmados.'}
-            </p>
-          </div>
-          <div className="month-controls">
+          <div className="month-switcher">
             <button
               type="button"
-              className="ghost"
+              className="ghost month-step"
+              aria-label="Mês anterior"
               onClick={() => {
                 if (previousMonth) {
                   setSelectedMonth(previousMonth)
@@ -72,9 +65,9 @@ export function MonthlyView({
               }}
               disabled={!previousMonth}
             >
-              Mês anterior
+              <ChevronLeft size={18} strokeWidth={1.8} aria-hidden="true" />
             </button>
-            <label>
+            <label className="month-select">
               <span className="sr-only" id="monthly-select-label">Selecionar mês</span>
               <select aria-labelledby="monthly-select-label" value={activeMonth} onChange={(event) => setSelectedMonth(event.target.value)}>
                 {months.map((month) => (
@@ -86,7 +79,8 @@ export function MonthlyView({
             </label>
             <button
               type="button"
-              className="ghost"
+              className="ghost month-step"
+              aria-label="Próximo mês"
               onClick={() => {
                 if (nextMonth) {
                   setSelectedMonth(nextMonth)
@@ -94,18 +88,30 @@ export function MonthlyView({
               }}
               disabled={!nextMonth}
             >
-              Próximo mês
+              <ChevronRight size={18} strokeWidth={1.8} aria-hidden="true" />
             </button>
             {activeMonth !== currentMonth ? (
-              <button type="button" onClick={() => setSelectedMonth(currentMonth)}>
-                Voltar ao atual
+              <button type="button" className="ghost" onClick={() => setSelectedMonth(currentMonth)}>
+                Hoje
               </button>
             ) : null}
           </div>
+          <p className="muted">
+            {futureMonth
+              ? 'Meses futuros mostram apenas o que já está previsto na base.'
+              : 'Esta área combina leitura do mês, revisão e edição dos lançamentos confirmados.'}
+          </p>
         </div>
       </section>
 
-      {loading ? <p className="feedback" role="status">Carregando dados…</p> : null}
+      {loading ? (
+        <section className="panel skeleton-panel" role="status" aria-label="Carregando dados">
+          <div className="skeleton-line narrow" />
+          <div className="skeleton-line" />
+          <div className="skeleton-line wide" />
+          <div className="skeleton-line wide" />
+        </section>
+      ) : null}
       {error ? <p className="feedback error" role="alert">{error}</p> : null}
       {feedback && !error ? <p className="feedback" role="status">{feedback}</p> : null}
 

@@ -59,7 +59,7 @@ test('persists selected budget group when editing a transaction', async ({ page 
   await page.getByRole('link', { name: 'Mensal' }).click()
 
   await page.getByRole('button', { name: 'Editar' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Editar classificacao' })
+  const dialog = page.getByRole('dialog', { name: 'Editar classificação' })
   await dialog.getByLabel('Grupo').selectOption(selectableBudgetGroup.id)
   const updateRequestPromise = page.waitForRequest((request) => {
     return (
@@ -106,12 +106,12 @@ test('shows reclassification CTA after remember-classification and updates match
     .filter({ has: page.getByText(editableTransaction.description, { exact: true }) })
     .getByRole('button', { name: 'Editar' })
     .click()
-  const dialog = page.getByRole('dialog', { name: 'Editar classificacao' })
+  const dialog = page.getByRole('dialog', { name: 'Editar classificação' })
   await dialog.getByLabel('Categoria').selectOption('Alimentação')
   await dialog.getByLabel('Grupo').selectOption(selectableBudgetGroup.id)
   await dialog.getByRole('button', { name: 'Salvar' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Lembrar esta classificacao?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Lembrar esta classificação?' })).toBeVisible()
   await page.getByLabel('Nome da regra').fill('supermercado')
   await page.getByRole('button', { name: 'Lembrar pelo nome', exact: true }).click()
 

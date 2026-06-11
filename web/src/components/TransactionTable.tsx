@@ -1,5 +1,6 @@
+import { Pencil } from 'lucide-react'
 import type { DecoratedTransaction, GroupOption, TransactionFilters, TransactionType } from '../types'
-import { toCurrency } from '../lib/formatters'
+import { dateLabel, toCurrency } from '../lib/formatters'
 
 type TransactionFiltersProps = {
   filters: TransactionFilters
@@ -37,9 +38,10 @@ function TransactionFilters({ filters, onFiltersChange, typeOptions, categoryOpt
         Buscar
         <input
           type="search"
+          name="search"
           value={filters.search}
           onChange={(event) => onFiltersChange('search', event.target.value)}
-          placeholder="Descrição ou instituição"
+          placeholder="Descrição ou instituição…"
         />
       </label>
       <label>
@@ -91,11 +93,11 @@ function TransactionRow({ transaction, savingId, onEdit }: TransactionRowProps) 
 
   return (
     <tr>
-      <td>{transaction.date}</td>
+      <td>{dateLabel(transaction.date)}</td>
       <td>
         <div className="description-cell">
           <strong>{transaction.description}</strong>
-          <span>{transaction.institution ?? 'Sem instituicao'}</span>
+          <span>{transaction.institution ?? 'Sem instituição'}</span>
         </div>
       </td>
       <td>
@@ -105,13 +107,17 @@ function TransactionRow({ transaction, savingId, onEdit }: TransactionRowProps) 
       <td>{transaction.category}</td>
       <td>
         <div className="group-cell">
-          <span>{transaction.budgetGroupName ?? 'Sem grupo'}</span>
-          {transaction.needsReclassification ? <div className="row-hint">Precisa de classificação</div> : null}
+          {transaction.needsReclassification ? (
+            <div className="row-hint">Precisa de classificação</div>
+          ) : (
+            <span>{transaction.budgetGroupName ?? 'Sem grupo'}</span>
+          )}
         </div>
       </td>
       <td>
         <button type="button" className="ghost" onClick={() => onEdit(transaction.id)} disabled={isSaving}>
-          {isSaving ? 'Salvando...' : 'Editar'}
+          <Pencil size={14} strokeWidth={1.8} aria-hidden="true" />
+          {isSaving ? 'Salvando…' : 'Editar'}
         </button>
       </td>
     </tr>
@@ -132,8 +138,8 @@ export function TransactionTable({
     <section className="panel">
       <div className="panel-header compact">
         <div>
-          <div className="eyebrow">Revisao</div>
-          <h3>Lancamentos do mes</h3>
+          <div className="eyebrow">Revisão</div>
+          <h3>Lançamentos do mês</h3>
         </div>
       </div>
       <TransactionFilters
@@ -157,12 +163,12 @@ export function TransactionTable({
           <thead>
             <tr>
               <th>Data</th>
-              <th>Descricao</th>
+              <th>Descrição</th>
               <th>Tipo</th>
               <th>Valor</th>
               <th>Categoria</th>
               <th>Grupo</th>
-              <th>Acoes</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>

@@ -9,10 +9,11 @@ export function addMonths(base: Date, delta: number) {
 }
 
 export function monthLabel(date: Date) {
-  return new Intl.DateTimeFormat('pt-BR', {
+  const label = new Intl.DateTimeFormat('pt-BR', {
     month: 'long',
     year: 'numeric',
   }).format(new Date(date.getFullYear(), date.getMonth(), 1))
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 export async function signIn(page: Page, email: string, password: string) {

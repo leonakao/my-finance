@@ -1,6 +1,6 @@
 # Testing
 
-**Analyzed:** 2026-06-03
+**Analyzed:** 2026-06-11
 
 ## Current State
 
@@ -17,7 +17,12 @@
 - `web/package.json` expoe:
   - `npm run lint`
   - `npm run build`
-- nao ha testes unitarios ou e2e configurados
+  - `npm run typecheck`
+  - `npm run test`
+  - `npm run test:e2e`
+- Vitest + Testing Library cobrem helpers, hooks e componentes.
+- Playwright cobre os fluxos autenticados principais.
+- Baseline em 2026-06-11: 3 arquivos e 10 testes unitarios passando.
 
 ### Database
 
@@ -44,9 +49,42 @@
 
 ### Minimum gate for frontend changes
 
-- rodar `npm run lint` em `web/`
-- rodar `npm run build` em `web/` quando houver alteracao de UI, estado ou integracao Supabase
-- validar manualmente auth, carregamento e atualizacao de categoria/grupo quando o fluxo for tocado
+- helper puro ou regra financeira:
+  - teste unitario co-localizado
+  - `npm run test`
+  - `npm run typecheck`
+- componente ou hook:
+  - teste com Testing Library quando houver comportamento observavel
+  - `npm run test`
+  - `npm run typecheck`
+- integracao de pagina ou navegacao:
+  - Playwright no fluxo afetado
+  - `npm run test:e2e`
+- toda alteracao frontend:
+  - `npm run lint`
+  - `npm run build`
+
+## Test Coverage Matrix
+
+| Code layer | Required test | Parallel-safe |
+| --- | --- | --- |
+| Pure financial/date helper | Unit (Vitest) | Yes |
+| React presentation component | Component (Testing Library) | Yes |
+| React hook/state derivation | Unit/component when behavior changes | Yes |
+| Page composition and routing | E2E (Playwright) | No |
+| CSS-only change | None; validate through owning component/page gate | Yes |
+| Type-only contract | Typecheck | Yes |
+
+## Gate Check Commands
+
+Run from `web/`.
+
+| Gate | Commands |
+| --- | --- |
+| Type | `npm run typecheck` |
+| Unit | `npm run test && npm run typecheck` |
+| Build | `npm run lint && npm run typecheck && npm run build` |
+| Full | `npm run test && npm run lint && npm run typecheck && npm run build && npm run test:e2e` |
 
 ### Minimum gate for Supabase changes
 
@@ -60,13 +98,12 @@
 ### Short term
 
 - criar fixtures pequenas e anonimizadas para os scripts Python
-- introduzir testes unitarios para helpers puros de classificacao e agregacao
 - registrar comandos de verificacao em cada feature ou quick task relevante
 
 ### Medium term
 
 - adicionar testes de integracao para os pipelines principais de `tools/`
-- adicionar pelo menos um smoke test do frontend para login/configuracao basica
+- ampliar testes de componentes para estados vazios, erros e acessibilidade
 
 ## Non-Negotiable Rules
 

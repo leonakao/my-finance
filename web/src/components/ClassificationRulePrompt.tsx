@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useDialog } from '../hooks/useDialog'
+import { AppDialog } from './ui/AppDialog'
 import type { RulePromptOverrides, Transaction } from '../types'
 
 type ClassificationRulePromptProps = {
@@ -9,7 +9,6 @@ type ClassificationRulePromptProps = {
 }
 
 export function ClassificationRulePrompt({ transaction, onDismiss, onRemember }: ClassificationRulePromptProps) {
-  const dialogRef = useDialog(onDismiss)
   const [matchDescription, setMatchDescription] = useState(transaction?.description ?? '')
   const [matchAmount, setMatchAmount] = useState(transaction ? String(transaction.amount) : '')
 
@@ -31,39 +30,42 @@ export function ClassificationRulePrompt({ transaction, onDismiss, onRemember }:
   }
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <div ref={dialogRef} className="modal-panel prompt-panel" role="dialog" aria-modal="true" aria-labelledby="rule-prompt-title">
-        <div className="panel-header compact">
-          <div>
-            <div className="eyebrow">Aprendizado</div>
-            <h3 id="rule-prompt-title">Lembrar esta classificacao?</h3>
-          </div>
-        </div>
-        <p className="muted">
-          Revise o nome e o valor que vao compor a regra. O sistema pode lembrar pelo nome ou pelo nome + valor.
-        </p>
-        <div className="modal-grid">
-          <label className="full-width">
-            Nome da regra
-            <input value={matchDescription} onChange={(event) => setMatchDescription(event.target.value)} />
-          </label>
-          <label>
-            Valor da regra
-            <input type="number" step="0.01" min="0" value={matchAmount} onChange={(event) => setMatchAmount(event.target.value)} />
-          </label>
-        </div>
-        <div className="prompt-actions">
-          <button type="button" className="ghost" onClick={onDismiss}>
-            Nao lembrar
-          </button>
-          <button type="button" onClick={rememberByName} disabled={!matchDescription.trim()}>
-            Lembrar pelo nome
-          </button>
-          <button type="button" onClick={rememberByNameAndAmount} disabled={!matchDescription.trim() || !matchAmount}>
-            Lembrar pelo nome + valor
-          </button>
-        </div>
+    <AppDialog open onOpenChange={(open) => !open && onDismiss()} className="prompt-panel" eyebrow="Aprendizado" title="Lembrar esta classificação?">
+      <p className="muted">
+        Revise o nome e o valor que vão compor a regra. O sistema pode lembrar pelo nome ou pelo nome + valor.
+      </p>
+      <div className="modal-grid">
+        <label className="full-width">
+          Nome da regra
+          <input
+            value={matchDescription}
+            onChange={(event) => setMatchDescription(event.target.value)}
+            name="matchDescription"
+          />
+        </label>
+        <label>
+          Valor da regra
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={matchAmount}
+            onChange={(event) => setMatchAmount(event.target.value)}
+            name="matchAmount"
+          />
+        </label>
       </div>
-    </div>
+      <div className="prompt-actions">
+        <button type="button" className="ghost" onClick={onDismiss}>
+          Não lembrar
+        </button>
+        <button type="button" onClick={rememberByName} disabled={!matchDescription.trim()}>
+          Lembrar pelo nome
+        </button>
+        <button type="button" onClick={rememberByNameAndAmount} disabled={!matchDescription.trim() || !matchAmount}>
+          Lembrar pelo nome + valor
+        </button>
+      </div>
+    </AppDialog>
   )
 }

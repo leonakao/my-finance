@@ -1,3 +1,4 @@
+import { FileUp } from 'lucide-react'
 import { useState } from 'react'
 import { IMPORT_OPTIONS } from '../constants'
 import type { ImportKind, ImportPayload } from '../types'
@@ -12,6 +13,7 @@ export function ImportPanel({ onImport, loading }: ImportPanelProps) {
   const [invoice, setInvoice] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const isSantanderPdf = kind === 'santander-card-pdf' || kind === 'santander-account-pdf'
+  const isCardImport = kind === 'card' || kind === 'santander-card-pdf'
 
   return (
     <section className="panel">
@@ -41,26 +43,35 @@ export function ImportPanel({ onImport, loading }: ImportPanelProps) {
             ))}
           </select>
         </label>
-        <label>
-          Referência da fatura
-          <input
-            type="text"
-            value={invoice}
-            onChange={(event) => setInvoice(event.target.value)}
-            placeholder="Opcional para cartão…"
-            disabled={kind !== 'card'}
-          />
-        </label>
-        <label>
+        {isCardImport ? (
+          <label>
+            Referência da fatura
+            <input
+              name="invoice"
+              type="text"
+              value={invoice}
+              onChange={(event) => setInvoice(event.target.value)}
+              placeholder="Opcional para cartão…"
+            />
+          </label>
+        ) : null}
+        <label className="file-field">
           Arquivo
           <input
+            name="file"
             type="file"
+            className="sr-only"
             accept={isSantanderPdf ? '.pdf,application/pdf' : '.csv,text/csv'}
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
+          <span className="file-trigger" aria-hidden="true">
+            <FileUp size={16} strokeWidth={1.8} />
+            <span className="file-trigger-label">{file ? file.name : 'Escolher arquivo…'}</span>
+          </span>
         </label>
         <button type="submit" disabled={loading || !file}>
-          {loading ? 'Importando…' : 'Importar para o Supabase'}
+          {loading ? <span className="button-spinner" aria-hidden="true" /> : null}
+          {loading ? 'Importando…' : 'Importar arquivo'}
         </button>
       </form>
     </section>

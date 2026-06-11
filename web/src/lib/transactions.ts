@@ -267,7 +267,6 @@ export function reclassifyTransactionsWithRules(transactions: Transaction[], rul
   }
 }
 
-/* eslint-disable-next-line complexity */
 export function normalizeTransaction(row: TransactionRecord): Transaction {
   const type = row.type ?? 'Despesa'
   return {
@@ -482,6 +481,39 @@ function hasPersistedRecurringMatch(transactions: Transaction[], candidate: Recu
   })
 }
 
+// eslint-disable-next-line complexity
+function buildTrendMonth(
+  monthKey: string,
+  currentMonthKey: string,
+  summaryByMonth: Map<string, MonthSummary>,
+  projectionByMonth: Map<string, ProjectionMonth>,
+): TrendMonth {
+  const summary = summaryByMonth.get(monthKey)
+  const projection = projectionByMonth.get(monthKey)
+
+  if (compareMonthKeys(monthKey, currentMonthKey) > 0 && projection) {
+    return {
+      monthKey,
+      revenue: projection.revenue,
+      expenses: projection.confirmedExpenses + projection.probableExpenses,
+      transferOut: 0,
+      net: projection.net,
+      isCurrent: false,
+      isProjected: true,
+    }
+  }
+
+  return {
+    monthKey,
+    revenue: summary?.revenue ?? 0,
+    expenses: summary?.expenses ?? 0,
+    transferOut: summary?.transferOut ?? 0,
+    net: summary?.net ?? 0,
+    isCurrent: monthKey === currentMonthKey,
+    isProjected: false,
+  }
+}
+
 /* eslint-disable-next-line max-lines-per-function, complexity */
 export function buildFinancialOverview(transactions: Transaction[], budgetGroups: BudgetGroup[], now = new Date()): FinancialOverview {
   const currentMonthKey = getCurrentMonthKey(now)
@@ -568,32 +600,8 @@ export function buildFinancialOverview(transactions: Transaction[], budgetGroups
   const plannedCommitments = projectedMonths.reduce((total, month) => total + month.confirmedExpenses, 0)
   const probableCommitments = projectedMonths.reduce((total, month) => total + month.probableExpenses, 0)
   const summaryByMonth = new Map(monthSummaries.map((summary) => [summary.monthKey, summary]))
-  const trendMonths: TrendMonth[] = Array.from({ length: 5 }, (_, index) => addMonthsToMonthKey(currentMonthKey, index - 2)).map((monthKey) => {
-    const summary = summaryByMonth.get(monthKey)
-    const projection = projectionByMonth.get(monthKey)
-
-    if (compareMonthKeys(monthKey, currentMonthKey) > 0 && projection) {
-      return {
-        monthKey,
-        revenue: projection.revenue,
-        expenses: projection.confirmedExpenses + projection.probableExpenses,
-        transferOut: 0,
-        net: projection.net,
-        isCurrent: false,
-        isProjected: true,
-      }
-    }
-
-    return {
-      monthKey,
-      revenue: summary?.revenue ?? 0,
-      expenses: summary?.expenses ?? 0,
-      transferOut: summary?.transferOut ?? 0,
-      net: summary?.net ?? 0,
-      isCurrent: monthKey === currentMonthKey,
-      isProjected: false,
-    }
-  })
+  const trendMonths = Array.from({ length: 5 }, (_, index) => addMonthsToMonthKey(currentMonthKey, index - 2))
+    .map((monthKey) => buildTrendMonth(monthKey, currentMonthKey, summaryByMonth, projectionByMonth))
 
   return {
     currentMonthKey,

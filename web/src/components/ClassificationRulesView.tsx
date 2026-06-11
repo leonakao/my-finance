@@ -1,6 +1,9 @@
 /* eslint-disable max-lines-per-function */
+import { Pencil, Trash2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
+import { ConfirmDialog } from './ui/ConfirmDialog'
 import { CLASSIFICATION_RULE_MATCH_MODE_OPTIONS, TYPE_OPTIONS } from '../constants'
+import { toCurrency } from '../lib/formatters'
 import {
   getCategoryOptionsForType,
   getDefaultCategoryForType,
@@ -107,7 +110,7 @@ function RuleForm({
           </select>
         </label>
         <label className="full-width">
-          Descricao
+          Descrição
           <input value={matchDescription} onChange={(event) => setMatchDescription(event.target.value)} disabled={saving} />
         </label>
         {matchMode === 'description_amount' ? (
@@ -163,7 +166,8 @@ function RuleForm({
           </button>
         ) : null}
         <button type="submit" disabled={saving}>
-          {submitLabel}
+          {saving ? <span className="button-spinner" aria-hidden="true" /> : null}
+          {saving ? 'Salvando…' : submitLabel}
         </button>
       </div>
     </form>
@@ -172,6 +176,7 @@ function RuleForm({
 
 function RuleRow({ budgetGroups, rule, saving, onSave, onDelete }: RuleRowProps) {
   const [editing, setEditing] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   if (editing) {
     return (
@@ -193,7 +198,7 @@ function RuleRow({ budgetGroups, rule, saving, onSave, onDelete }: RuleRowProps)
       <div>
         <strong>{rule.matchDescription}</strong>
         <div className="muted">
-          {rule.matchMode === 'description_amount' ? `Nome + valor (${rule.matchAmount?.toFixed(2) ?? '0.00'})` : 'Nome'}
+          {rule.matchMode === 'description_amount' ? `Nome + valor (${toCurrency(rule.matchAmount ?? 0)})` : 'Nome'}
         </div>
       </div>
       <div className="rule-summary">
@@ -203,12 +208,25 @@ function RuleRow({ budgetGroups, rule, saving, onSave, onDelete }: RuleRowProps)
       </div>
       <div className="rule-actions">
         <button type="button" className="ghost" onClick={() => setEditing(true)} disabled={saving}>
+          <Pencil size={14} strokeWidth={1.8} aria-hidden="true" />
           Editar
         </button>
-        <button type="button" className="danger" onClick={() => onDelete(rule.id)} disabled={saving}>
+        <button type="button" className="danger" onClick={() => setConfirmingDelete(true)} disabled={saving}>
+          <Trash2 size={14} strokeWidth={1.8} aria-hidden="true" />
           Excluir
         </button>
       </div>
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Excluir regra?"
+        description={`A regra "${rule.matchDescription}" deixará de classificar novas transações. Esta ação não pode ser desfeita.`}
+        confirmLabel="Excluir regra"
+        busy={saving}
+        onCancel={() => setConfirmingDelete(false)}
+        onConfirm={() => {
+          void onDelete(rule.id).then(() => setConfirmingDelete(false))
+        }}
+      />
     </div>
   )
 }
@@ -225,16 +243,6 @@ export function ClassificationRulesView({
 }: ClassificationRulesViewProps) {
   return (
     <div className="page-stack">
-      <section className="hero-panel compact-hero">
-        <div className="hero-copy">
-          <div className="eyebrow">Regras</div>
-          <h2>Regras de classificação</h2>
-          <p>
-            Defina regras manuais para reduzir retrabalho e manter consistência entre importações, revisões e
-            reclassificações.
-          </p>
-        </div>
-      </section>
       {error ? <p className="feedback error" role="alert">{error}</p> : null}
       {feedback && !error ? <p className="feedback" role="status">{feedback}</p> : null}
 

@@ -460,7 +460,7 @@ function App() {
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
+  }, [setSelectedMonth])
 
   useEffect(() => {
     if (currentPath !== '/app/mensal') {

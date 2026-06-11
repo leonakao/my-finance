@@ -11,13 +11,14 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "sh ../tools/run_web_e2e.sh",
     "preview": "vite preview"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.16",
     "@radix-ui/react-tooltip": "^1.2.9",
     "@supabase/supabase-js": "^2.107.0",
+    "lucide-react": "^1.17.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

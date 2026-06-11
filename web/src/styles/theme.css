@@ -1,0 +1,65 @@
+:root {
+  color-scheme: dark;
+
+  --color-bg-app: #0b0b12;
+  --color-bg-sidebar: #10101a;
+  --color-bg-surface: #171624;
+  --color-bg-surface-elevated: #1d1b2b;
+  --color-bg-surface-hover: #242236;
+  --color-bg-overlay: rgba(11, 11, 18, 0.78);
+
+  --color-border-subtle: #29263a;
+  --color-border-default: #343049;
+  --color-border-strong: #45405f;
+
+  --color-primary: #7c5cff;
+  --color-primary-hover: #9b87ff;
+  --color-primary-active: #6842e8;
+  --color-primary-subtle: rgba(124, 92, 255, 0.1);
+  --color-primary-border: rgba(124, 92, 255, 0.25);
+
+  --color-text-primary: #f4f4f5;
+  --color-text-secondary: #b4b4c0;
+  --color-text-muted: #858596;
+  --color-text-disabled: #5f5f70;
+
+  --color-finance-income: #2ecc71;
+  --color-finance-income-subtle: rgba(46, 204, 113, 0.1);
+  --color-finance-expense: #ff5c70;
+  --color-finance-expense-subtle: rgba(255, 92, 112, 0.1);
+  --color-finance-warning: #f6b44b;
+  --color-finance-warning-subtle: rgba(246, 180, 75, 0.1);
+  --color-finance-info: #4db7e5;
+  --color-finance-info-subtle: rgba(77, 183, 229, 0.1);
+
+  --color-focus-ring: #9b87ff;
+  --color-selection: rgba(124, 92, 255, 0.28);
+
+  --layout-sidebar-width: 280px;
+  --layout-sidebar-collapsed-width: 88px;
+  --layout-content-max: 1440px;
+  --layout-page-padding: 32px;
+  --layout-page-padding-mobile: 20px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --radius-panel: 24px;
+  --radius-card: 20px;
+  --radius-control: 14px;
+  --radius-chip: 999px;
+
+  --shadow-panel:
+    0 18px 48px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-elevated:
+    0 24px 64px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}

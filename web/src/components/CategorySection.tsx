@@ -19,8 +19,8 @@ export function CategorySection({ group, revenue }: CategorySectionProps) {
     <section className="panel">
       <div className="panel-header compact">
         <div>
-          <div className="eyebrow">{group.name}</div>
-          <h3>Categorias</h3>
+          <div className="eyebrow">Categorias</div>
+          <h3>{group.name}</h3>
         </div>
       </div>
       <table className="summary-table">
@@ -43,7 +43,7 @@ export function CategorySection({ group, revenue }: CategorySectionProps) {
           ) : (
             <tr>
               <td colSpan={3} className="empty-cell">
-                Nenhum lancamento neste grupo.
+                Nenhum lançamento neste grupo.
               </td>
             </tr>
           )}

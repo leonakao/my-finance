@@ -6,10 +6,10 @@ test('shows budget group management controls', async ({ page }) => {
   const { email, password } = await createUserSession()
 
   await signIn(page, email, password)
-  await page.getByRole('link', { name: 'Budget groups' }).click()
+  await page.getByRole('link', { name: 'Grupos' }).click()
 
-  await expect(page.getByText('Organize os grupos que sustentam metas, leitura mensal e projeções.')).toBeVisible()
-  await expect(page.getByLabel('Nome do grupo')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Gerenciar grupos' })).toBeVisible()
+  await expect(page.getByLabel('Nome do grupo', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Meta %')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Criar grupo' })).toBeVisible()
   await expect(page.locator('.budget-group-row')).toHaveCount(3)
@@ -21,7 +21,7 @@ test('keeps import submit disabled until a file is attached', async ({ page }) =
   await signIn(page, email, password)
   await page.getByRole('link', { name: 'Importar' }).click()
 
-  const submitButton = page.getByRole('button', { name: 'Importar para o Supabase' })
+  const submitButton = page.getByRole('button', { name: 'Importar arquivo' })
   await expect(submitButton).toBeDisabled()
   await page.getByLabel('Tipo de arquivo').selectOption('account')
   await page.locator('input[type="file"]').setInputFiles({

@@ -20,16 +20,6 @@ export function BudgetGroupsView({
 }: BudgetGroupsViewProps) {
   return (
     <div className="page-stack">
-      <section className="hero-panel compact-hero">
-        <div className="hero-copy">
-          <div className="eyebrow">Budget groups</div>
-          <h2>Organize os grupos que sustentam metas, leitura mensal e projeções.</h2>
-          <p>
-            Ajuste nomes e metas percentuais com uma área dedicada. As mudanças refletem a navegação mensal e a
-            dashboard estratégica.
-          </p>
-        </div>
-      </section>
       <BudgetGroupManager
         budgetGroups={budgetGroups}
         orphanedCount={orphanedCount}

@@ -15,6 +15,12 @@
 - A feature `003-importar-parcelas-por-mes` sera desenvolvida na worktree `.worktrees/003-importar-parcelas-por-mes`, branch `feature/003-importar-parcelas-por-mes`.
 - O MVP da feature `003-importar-parcelas-por-mes` cobre o parser de cartao Santander em `supabase/functions/_shared/santander.ts`, unico fluxo ativo que hoje expoe `installment` no formato `NN/NN`.
 - A estrategia de idempotencia da feature `003-importar-parcelas-por-mes` sera gerar `external_id` determinista por parcela sintetizada, derivado de uma chave-base estavel da compra.
+- A feature `005-detalhar-projecoes-na-analise-mensal` cobre a tela `Mensal` para mes atual e meses futuros, sem alterar a heuristica de projecao existente nesta etapa de planejamento.
+- Para a feature `005-detalhar-projecoes-na-analise-mensal`, no mes atual a projecao considera apenas o que falta acontecer; o saldo restante sera `saldo do mes ate agora + receitas restantes - despesas restantes previstas/provaveis`; a sugestao semanal sera `saldo disponivel / semanas restantes no mes`.
+- Para a feature `005-detalhar-projecoes-na-analise-mensal`, a tela `Mensal` seguira a opcao A: bloco-resumo no topo e detalhamento logo abaixo.
+- O design da feature `005-detalhar-projecoes-na-analise-mensal` foi aprovado em 2026-06-11.
+- Nessa feature, transacoes registradas no dia atual contam como realizadas; deficit zera a sugestao semanal; meses futuros alem do horizonte da dashboard recebem detalhe; e itens registrados podem aparecer tanto na projecao quanto na tabela mensal.
+- A feature `005-detalhar-projecoes-na-analise-mensal` possui 9 tarefas planejadas, com componentes de apresentacao paralelizaveis e gate final unitario, lint, typecheck, build e Playwright.
 
 ## Current Facts
 
@@ -24,6 +30,7 @@
 - O schema real ja possui `budget_groups` e `transactions.budget_group_id` via migrations de 2026-06-09, mesmo que a documentacao anterior em `.specs/features/001-gerenciar-budget-groups/` ainda reflita um estado mais antigo.
 - O parser de cartao Santander ja identifica `installment` e hoje persiste apenas a parcela presente na fatura importada.
  - O parser de cartao Santander ja identifica `installment` e hoje persiste apenas a parcela presente na fatura importada.
+- A dashboard ja mostra `projectedMonths` de forma resumida, mas a pagina `Mensal` ainda nao expoe detalhamento dos itens previstos e provaveis por mes.
 
 ## Blockers
 

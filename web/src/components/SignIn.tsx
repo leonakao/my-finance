@@ -60,9 +60,11 @@ function PasswordFields({ confirmPassword, password, setConfirmPassword, setPass
       <label>
         Senha
         <input
+          name="password"
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          autoComplete="new-password"
           placeholder="Sua senha…"
           minLength={6}
           required
@@ -71,9 +73,11 @@ function PasswordFields({ confirmPassword, password, setConfirmPassword, setPass
       <label>
         Confirmar senha
         <input
+          name="confirmPassword"
           type="password"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
+          autoComplete="new-password"
           placeholder="Repita sua senha…"
           minLength={6}
           required
@@ -112,7 +116,7 @@ function Panel({ children, copy, title }: PanelProps) {
   return (
     <main className="auth-shell">
       <section className="auth-panel">
-        <div className="eyebrow">Supabase + React</div>
+        <div className="eyebrow">Finanças pessoais</div>
         <h1>{title}</h1>
         <p className="auth-copy">{copy}</p>
         {children}
@@ -126,6 +130,15 @@ function AuthFeedback({ error, formError }: AuthFeedbackProps) {
     <>
       {formError ? <p className="feedback error" role="alert">{formError}</p> : null}
       {error ? <p className="feedback error" role="alert">{error}</p> : null}
+    </>
+  )
+}
+
+function ButtonLabel({ idle, loading, pending }: { idle: string; loading: string; pending: boolean }) {
+  return (
+    <>
+      {pending ? <span className="button-spinner" aria-hidden="true" /> : null}
+      <span>{pending ? loading : idle}</span>
     </>
   )
 }
@@ -157,7 +170,7 @@ function buildContent(mode: AuthMode, isRecoveryMode: boolean) {
   }
   return {
     title: 'Finanças',
-    copy: 'Entre com email e senha para abrir o dashboard e revisar seus lançamentos direto no Supabase.',
+    copy: 'Entre com email e senha para abrir o dashboard e revisar seus lançamentos.',
     button: 'Entrar',
     loading: 'Entrando...',
   }
@@ -181,9 +194,13 @@ function AuthFormBody({
         <label>
           Email
           <input
+            name="email"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            inputMode="email"
+            spellCheck={false}
             placeholder="voce@exemplo.com…"
             required
           />
@@ -193,9 +210,11 @@ function AuthFormBody({
         <label>
           Senha
           <input
+            name="password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
             placeholder="Sua senha…"
             minLength={6}
             required
@@ -279,7 +298,7 @@ export function SignIn({
           setPassword={setPassword}
         />
         <button type="submit" disabled={loading}>
-          {loading ? content.loading : content.button}
+          <ButtonLabel idle={content.button} loading={content.loading} pending={loading} />
         </button>
       </form>
       {!isRecoveryMode ? <ForgotPasswordLink mode={mode} setMode={setMode} /> : null}

@@ -18,12 +18,12 @@ test('creates a user rule from the remember-classification flow', async ({ page 
   await page.getByRole('link', { name: 'Mensal' }).click()
 
   await page.getByRole('button', { name: 'Editar' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Editar classificacao' })
+  const dialog = page.getByRole('dialog', { name: 'Editar classificação' })
   await dialog.getByLabel('Categoria').selectOption('Alimentação')
   await dialog.getByLabel('Grupo').selectOption(selectableBudgetGroup.id)
   await dialog.getByRole('button', { name: 'Salvar' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Lembrar esta classificacao?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Lembrar esta classificação?' })).toBeVisible()
   await page.getByLabel('Nome da regra').fill('supermercado')
   await page.getByRole('button', { name: 'Lembrar pelo nome + valor' }).click()
   await expect(page.getByText('Reclassificar transações existentes?')).toBeVisible()
