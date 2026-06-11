@@ -15,6 +15,7 @@ import type {
   MonthSummary,
   ProjectionMonth,
   RecurringCandidate,
+  TrendMonth,
   Transaction,
   TransactionFilters,
   TransactionRecord,
@@ -490,7 +491,8 @@ function hasPersistedRecurringMatch(transactions: Transaction[], candidate: Recu
 /* eslint-disable-next-line max-lines-per-function, complexity */
 export function buildFinancialOverview(transactions: Transaction[], budgetGroups: BudgetGroup[], now = new Date()): FinancialOverview {
   const currentMonthKey = getCurrentMonthKey(now)
-  const recentMonths = buildMonthSummaries(transactions).slice(-6)
+  const monthSummaries = buildMonthSummaries(transactions)
+  const recentMonths = monthSummaries.slice(-6)
   const recurringCandidates = buildRecurringCandidates(transactions, currentMonthKey)
   const currentMonthWindow = Array.from({ length: PROJECTION_HORIZON_MONTHS }, (_, index) => addMonthsToMonthKey(currentMonthKey, index))
   const projectedMonths: ProjectionMonth[] = currentMonthWindow.map((monthKey) => ({
@@ -571,10 +573,38 @@ export function buildFinancialOverview(transactions: Transaction[], budgetGroups
 
   const plannedCommitments = projectedMonths.reduce((total, month) => total + month.confirmedExpenses, 0)
   const probableCommitments = projectedMonths.reduce((total, month) => total + month.probableExpenses, 0)
+  const summaryByMonth = new Map(monthSummaries.map((summary) => [summary.monthKey, summary]))
+  const trendMonths: TrendMonth[] = Array.from({ length: 5 }, (_, index) => addMonthsToMonthKey(currentMonthKey, index - 2)).map((monthKey) => {
+    const summary = summaryByMonth.get(monthKey)
+    const projection = projectionByMonth.get(monthKey)
+
+    if (compareMonthKeys(monthKey, currentMonthKey) > 0 && projection) {
+      return {
+        monthKey,
+        revenue: projection.revenue,
+        expenses: projection.confirmedExpenses + projection.probableExpenses,
+        transferOut: 0,
+        net: projection.net,
+        isCurrent: false,
+        isProjected: true,
+      }
+    }
+
+    return {
+      monthKey,
+      revenue: summary?.revenue ?? 0,
+      expenses: summary?.expenses ?? 0,
+      transferOut: summary?.transferOut ?? 0,
+      net: summary?.net ?? 0,
+      isCurrent: monthKey === currentMonthKey,
+      isProjected: false,
+    }
+  })
 
   return {
     currentMonthKey,
     recentMonths,
+    trendMonths,
     projectedMonths,
     averageRevenue,
     averageExpenses,

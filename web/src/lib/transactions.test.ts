@@ -192,6 +192,48 @@ describe('reclassifyTransactionsWithRules', () => {
     )
 
     expect(overview.currentMonthKey).toBe('2026-06')
+    expect(overview.trendMonths).toMatchObject([
+      {
+        monthKey: '2026-04',
+        revenue: 0,
+        expenses: 0,
+        net: 0,
+        isCurrent: false,
+        isProjected: false,
+      },
+      {
+        monthKey: '2026-05',
+        revenue: 10000,
+        expenses: 3000,
+        net: 7000,
+        isCurrent: false,
+        isProjected: false,
+      },
+      {
+        monthKey: '2026-06',
+        revenue: 10000,
+        expenses: 3000,
+        net: 7000,
+        isCurrent: true,
+        isProjected: false,
+      },
+      {
+        monthKey: '2026-07',
+        revenue: 10000,
+        expenses: 3800,
+        net: 6200,
+        isCurrent: false,
+        isProjected: true,
+      },
+      {
+        monthKey: '2026-08',
+        revenue: 10000,
+        expenses: 3000,
+        net: 7000,
+        isCurrent: false,
+        isProjected: true,
+      },
+    ])
     expect(overview.projectedMonths).toHaveLength(3)
     expect(overview.projectedMonths[0]).toMatchObject({
       monthKey: '2026-06',

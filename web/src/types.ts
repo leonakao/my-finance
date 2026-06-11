@@ -161,6 +161,11 @@ export type MonthSummary = {
   net: number
 }
 
+export type TrendMonth = MonthSummary & {
+  isCurrent: boolean
+  isProjected: boolean
+}
+
 export type RecurringCandidate = {
   description: string
   normalizedDescription: string
@@ -185,6 +190,7 @@ export type ProjectionMonth = {
 export type FinancialOverview = {
   currentMonthKey: string
   recentMonths: MonthSummary[]
+  trendMonths: TrendMonth[]
   projectedMonths: ProjectionMonth[]
   averageRevenue: number
   averageExpenses: number

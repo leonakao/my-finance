@@ -74,8 +74,8 @@ export function DashboardOverviewView({ budgetGroups, overview }: DashboardOverv
       <section className="panel">
         <div className="panel-header compact">
           <div>
-            <div className="eyebrow">Tendência recente</div>
-            <h3>Últimos meses confirmados</h3>
+            <div className="eyebrow">Tendência</div>
+            <h3>Histórico recente e próximos meses</h3>
           </div>
         </div>
         <div className="table-wrap">
@@ -89,9 +89,16 @@ export function DashboardOverviewView({ budgetGroups, overview }: DashboardOverv
               </tr>
             </thead>
             <tbody>
-              {overview.recentMonths.map((month) => (
-                <tr key={month.monthKey}>
-                  <td>{monthLabel(month.monthKey)}</td>
+              {overview.trendMonths.map((month) => (
+                <tr
+                  key={month.monthKey}
+                  className={month.isCurrent ? 'trend-row is-current' : month.isProjected ? 'trend-row is-projected' : 'trend-row'}
+                >
+                  <td className="trend-month-cell">
+                    <span>{monthLabel(month.monthKey)}</span>
+                    {month.isCurrent ? <span className="trend-badge current">Atual</span> : null}
+                    {month.isProjected ? <span className="trend-badge projected">Previsto</span> : null}
+                  </td>
                   <td>{toCurrency(month.revenue)}</td>
                   <td>{toCurrency(month.expenses)}</td>
                   <td className={month.net >= 0 ? 'positive' : 'negative'}>{toCurrency(month.net)}</td>
