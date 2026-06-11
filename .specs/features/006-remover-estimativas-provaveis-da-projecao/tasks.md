@@ -241,14 +241,16 @@ Expected: testes novos de escopo, dashboard, saldo e removidos passam; suite tot
 
 **Done when**:
 
-- [ ] O hook consulta todos os campos definidos no design
-- [ ] Registros passam pelo normalizador canonico
-- [ ] Estado e setter sao retornados
-- [ ] Falha de carga interrompe o estado de loading e informa erro
-- [ ] Deep link nao depende de navegacao previa para receber exclusoes
-- [ ] Sao adicionados pelo menos 3 testes do hook
-- [ ] Suite total tem pelo menos 64 testes na branch isolada
+- [x] O hook consulta todos os campos definidos no design
+- [x] Registros passam pelo normalizador canonico
+- [x] Estado e setter sao retornados
+- [x] Falha de carga interrompe o estado de loading e informa erro
+- [x] Deep link nao depende de navegacao previa para receber exclusoes
+- [x] Sao adicionados pelo menos 3 testes do hook
+- [x] Suite total tem pelo menos 64 testes na branch isolada
 - [ ] `npm run test && npm run typecheck` passa
+
+**Gate note**: 3 testes direcionados passam; typecheck global continua bloqueado pelos imports Deno do trabalho paralelo.
 
 **Tests**: hook unit/component
 **Gate**: Quick unit

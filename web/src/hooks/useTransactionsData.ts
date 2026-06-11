@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { normalizeProjectionExclusion } from '../lib/projectionExclusions'
 import { getCurrentMonthKey, normalizeBudgetGroup, normalizeClassificationRule, normalizeTransaction, sortClassificationRules } from '../lib/transactions'
-import type { BudgetGroup, ClassificationRule, Transaction } from '../types'
+import type { BudgetGroup, ClassificationRule, ProjectionExclusion, Transaction } from '../types'
 
 export function useTransactionsData(
   session: Session | null,
@@ -11,6 +12,7 @@ export function useTransactionsData(
 ) {
   const [budgetGroups, setBudgetGroups] = useState<BudgetGroup[]>([])
   const [classificationRules, setClassificationRules] = useState<ClassificationRule[]>([])
+  const [projectionExclusions, setProjectionExclusions] = useState<ProjectionExclusion[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [selectedMonth, setSelectedMonth] = useState('')
 
@@ -44,6 +46,17 @@ export function useTransactionsData(
       return
     }
 
+    const { data: projectionExclusionsData, error: projectionExclusionsError } = await supabase
+      .from('projection_exclusions')
+      .select('id, type, description, normalized_description, scope, month_start, created_at')
+      .order('created_at', { ascending: false })
+
+    if (projectionExclusionsError) {
+      setError(projectionExclusionsError.message)
+      setLoading(false)
+      return
+    }
+
     const { data, error: queryError } = await supabase
       .from('transactions')
       .select('id, date, description, amount, type, category, budget_group_id, account, institution, notes, installment')
@@ -57,6 +70,7 @@ export function useTransactionsData(
 
     setBudgetGroups(budgetGroupsData.map(normalizeBudgetGroup))
     setClassificationRules(sortClassificationRules(classificationRulesData.map(normalizeClassificationRule)))
+    setProjectionExclusions(projectionExclusionsData.map(normalizeProjectionExclusion))
     const normalized = data.map(normalizeTransaction)
     setTransactions(normalized)
 
@@ -79,6 +93,8 @@ export function useTransactionsData(
     setBudgetGroups,
     classificationRules,
     setClassificationRules,
+    projectionExclusions,
+    setProjectionExclusions,
     transactions,
     setTransactions,
     selectedMonth,
