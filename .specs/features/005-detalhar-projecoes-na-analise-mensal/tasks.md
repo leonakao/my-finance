@@ -101,14 +101,14 @@ Expected: TypeScript termina com exit code `0`.
 
 **Done when**:
 
-- [ ] `monthKeys.ts` exporta chaves locais sem usar `toISOString()`
-- [ ] Rollover entre dezembro/janeiro e deltas negativos funcionam
-- [ ] Dia 29, 30 ou 31 e limitado ao ultimo dia valido do mes alvo
-- [ ] Dias e semanas restantes usam contagem inclusiva
-- [ ] `transactions.ts` reutiliza os helpers sem alterar APIs publicas
-- [ ] Sao adicionados pelo menos 6 testes unitarios
-- [ ] Suite total tem pelo menos 16 testes, sem remover os 10 existentes
-- [ ] `npm run test && npm run typecheck` passa
+- [x] `monthKeys.ts` exporta chaves locais sem usar `toISOString()`
+- [x] Rollover entre dezembro/janeiro e deltas negativos funcionam
+- [x] Dia 29, 30 ou 31 e limitado ao ultimo dia valido do mes alvo
+- [x] Dias e semanas restantes usam contagem inclusiva
+- [x] `transactions.ts` reutiliza os helpers sem alterar APIs publicas
+- [x] Sao adicionados pelo menos 6 testes unitarios
+- [x] Suite total tem pelo menos 16 testes, sem remover os 10 existentes
+- [x] `npm run test && npm run typecheck` passa
 
 **Tests**: unit
 **Gate**: Unit

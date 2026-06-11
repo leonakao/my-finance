@@ -21,47 +21,13 @@ import type {
   TransactionRecord,
   TransactionType,
 } from '../types'
+import { addMonthsToMonthKey, compareMonthKeys, getCurrentMonthKey } from './monthKeys'
 
 type RuleLike = Partial<ClassificationRule> & Partial<ClassificationRuleRecord>
 type TransactionLike = Partial<Transaction> & { budget_group_id?: string | null }
 const PROJECTION_HORIZON_MONTHS = 3
 
-function padMonth(value: number): string {
-  return String(value).padStart(2, '0')
-}
-
-function monthParts(monthKey: string): { year: number; month: number } | null {
-  const match = /^(?<year>\d{4})-(?<month>\d{2})$/.exec(monthKey)
-  if (!match?.groups) {
-    return null
-  }
-
-  return {
-    year: Number(match.groups.year),
-    month: Number(match.groups.month),
-  }
-}
-
-export function getCurrentMonthKey(now = new Date()): string {
-  return `${now.getFullYear()}-${padMonth(now.getMonth() + 1)}`
-}
-
-export function addMonthsToMonthKey(monthKey: string, delta: number): string {
-  const parts = monthParts(monthKey)
-  if (!parts) {
-    return monthKey
-  }
-
-  const monthIndex = parts.month - 1 + delta
-  const year = parts.year + Math.floor(monthIndex / 12)
-  const normalizedMonthIndex = ((monthIndex % 12) + 12) % 12
-
-  return `${year}-${padMonth(normalizedMonthIndex + 1)}`
-}
-
-function compareMonthKeys(left: string, right: string): number {
-  return left.localeCompare(right)
-}
+export { addMonthsToMonthKey, getCurrentMonthKey } from './monthKeys'
 
 export function buildMonthRange(transactions: Transaction[], monthsForward = PROJECTION_HORIZON_MONTHS, now = new Date()): string[] {
   const currentMonth = getCurrentMonthKey(now)
