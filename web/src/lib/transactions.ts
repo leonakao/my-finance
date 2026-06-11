@@ -459,6 +459,7 @@ function buildRecurringCandidates(transactions: Transaction[], currentMonthKey: 
       const [type] = key.split(':') as [Exclude<TransactionType, 'Transferência'>]
       const latestTransaction = [...entry.transactions].sort((left, right) => (right.date ?? '').localeCompare(left.date ?? ''))[0]!
       const averageAmount = entry.transactions.reduce((total, transaction) => total + transaction.amount, 0) / entry.transactions.length
+      const lastObservedDate = latestTransaction.date ?? ''
 
       return {
         description: latestTransaction.description,
@@ -467,6 +468,10 @@ function buildRecurringCandidates(transactions: Transaction[], currentMonthKey: 
         type,
         category: latestTransaction.category,
         budgetGroupId: latestTransaction.budgetGroupId,
+        occurrenceCount: entry.transactions.length,
+        observedMonthCount: entry.months.size,
+        lastObservedDate,
+        expectedDayOfMonth: Number(lastObservedDate.slice(8, 10)),
       }
     })
 }

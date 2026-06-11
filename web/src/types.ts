@@ -171,6 +171,78 @@ export type RecurringCandidate = {
   type: Exclude<TransactionType, 'Transferência'>
   category: string
   budgetGroupId: string | null
+  occurrenceCount: number
+  observedMonthCount: number
+  lastObservedDate: string
+  expectedDayOfMonth: number
+}
+
+export type ProjectionItemBasis = {
+  averageAmount: number
+  occurrenceCount: number
+  observedMonthCount: number
+  lastObservedDate: string
+}
+
+export type ProjectionLineItem = {
+  id: string
+  kind: 'registered' | 'probable'
+  date: string
+  isDateEstimated: boolean
+  description: string
+  normalizedDescription: string
+  amount: number
+  type: Exclude<TransactionType, 'Transferência'>
+  category: string
+  budgetGroupId: string | null
+  budgetGroupName: string
+  installment: string | null
+  basis: ProjectionItemBasis | null
+}
+
+export type ProjectionGroupSummary = {
+  budgetGroupId: string | null
+  budgetGroupName: string
+  registeredAmount: number
+  probableAmount: number
+  totalAmount: number
+  itemCount: number
+}
+
+export type ProjectionCategorySummary = {
+  type: Exclude<TransactionType, 'Transferência'>
+  category: string
+  registeredAmount: number
+  probableAmount: number
+  totalAmount: number
+  itemCount: number
+}
+
+export type MonthlyProjectionTotals = {
+  registeredRevenue: number
+  probableRevenue: number
+  registeredExpenses: number
+  probableExpenses: number
+  totalRevenue: number
+  totalExpenses: number
+  remainingNet: number
+}
+
+export type MonthlyProjectionInsight = {
+  monthKey: string
+  isCurrentMonth: boolean
+  hasProjection: boolean
+  totals: MonthlyProjectionTotals
+  balanceToDate: number | null
+  availableToSpend: number | null
+  daysRemaining: number | null
+  weeksRemaining: number | null
+  weeklyBalance: number | null
+  weeklySpendingSuggestion: number | null
+  registeredItems: ProjectionLineItem[]
+  probableItems: ProjectionLineItem[]
+  groupSummaries: ProjectionGroupSummary[]
+  categorySummaries: ProjectionCategorySummary[]
 }
 
 export type ProjectionMonth = {
@@ -195,4 +267,9 @@ export type FinancialOverview = {
   averageNet: number
   plannedCommitments: number
   probableCommitments: number
+}
+
+export type FinancialAnalysis = {
+  overview: FinancialOverview
+  monthlyProjectionInsight: MonthlyProjectionInsight | null
 }

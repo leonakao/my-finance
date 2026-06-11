@@ -1,7 +1,7 @@
 # Detalhar Projecoes Na Analise Mensal Tasks
 
 **Design**: `.specs/features/005-detalhar-projecoes-na-analise-mensal/design.md`
-**Status**: Draft - aguardando aprovacao e escolha de ferramentas
+**Status**: In Progress
 **Baseline unitario**: 3 arquivos, 10 testes passando em 2026-06-11
 
 ---
@@ -64,11 +64,11 @@ T1 -> T2 -> T3 -> T4 --------------------------┐
 
 **Done when**:
 
-- [ ] `RecurringCandidate` inclui contagens, ultima data observada e dia esperado
-- [ ] `ProjectionItemBasis`, `ProjectionLineItem`, `ProjectionGroupSummary` e `ProjectionCategorySummary` estao exportados
-- [ ] `MonthlyProjectionTotals`, `MonthlyProjectionInsight` e `FinancialAnalysis` estao exportados
-- [ ] Os tipos representam `registered` e `probable` sem introduzir estado de pagamento
-- [ ] `npm run typecheck` passa
+- [x] `RecurringCandidate` inclui contagens, ultima data observada e dia esperado
+- [x] `ProjectionItemBasis`, `ProjectionLineItem`, `ProjectionGroupSummary` e `ProjectionCategorySummary` estao exportados
+- [x] `MonthlyProjectionTotals`, `MonthlyProjectionInsight` e `FinancialAnalysis` estao exportados
+- [x] Os tipos representam `registered` e `probable` sem introduzir estado de pagamento
+- [x] `npm run typecheck` passa
 
 **Tests**: typecheck
 **Gate**: Type
