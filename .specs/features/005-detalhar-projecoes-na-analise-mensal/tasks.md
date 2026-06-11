@@ -434,7 +434,8 @@ Expected:
 
 - 9 arquivos e 53 testes unitarios passaram.
 - Lint, typecheck e build passaram.
-- 19 testes Playwright passaram.
+- 22 testes Playwright passaram.
+- A cobertura E2E inclui formulas de saldo disponivel e sugestao semanal, deficit com sugestao zerada e mes futuro composto apenas por estimativas provaveis sem grupo.
 - Viewports de 390px, 1280px e 2560px foram validados sem overflow da pagina.
 - Nenhum `SPEC_DEVIATION` foi necessario.
 
