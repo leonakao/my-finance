@@ -24,17 +24,9 @@ import {
   getLocalDateKey,
   getRemainingMonthTime,
 } from './monthKeys'
+import { normalizeProjectionDescription } from './projectionExclusions'
 
 const PROJECTION_HORIZON_MONTHS = 3
-
-function normalizeDescription(description: string | null | undefined): string {
-  return String(description ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
-}
 
 function getValidDateKey(transaction: Transaction): string | null {
   const date = transaction.date ?? ''
@@ -119,7 +111,7 @@ function buildRecurringCandidates(transactions: Transaction[], currentMonthKey: 
       continue
     }
 
-    const normalizedDescription = normalizeDescription(transaction.description)
+    const normalizedDescription = normalizeProjectionDescription(transaction.description)
     if (normalizedDescription === '') {
       continue
     }
@@ -140,7 +132,7 @@ function buildRecurringCandidates(transactions: Transaction[], currentMonthKey: 
 
       return {
         description: latestTransaction.description,
-        normalizedDescription: normalizeDescription(latestTransaction.description),
+        normalizedDescription: normalizeProjectionDescription(latestTransaction.description),
         amount: entry.transactions.reduce((total, transaction) => total + transaction.amount, 0) / entry.transactions.length,
         type,
         category: latestTransaction.category,
@@ -164,7 +156,7 @@ function hasPersistedRecurringMatch(
       return false
     }
 
-    return normalizeDescription(transaction.description) === candidate.normalizedDescription
+    return normalizeProjectionDescription(transaction.description) === candidate.normalizedDescription
   })
 }
 
@@ -332,7 +324,7 @@ function buildRegisteredItems(
       date,
       isDateEstimated: false,
       description: transaction.description,
-      normalizedDescription: normalizeDescription(transaction.description),
+      normalizedDescription: normalizeProjectionDescription(transaction.description),
       amount: transaction.amount,
       type: transaction.type,
       category: transaction.category,

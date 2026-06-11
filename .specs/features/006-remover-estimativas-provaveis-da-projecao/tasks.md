@@ -152,14 +152,16 @@ Expected: TypeScript termina com exit code `0`.
 
 **Done when**:
 
-- [ ] Existe uma unica normalizacao canonica para identidade de recorrencia
-- [ ] `YYYY-MM` converte para `YYYY-MM-01`
-- [ ] Escopo mensal corresponde somente ao mes exato
-- [ ] Escopo futuro corresponde ao mes inicial e posteriores
-- [ ] Tipo e descricao normalizada participam do match
-- [ ] Sao adicionados pelo menos 8 testes unitarios
-- [ ] Suite total tem pelo menos 61 testes, sem remover os 53 existentes
+- [x] Existe uma unica normalizacao canonica para identidade de recorrencia
+- [x] `YYYY-MM` converte para `YYYY-MM-01`
+- [x] Escopo mensal corresponde somente ao mes exato
+- [x] Escopo futuro corresponde ao mes inicial e posteriores
+- [x] Tipo e descricao normalizada participam do match
+- [x] Sao adicionados pelo menos 8 testes unitarios
+- [x] Suite total tem pelo menos 61 testes, sem remover os 53 existentes
 - [ ] `npm run test && npm run typecheck` passa
+
+**Gate note**: 28 testes direcionados passam; typecheck continua bloqueado apenas pelos imports Deno do trabalho paralelo.
 
 **Tests**: unit
 **Gate**: Quick unit
