@@ -91,7 +91,6 @@ export async function seedTransactionWithNoGroup(client: TestSupabaseClient, use
     budget_group_id: null,
     account: 'Conta principal',
     institution: 'Nubank',
-    status: 'Confirmado',
     notes: 'Seed E2E',
     invoice: '',
     installment: '',
@@ -127,7 +126,6 @@ export async function seedTransaction(client: TestSupabaseClient, userId: string
     budget_group_id: null,
     account: 'Conta principal',
     institution: 'Nubank',
-    status: 'Confirmado',
     notes: 'Seed E2E',
     invoice: '',
     installment: '',
@@ -220,6 +218,20 @@ export async function fetchTransactions(client: TestSupabaseClient) {
     .from('transactions')
     .select('id, description, budget_group_id, category, type')
     .order('created_at', { ascending: true })
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function fetchTransactionsByExternalIds(client: TestSupabaseClient, externalIds: string[]) {
+  const { data, error } = await client
+    .from('transactions')
+    .select('id, external_id, description, amount, type, category, source')
+    .in('external_id', externalIds)
+    .order('external_id', { ascending: true })
 
   if (error) {
     throw error

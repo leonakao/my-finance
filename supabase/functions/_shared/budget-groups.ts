@@ -14,7 +14,7 @@ export type ParsedImportedTransaction = {
   budget_group_name: DefaultBudgetGroupName | null
   account: string
   institution: string
-  status: 'Confirmado' | 'Pendente' | 'Ignorar'
+  ignored: boolean
   notes: string
   invoice: string
   installment: string

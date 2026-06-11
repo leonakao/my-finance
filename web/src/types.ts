@@ -31,7 +31,6 @@ export type Transaction = {
   budgetGroupId: string | null
   account?: string
   institution?: string
-  status?: string
   notes?: string
   installment?: string
 }
@@ -51,7 +50,6 @@ export type TransactionRecord = {
   budget_group_id: string | null
   account: string | null
   institution: string | null
-  status: string | null
   notes: string | null
   installment?: string | null
 }

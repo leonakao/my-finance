@@ -46,7 +46,7 @@ export function useTransactionsData(
 
     const { data, error: queryError } = await supabase
       .from('transactions')
-      .select('id, date, description, amount, type, category, budget_group_id, account, institution, status, notes, installment')
+      .select('id, date, description, amount, type, category, budget_group_id, account, institution, notes, installment')
       .order('date', { ascending: false })
 
     if (queryError) {

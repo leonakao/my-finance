@@ -86,7 +86,6 @@ create table if not exists public.transactions (
   ),
   account text not null default '',
   institution text not null default '',
-  status text not null default 'Confirmado' check (status in ('Confirmado', 'Pendente', 'Ignorar')),
   notes text not null default '',
   invoice text not null default '',
   installment text not null default '',

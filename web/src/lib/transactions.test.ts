@@ -108,7 +108,6 @@ describe('reclassifyTransactionsWithRules', () => {
           type: 'Receita',
           category: 'Salário',
           budgetGroupId: null,
-          status: 'Confirmado',
         },
         {
           id: 'tx-2',
@@ -118,7 +117,6 @@ describe('reclassifyTransactionsWithRules', () => {
           type: 'Transferência',
           category: 'Investimentos',
           budgetGroupId: 'group-future',
-          status: 'Confirmado',
         },
       ],
       [{ id: 'group-future', name: 'Futuro', targetPercentage: 20 } satisfies BudgetGroup],
@@ -139,7 +137,6 @@ describe('reclassifyTransactionsWithRules', () => {
           type: 'Receita',
           category: 'Salário',
           budgetGroupId: null,
-          status: 'Confirmado',
         },
         {
           id: 'salary-jun',
@@ -149,7 +146,6 @@ describe('reclassifyTransactionsWithRules', () => {
           type: 'Receita',
           category: 'Salário',
           budgetGroupId: null,
-          status: 'Confirmado',
         },
         {
           id: 'rent-may',
@@ -159,7 +155,6 @@ describe('reclassifyTransactionsWithRules', () => {
           type: 'Despesa',
           category: 'Moradia',
           budgetGroupId: 'needs',
-          status: 'Confirmado',
         },
         {
           id: 'rent-jun',
@@ -169,7 +164,6 @@ describe('reclassifyTransactionsWithRules', () => {
           type: 'Despesa',
           category: 'Moradia',
           budgetGroupId: 'needs',
-          status: 'Confirmado',
         },
         {
           id: 'parcel-jul',
@@ -179,7 +173,6 @@ describe('reclassifyTransactionsWithRules', () => {
           type: 'Despesa',
           category: 'Compras',
           budgetGroupId: 'wants',
-          status: 'Confirmado',
           installment: '03/10',
         },
       ],

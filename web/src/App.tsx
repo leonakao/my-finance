@@ -85,7 +85,7 @@ function getPageMetadata(pathname: AuthenticatedPath) {
       }
     case '/app/budget-groups':
       return {
-        title: 'Budget groups',
+        title: 'Grupos de orçamento',
         intro: 'Gerencie os grupos e metas percentuais que aparecem na leitura mensal e nas projeções.',
       }
     case '/app/dashboard':
@@ -455,7 +455,7 @@ function App() {
     document.title = `Finanças | ${getPageMetadata(authenticatedPath).title}`
   }, [currentPath, isRecoveryMode, session])
 
-  const orphanedCount = transactions.filter((transaction) => transaction.status === 'Confirmado' && transaction.type === 'Despesa' && transaction.budgetGroupId === null).length
+  const orphanedCount = transactions.filter((transaction) => transaction.type === 'Despesa' && transaction.budgetGroupId === null).length
 
   if (!supabase) {
     return <MissingConfig />
@@ -526,6 +526,8 @@ function App() {
       monthData={monthData}
       months={months}
       navigateTo={(pathname) => {
+        setError('')
+        setFeedback('')
         writePath(pathname)
         setCurrentPath(pathname)
       }}

@@ -85,7 +85,7 @@ Deno.serve(async (request) => {
     transactionsWithBudgetGroups,
     rules,
   )
-  const insertableTransactions = classifiedTransactions.filter((item) => item.status !== 'Ignorar')
+  const insertableTransactions = classifiedTransactions.filter((item) => !item.ignored)
   const ignoredByStatusCount = classifiedTransactions.length - insertableTransactions.length
   const { transactions: newTransactions, alreadyImportedCount } = await dropTransactionsAlreadyImported(
     supabase,
@@ -96,12 +96,13 @@ Deno.serve(async (request) => {
   const transactionsByExternalId = new Map(newTransactions.map((item) => [item.external_id, item]))
   const transactions = [...transactionsByExternalId.values()]
   const duplicatesDropped = newTransactions.length - transactions.length
+  const transactionsToInsert = transactions.map(({ ignored: _ignored, ...transaction }) => transaction)
 
   let insertError: { message: string } | null = null
-  if (transactions.length > 0) {
+  if (transactionsToInsert.length > 0) {
     const { error } = await supabase
       .from('transactions')
-      .insert(transactions)
+      .insert(transactionsToInsert)
     insertError = error
   }
 
@@ -111,9 +112,7 @@ Deno.serve(async (request) => {
 
   const inserted = transactions.length
   const ignored = ignoredByStatusCount + alreadyImportedCount + duplicatesDropped
-  const insertedTotal = transactions
-    .filter((item) => item.status === 'Confirmado')
-    .reduce((sum, item) => sum + item.amount, 0)
+  const insertedTotal = transactions.reduce((sum, item) => sum + item.amount, 0)
 
   return json({
     imported,

@@ -139,37 +139,37 @@ function categoryFor(description: string, amount: number): string {
   return 'Outros'
 }
 
-function transactionType(amount: number, description: string, source: ImportKind): ['Despesa' | 'Receita' | 'Transferência', 'Confirmado' | 'Ignorar'] {
+function transactionType(amount: number, description: string, source: ImportKind): ['Despesa' | 'Receita' | 'Transferência', boolean] {
   const text = description.toUpperCase()
   if (source === 'card') {
     if (amount < 0 || text.includes('IOF DE VOLTA') || text.includes('PAGAMENTO RECEBIDO')) {
-      return ['Transferência', 'Ignorar']
+      return ['Transferência', true]
     }
-    return ['Despesa', 'Confirmado']
+    return ['Despesa', false]
   }
 
-  if (isRdbApplication(description)) return ['Transferência', 'Confirmado']
-  if (isRdbRedemption(description)) return ['Transferência', 'Confirmado']
-  if (text.includes('TRANSFERÊNCIA RECEBIDA')) return ['Receita', 'Confirmado']
+  if (isRdbApplication(description)) return ['Transferência', false]
+  if (isRdbRedemption(description)) return ['Transferência', false]
+  if (text.includes('TRANSFERÊNCIA RECEBIDA')) return ['Receita', false]
   if (text.includes('PAGAMENTO DE FATURA')) {
-    return ['Transferência', 'Confirmado']
+    return ['Transferência', false]
   }
   if (['RDB', 'CDB', 'TESOURO', 'CORRETORA', 'INVEST'].some((needle) => text.includes(needle))) {
-    return ['Transferência', 'Confirmado']
+    return ['Transferência', false]
   }
-  if (amount < 0) return ['Despesa', 'Confirmado']
-  return ['Receita', 'Confirmado']
+  if (amount < 0) return ['Despesa', false]
+  return ['Receita', false]
 }
 
 function budgetGroupFor(
   kind: string,
-  status: string,
+  ignored: boolean,
   category: string,
   description: string,
   amount: number,
 ): DefaultBudgetGroupName | null {
   const text = description.toUpperCase()
-  if (status === 'Ignorar') return null
+  if (ignored) return null
   if (kind === 'Receita') return null
   if (text.includes('DÉBITO EM CONTA') || text.includes('DEBITO EM CONTA')) return 'Necessidades'
   if (kind === 'Transferência') {
@@ -210,7 +210,7 @@ export function parseNubankCsv(params: {
     return rows.flatMap((row, index) => {
       const amount = decimalFromCsv(row.amount)
       const { description, installment } = extractNubankInstallment(row.title)
-      const [type, status] = transactionType(amount, description, 'card')
+      const [type, ignored] = transactionType(amount, description, 'card')
       const category = categoryFor(description, amount)
 
       const transaction: ParsedImportedTransaction = {
@@ -220,10 +220,10 @@ export function parseNubankCsv(params: {
         amount: Math.abs(amount),
         type,
         category,
-        budget_group_name: budgetGroupFor(type, status, category, description, amount),
+        budget_group_name: budgetGroupFor(type, ignored, category, description, amount),
         account: 'Cartão de crédito',
         institution: 'Nubank',
-        status,
+        ignored,
         notes: 'Importado de CSV de fatura do cartão Nubank via Edge Function.',
         invoice,
         installment,
@@ -262,7 +262,7 @@ export function parseNubankCsv(params: {
   return rows.map((row) => {
     const amount = Number(row['Valor'])
     const description = row['Descrição']
-    const [type, status] = transactionType(amount, description, 'account')
+    const [type, ignored] = transactionType(amount, description, 'account')
     const category = categoryFor(description, amount)
     return {
       user_id: params.userId,
@@ -271,10 +271,10 @@ export function parseNubankCsv(params: {
       amount: Math.abs(amount),
       type,
       category,
-      budget_group_name: budgetGroupFor(type, status, category, description, amount),
+      budget_group_name: budgetGroupFor(type, ignored, category, description, amount),
       account: 'Conta principal',
       institution: 'Nubank',
-      status,
+      ignored,
       notes: 'Importado de CSV de extrato da conta Nubank via Edge Function.',
       invoice: '',
       installment: '',

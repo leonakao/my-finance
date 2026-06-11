@@ -280,7 +280,6 @@ export function normalizeTransaction(row: TransactionRecord): Transaction {
     budgetGroupId: row.budget_group_id ?? null,
     account: row.account ?? '',
     institution: row.institution ?? '',
-    status: row.status ?? 'Confirmado',
     notes: row.notes ?? '',
     installment: row.installment ?? '',
   }
@@ -355,10 +354,6 @@ export function buildMonthData(transactions: Transaction[], budgetGroups: Budget
     if (!bucket) {
       continue
     }
-    if (transaction.status !== 'Confirmado') {
-      continue
-    }
-
     if (transaction.type === 'Receita') {
       bucket.revenue += transaction.amount
       continue
@@ -392,7 +387,7 @@ export function buildMonthSummaries(transactions: Transaction[]): MonthSummary[]
 
   for (const transaction of transactions) {
     const monthKey = transaction.date?.slice(0, 7)
-    if (monthKey === undefined || monthKey === '' || transaction.status !== 'Confirmado') {
+    if (monthKey === undefined || monthKey === '') {
       continue
     }
 
@@ -441,7 +436,6 @@ function buildRecurringCandidates(transactions: Transaction[], currentMonthKey: 
       monthKey === undefined
       || monthKey === ''
       || !recentMonthSet.has(monthKey)
-      || transaction.status !== 'Confirmado'
       || transaction.type === 'Transferência'
       || (transaction.installment ?? '') !== ''
     ) {
@@ -480,7 +474,7 @@ function buildRecurringCandidates(transactions: Transaction[], currentMonthKey: 
 
 function hasPersistedRecurringMatch(transactions: Transaction[], candidate: RecurringCandidate, monthKey: string): boolean {
   return transactions.some((transaction) => {
-    if (transaction.status !== 'Confirmado' || transaction.type !== candidate.type || transaction.date?.slice(0, 7) !== monthKey) {
+    if (transaction.type !== candidate.type || transaction.date?.slice(0, 7) !== monthKey) {
       return false
     }
 
@@ -511,7 +505,7 @@ export function buildFinancialOverview(transactions: Transaction[], budgetGroups
 
   for (const transaction of transactions) {
     const monthKey = transaction.date?.slice(0, 7)
-    if (monthKey === undefined || monthKey === '' || transaction.status !== 'Confirmado') {
+    if (monthKey === undefined || monthKey === '') {
       continue
     }
 
@@ -617,7 +611,6 @@ export function buildFinancialOverview(transactions: Transaction[], budgetGroups
 export function getMonthTransactions(transactions: DecoratedTransaction[], activeMonth: string): DecoratedTransaction[] {
   return transactions
     .filter((transaction) => transaction.date?.startsWith(activeMonth) === true)
-    .filter((transaction) => transaction.status === 'Confirmado')
     .sort((left, right) => right.amount - left.amount)
 }
 

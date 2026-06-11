@@ -326,7 +326,7 @@ export function parseSantanderPdf(params: {
       budget_group_name: budgetGroupFor(category, description),
       account: 'Cartão de crédito',
       institution: 'Santander',
-      status: 'Confirmado',
+      ignored: false,
       notes,
       invoice: params.invoice || (params.filename ?? ''),
       installment,

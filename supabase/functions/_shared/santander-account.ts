@@ -214,10 +214,6 @@ function inferStatementYear(lines: PdfLine[]): number {
   return new Date().getFullYear()
 }
 
-function transactionStatus(): 'Confirmado' | 'Ignorar' {
-  return 'Confirmado'
-}
-
 function isCardPayment(description: string): boolean {
   return description.toUpperCase().includes('PAGAMENTO CARTAO CREDITO')
 }
@@ -409,7 +405,6 @@ export async function parseSantanderAccountPdf(params: {
   return parsedTransactions.map((transaction, index) => {
     const type = typeFor(transaction.description, transaction.amount)
     const category = categoryFor(transaction.description)
-    const status = transactionStatus()
     const notesParts = ['Importado de PDF de extrato Santander via Edge Function.']
     if (transaction.balance !== null) notesParts.push(`Saldo após lançamento: R$ ${brlFromNumber(transaction.balance)}.`)
 
@@ -423,7 +418,7 @@ export async function parseSantanderAccountPdf(params: {
       budget_group_name: budgetGroupFor(type, category, transaction.description),
       account: 'Conta principal',
       institution: 'Santander',
-      status,
+      ignored: false,
       notes: notesParts.join(' '),
       invoice: '',
       installment: '',
