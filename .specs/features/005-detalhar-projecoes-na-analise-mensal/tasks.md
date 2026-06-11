@@ -227,14 +227,14 @@ Expected: pelo menos `6` arquivos e `37` testes passam; typecheck termina com ex
 
 **Done when**:
 
-- [ ] Mes atual mostra saldo realizado, receitas restantes, despesas registradas, despesas provaveis, saldo projetado e sugestao semanal
-- [ ] Mes futuro mostra receitas/despesas separadas por origem e saldo projetado
-- [ ] Deficit usa texto explicito e sugestao semanal `R$ 0,00`
-- [ ] O componente usa `<section>`, heading e `<dl>` com nomes acessiveis
-- [ ] Status nao depende apenas de cor
-- [ ] Sao adicionados pelo menos 4 testes de componente
-- [ ] Suite isolada da branch tem pelo menos 38 testes
-- [ ] `npm run test && npm run typecheck` passa
+- [x] Mes atual mostra saldo realizado, receitas restantes, despesas registradas, despesas provaveis, saldo projetado e sugestao semanal
+- [x] Mes futuro mostra receitas/despesas separadas por origem e saldo projetado
+- [x] Deficit usa texto explicito e sugestao semanal `R$ 0,00`
+- [x] O componente usa `<section>`, heading e `<dl>` com nomes acessiveis
+- [x] Status nao depende apenas de cor
+- [x] Sao adicionados pelo menos 4 testes de componente
+- [x] Suite isolada da branch tem pelo menos 38 testes
+- [x] `npm run test && npm run typecheck` passa
 
 **Tests**: component
 **Gate**: Unit
