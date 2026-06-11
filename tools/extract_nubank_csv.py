@@ -33,7 +33,9 @@ def category_for(description: str) -> str:
         ("Moradia", ["DÉBITO EM CONTA", "DEBITO EM CONTA"]),
         ("Assinaturas", ["SPOTIFY", "NETFLIX", "APPLE.COM/BILL", "CHATGPT", "OPENAI", "WINDSURF", "IFOOD CLUB"]),
         ("Saúde", ["SEGURO VIDA", "SEGURO CELULAR", "YELUMSEG"]),
+        ("Pets", ["PETZ", "COBASI", "PETLOVE", "PET CARE", "VETERIN", "VET "]),
         ("Telefone", ["BCO C6", "BANCO C6", " C6 "]),
+        ("Cuidados pessoais", ["SALAO", "SALÃO", "CABEL", "BARBEARIA", "ESTETIC", "MANICURE", "SEPHORA", "BOTICARIO", "OBOTICARIO"]),
         ("Alimentação", ["COMERCIALBARROS", "IFOOD"]),
         ("Investimentos", ["RDB", "AVENUE SECURITIES", "BANCO INTER", "BCO INTER", "INTER"]),
         ("Transporte", ["UBER", "POSTO"]),
@@ -89,10 +91,12 @@ def budget_group_for(kind: str, status: str, category: str, description: str) ->
         if category == "Investimentos" or "APLICAÇÃO RDB" in text or "AVENUE" in text or "BANCO INTER" in text or "BCO INTER" in text:
             return "20 Futuro"
         return "Transferência"
-    if category in {"Saúde", "Moradia", "Telefone"}:
+    if category in {"Saúde", "Moradia", "Telefone", "Pets"}:
         return "50 Necessidades"
     if category == "Transporte":
         return "50 Necessidades"
+    if category == "Cuidados pessoais":
+        return "30 Desejos"
     if category == "Alimentação":
         if any(word in text for word in ["IFOOD", "BAR", "CAFE", "PUB", "SUSHI", "PIZZARIA", "LANCHES"]):
             return "30 Desejos"

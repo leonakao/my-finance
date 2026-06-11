@@ -246,6 +246,8 @@ function categoryFor(description: string): string {
   }
   if (['SEGURO', 'SEGURO VIDA', 'SEGURO CELULAR', 'SEGURO AUTO'].some((needle) => text.includes(needle))) return 'Seguros'
   if (['DROGARIA', 'DROGASIL', 'FARMACIA'].some((needle) => text.includes(needle))) return 'Saúde'
+  if (['PETZ', 'COBASI', 'PETLOVE', 'PET CARE', 'VETERIN', 'VET '].some((needle) => text.includes(needle))) return 'Pets'
+  if (['SALAO', 'SALÃO', 'CABEL', 'BARBEARIA', 'ESTETIC', 'MANICURE', 'SEPHORA', 'BOTICARIO', 'OBOTICARIO'].some((needle) => text.includes(needle))) return 'Cuidados pessoais'
   if (['UBER', 'POSTO', 'SEM PARAR', 'SEM*PARAR'].some((needle) => text.includes(needle))) return 'Transporte'
   if (['IFOOD', 'BAR', 'CAFE', 'PIZZARIA', 'LANCHES', 'RESTAURANTE', 'PADARIA', 'MERCADO', 'SUPERMERCADO'].some((needle) => text.includes(needle))) return 'Alimentação'
   return 'Outros'
@@ -267,7 +269,8 @@ function budgetGroupFor(
   const text = description.toUpperCase()
   if (type === 'Receita') return null
   if (type === 'Transferência') return category === 'Investimentos' ? 'Futuro' : null
-  if (['Moradia', 'Saúde', 'Seguros', 'Telefone', 'Transporte'].includes(category)) return 'Necessidades'
+  if (['Moradia', 'Saúde', 'Seguros', 'Telefone', 'Transporte', 'Pets'].includes(category)) return 'Necessidades'
+  if (category === 'Cuidados pessoais') return 'Desejos'
   if (category === 'Alimentação') {
     if (['BAR', 'CAFE', 'PIZZARIA', 'LANCHES'].some((needle) => text.includes(needle))) return 'Desejos'
     return 'Necessidades'

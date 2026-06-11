@@ -1,7 +1,22 @@
 import type { BudgetGroup, ClassificationRule, Transaction } from '../types'
 /* eslint-disable max-lines-per-function */
 import { describe, expect, it } from 'vitest'
-import { buildFinancialOverview, buildMonthData, reclassifyTransactionsWithRules } from './transactions'
+import {
+  buildFinancialOverview,
+  buildMonthData,
+  getCategoryOptionsForType,
+  normalizeCategoryForType,
+  reclassifyTransactionsWithRules,
+} from './transactions'
+
+describe('category catalogs', () => {
+  it('includes the new despesa categories in the editable catalog', () => {
+    expect(getCategoryOptionsForType('Despesa')).toContain('Pets')
+    expect(getCategoryOptionsForType('Despesa')).toContain('Cuidados pessoais')
+    expect(normalizeCategoryForType('Despesa', 'Pets')).toBe('Pets')
+    expect(normalizeCategoryForType('Despesa', 'Cuidados pessoais')).toBe('Cuidados pessoais')
+  })
+})
 
 describe('reclassifyTransactionsWithRules', () => {
   it('reclassifies matching transactions using the current sorted rules', () => {

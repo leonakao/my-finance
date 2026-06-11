@@ -209,6 +209,8 @@ function categoryFor(description: string): string {
     ['Transporte', ['UBER', 'POSTO', 'SEM PARAR', 'SEM*PARAR', 'AZUL', 'AEREAS']],
     ['Seguros', ['SEGURO', 'SEGURO VIDA', 'SEGURO CELULAR', 'SEGURO AUTO']],
     ['Saúde', ['DROGASIL', 'DROGARIA', 'FARMACIA']],
+    ['Pets', ['PETZ', 'COBASI', 'PETLOVE', 'PET CARE', 'VETERIN', 'VET ']],
+    ['Cuidados pessoais', ['SALAO', 'SALÃO', 'CABEL', 'BARBEARIA', 'ESTETIC', 'MANICURE', 'SEPHORA', 'BOTICARIO', 'OBOTICARIO']],
     ['Lazer', ['INGRESSO', 'MULTIPLEX', 'AIRBNB']],
     [
       'Alimentação',
@@ -234,8 +236,9 @@ function categoryFor(description: string): string {
 function budgetGroupFor(category: string, description: string): DefaultBudgetGroupName | null {
   const text = description.toUpperCase()
   if (text.includes('ANUIDADE')) return 'Necessidades'
-  if (['Saúde', 'Seguros', 'Moradia'].includes(category)) return 'Necessidades'
+  if (['Saúde', 'Seguros', 'Moradia', 'Pets'].includes(category)) return 'Necessidades'
   if (category === 'Transporte') return text.includes('AZUL') || text.includes('AEREAS') ? 'Desejos' : 'Necessidades'
+  if (category === 'Cuidados pessoais') return 'Desejos'
   if (category === 'Alimentação') {
     if (['SUSHI', 'PASTEL', 'ROOFTOP', 'LANCHES', 'LIBANESA', 'CAFE', 'PUB', 'PIZZARIA', 'LOS BRUTOS', 'MONTANA', 'SALGADOS', 'BOUCHERIE'].some((needle) => text.includes(needle))) {
       return 'Desejos'

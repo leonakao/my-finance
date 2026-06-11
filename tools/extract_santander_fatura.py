@@ -195,6 +195,8 @@ def category_for(description: str) -> str:
         ("Assinaturas", ["AMAZONPRIME", "AMAZON PRIME", "AMAZON MUSIC", "YOUTUBE", "VERO", "SCP ESSENCIAL"]),
         ("Transporte", ["UBER", "POSTO", "SEM PARAR", "SEM*PARAR", "AZUL", "AEREAS"]),
         ("Saúde", ["DROGASIL", "NUTRIVICA"]),
+        ("Pets", ["PETZ", "COBASI", "PETLOVE", "PET CARE", "VETERIN", "VET "]),
+        ("Cuidados pessoais", ["SALAO", "SALÃO", "CABEL", "BARBEARIA", "ESTETIC", "MANICURE", "SEPHORA", "BOTICARIO", "OBOTICARIO"]),
         ("Lazer", ["INGRESSO", "MULTIPLEX", "AIRBNB"]),
         (
             "Alimentação",
@@ -233,8 +235,10 @@ def budget_group_for(category: str, description: str) -> str:
         return "50 Necessidades"
     if "ANUIDADE" in text:
         return "50 Necessidades"
-    if category in {"Saúde", "Moradia"}:
+    if category in {"Saúde", "Moradia", "Pets"}:
         return "50 Necessidades"
+    if category == "Cuidados pessoais":
+        return "30 Desejos"
     if category == "Transporte":
         if "AZUL" in text or "AEREAS" in text:
             return "30 Desejos"
