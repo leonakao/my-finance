@@ -284,16 +284,18 @@ Expected: pelo menos 3 testes do hook passam; typecheck termina com exit code `0
 
 **Done when**:
 
-- [ ] Insert otimista usa ID temporario e reconcilia a resposta
-- [ ] Falha de insert restaura estado anterior
-- [ ] Conflito de unicidade nao duplica exclusoes
-- [ ] Restore remove pelo ID original e faz rollback em falha
-- [ ] Desfazer restaura exatamente a ultima exclusao criada
-- [ ] Estado de saving impede envio duplicado
-- [ ] Feedback de sucesso e erro e atualizado de modo previsivel
-- [ ] Sao adicionados pelo menos 7 testes do hook
-- [ ] Suite total tem pelo menos 68 testes na branch isolada
+- [x] Insert otimista usa ID temporario e reconcilia a resposta
+- [x] Falha de insert restaura estado anterior
+- [x] Conflito de unicidade nao duplica exclusoes
+- [x] Restore remove pelo ID original e faz rollback em falha
+- [x] Desfazer restaura exatamente a ultima exclusao criada
+- [x] Estado de saving impede envio duplicado
+- [x] Feedback de sucesso e erro e atualizado de modo previsivel
+- [x] Sao adicionados pelo menos 7 testes do hook
+- [x] Suite total tem pelo menos 68 testes na branch isolada
 - [ ] `npm run test && npm run typecheck` passa
+
+**Gate note**: 8 testes direcionados e ESLint dos arquivos do hook passam; typecheck global continua bloqueado pelos imports Deno do trabalho paralelo.
 
 **Tests**: hook unit/component
 **Gate**: Quick unit
