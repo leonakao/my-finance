@@ -268,14 +268,14 @@ Expected: pelo menos `4` testes do componente passam; typecheck termina com exit
 
 **Done when**:
 
-- [ ] Resumo por grupo exibe `Registrado`, `Provavel` e `Total`
-- [ ] `Sem grupo` aparece por ultimo quando aplicavel
-- [ ] Resumo por categoria separa receitas e despesas
-- [ ] Cenario apenas com receitas nao renderiza tabela vazia de grupos
-- [ ] Tabelas possuem captions e headings hierarquicos
-- [ ] Sao adicionados pelo menos 4 testes de componente
-- [ ] Suite isolada da branch tem pelo menos 38 testes
-- [ ] `npm run test && npm run typecheck` passa
+- [x] Resumo por grupo exibe `Registrado`, `Provavel` e `Total`
+- [x] `Sem grupo` aparece por ultimo quando aplicavel
+- [x] Resumo por categoria separa receitas e despesas
+- [x] Cenario apenas com receitas nao renderiza tabela vazia de grupos
+- [x] Tabelas possuem captions e headings hierarquicos
+- [x] Sao adicionados pelo menos 4 testes de componente
+- [x] Suite isolada da branch tem pelo menos 38 testes
+- [x] `npm run test && npm run typecheck` passa
 
 **Tests**: component
 **Gate**: Unit
