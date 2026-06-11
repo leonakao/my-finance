@@ -195,17 +195,19 @@ Expected: pelo menos 8 testes do helper passam; typecheck termina com exit code 
 
 **Done when**:
 
-- [ ] A heuristica detecta candidatos sem consultar exclusoes
-- [ ] O filtro ocorre antes dos totais de dashboard e mensal
-- [ ] Escopo mensal nao afeta o mes seguinte
-- [ ] Escopo futuro nao afeta meses anteriores
-- [ ] Receita e despesa removidas recalculam os sinais corretos
-- [ ] Saldo disponivel e sugestao semanal sao recalculados
-- [ ] Exclusoes sobrepostas ocultam a recorrencia uma unica vez
-- [ ] Removidos com e sem candidato atual sao derivados
-- [ ] Sao adicionados pelo menos 11 testes unitarios
-- [ ] Suite total tem pelo menos 72 testes
+- [x] A heuristica detecta candidatos sem consultar exclusoes
+- [x] O filtro ocorre antes dos totais de dashboard e mensal
+- [x] Escopo mensal nao afeta o mes seguinte
+- [x] Escopo futuro nao afeta meses anteriores
+- [x] Receita e despesa removidas recalculam os sinais corretos
+- [x] Saldo disponivel e sugestao semanal sao recalculados
+- [x] Exclusoes sobrepostas ocultam a recorrencia uma unica vez
+- [x] Removidos com e sem candidato atual sao derivados
+- [x] Sao adicionados pelo menos 11 testes unitarios
+- [x] Suite total tem pelo menos 72 testes
 - [ ] `npm run test && npm run typecheck` passa
+
+**Gate note**: 39 testes direcionados e ESLint dos arquivos alterados passam; typecheck global continua bloqueado pelos imports Deno do trabalho paralelo.
 
 **Tests**: unit
 **Gate**: Quick unit

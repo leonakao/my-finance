@@ -6,6 +6,7 @@ import type {
   MonthSummary,
   MonthlyProjectionInsight,
   MonthlyProjectionTotals,
+  ProjectionExclusion,
   ProjectionCategorySummary,
   ProjectionGroupSummary,
   ProjectionLineItem,
@@ -24,7 +25,11 @@ import {
   getLocalDateKey,
   getRemainingMonthTime,
 } from './monthKeys'
-import { normalizeProjectionDescription } from './projectionExclusions'
+import {
+  appliesToProjectionMonth,
+  isCandidateExcluded,
+  normalizeProjectionDescription,
+} from './projectionExclusions'
 
 const PROJECTION_HORIZON_MONTHS = 3
 
@@ -199,6 +204,7 @@ function buildOverview(
   currentMonthKey: string,
   monthSummaries: MonthSummary[],
   recurringCandidates: RecurringCandidate[],
+  projectionExclusions: ProjectionExclusion[],
 ): FinancialOverview {
   const recentMonths = monthSummaries.slice(-6)
   const currentMonthWindow = Array.from(
@@ -238,7 +244,10 @@ function buildOverview(
 
   for (const candidate of recurringCandidates) {
     for (const monthKey of currentMonthWindow) {
-      if (hasPersistedRecurringMatch(transactions, candidate, monthKey)) {
+      if (
+        hasPersistedRecurringMatch(transactions, candidate, monthKey)
+        || isCandidateExcluded(candidate, monthKey, projectionExclusions)
+      ) {
         continue
       }
 
@@ -342,49 +351,99 @@ function buildRegisteredItems(
   return sortProjectionItems(items)
 }
 
+function buildProbableItem(
+  candidate: RecurringCandidate,
+  budgetGroupsById: Map<string, BudgetGroup>,
+  monthKey: string,
+  isCurrentMonth: boolean,
+  todayKey: string,
+): ProjectionLineItem | null {
+  const expectedDate = buildExpectedDateKey(monthKey, candidate.expectedDayOfMonth)
+  if (expectedDate === null || (isCurrentMonth && expectedDate < todayKey)) {
+    return null
+  }
+
+  return {
+    id: `probable:${monthKey}:${candidate.type}:${candidate.normalizedDescription}`,
+    kind: 'probable',
+    date: expectedDate,
+    isDateEstimated: true,
+    description: candidate.description,
+    normalizedDescription: candidate.normalizedDescription,
+    amount: candidate.amount,
+    type: candidate.type,
+    category: candidate.category,
+    budgetGroupId: candidate.budgetGroupId,
+    budgetGroupName: candidate.budgetGroupId !== null
+      ? (budgetGroupsById.get(candidate.budgetGroupId)?.name ?? 'Sem grupo')
+      : 'Sem grupo',
+    installment: null,
+    basis: {
+      averageAmount: candidate.amount,
+      occurrenceCount: candidate.occurrenceCount,
+      observedMonthCount: candidate.observedMonthCount,
+      lastObservedDate: candidate.lastObservedDate,
+    },
+  }
+}
+
 function buildProbableItems(
   transactions: Transaction[],
   candidates: RecurringCandidate[],
+  projectionExclusions: ProjectionExclusion[],
   budgetGroupsById: Map<string, BudgetGroup>,
   monthKey: string,
   isCurrentMonth: boolean,
   todayKey: string,
 ): ProjectionLineItem[] {
   const items = candidates.flatMap((candidate): ProjectionLineItem[] => {
-    if (hasPersistedRecurringMatch(transactions, candidate, monthKey)) {
+    if (
+      hasPersistedRecurringMatch(transactions, candidate, monthKey)
+      || isCandidateExcluded(candidate, monthKey, projectionExclusions)
+    ) {
       return []
     }
 
-    const expectedDate = buildExpectedDateKey(monthKey, candidate.expectedDayOfMonth)
-    if (expectedDate === null || (isCurrentMonth && expectedDate < todayKey)) {
-      return []
-    }
-
-    return [{
-      id: `probable:${monthKey}:${candidate.type}:${candidate.normalizedDescription}`,
-      kind: 'probable',
-      date: expectedDate,
-      isDateEstimated: true,
-      description: candidate.description,
-      normalizedDescription: candidate.normalizedDescription,
-      amount: candidate.amount,
-      type: candidate.type,
-      category: candidate.category,
-      budgetGroupId: candidate.budgetGroupId,
-      budgetGroupName: candidate.budgetGroupId !== null
-        ? (budgetGroupsById.get(candidate.budgetGroupId)?.name ?? 'Sem grupo')
-        : 'Sem grupo',
-      installment: null,
-      basis: {
-        averageAmount: candidate.amount,
-        occurrenceCount: candidate.occurrenceCount,
-        observedMonthCount: candidate.observedMonthCount,
-        lastObservedDate: candidate.lastObservedDate,
-      },
-    }]
+    const item = buildProbableItem(candidate, budgetGroupsById, monthKey, isCurrentMonth, todayKey)
+    return item === null ? [] : [item]
   })
 
   return sortProjectionItems(items)
+}
+
+function buildRemovedProbableItems(
+  transactions: Transaction[],
+  candidates: RecurringCandidate[],
+  projectionExclusions: ProjectionExclusion[],
+  budgetGroupsById: Map<string, BudgetGroup>,
+  monthKey: string,
+  isCurrentMonth: boolean,
+  todayKey: string,
+): MonthlyProjectionInsight['removedProbableItems'] {
+  return projectionExclusions
+    .filter((exclusion) => appliesToProjectionMonth(exclusion, monthKey))
+    .map((exclusion) => {
+      const candidate = candidates.find((item) => (
+        item.type === exclusion.type
+        && item.normalizedDescription === exclusion.normalizedDescription
+      ))
+      const hasPersistedMatch = candidate === undefined
+        ? false
+        : hasPersistedRecurringMatch(transactions, candidate, monthKey)
+
+      return {
+        exclusion,
+        currentEstimate: candidate === undefined || hasPersistedMatch
+          ? null
+          : buildProbableItem(candidate, budgetGroupsById, monthKey, isCurrentMonth, todayKey),
+      }
+    })
+    .sort((left, right) => (
+      left.exclusion.description.localeCompare(right.exclusion.description, 'pt-BR')
+      || left.exclusion.type.localeCompare(right.exclusion.type, 'pt-BR')
+      || left.exclusion.scope.localeCompare(right.exclusion.scope)
+      || left.exclusion.monthStart.localeCompare(right.exclusion.monthStart)
+    ))
 }
 
 function buildProjectionTotals(items: ProjectionLineItem[]): MonthlyProjectionTotals {
@@ -506,6 +565,7 @@ function buildMonthlyProjectionInsight(
   transactions: Transaction[],
   budgetGroups: BudgetGroup[],
   candidates: RecurringCandidate[],
+  projectionExclusions: ProjectionExclusion[],
   activeMonth: string,
   currentMonthKey: string,
   now: Date,
@@ -527,6 +587,7 @@ function buildMonthlyProjectionInsight(
   const probableItems = buildProbableItems(
     transactions,
     candidates,
+    projectionExclusions,
     budgetGroupsById,
     activeMonth,
     isCurrentMonth,
@@ -554,7 +615,15 @@ function buildMonthlyProjectionInsight(
     weeklySpendingSuggestion: weeklyBalance === null ? null : Math.max(0, weeklyBalance),
     registeredItems,
     probableItems,
-    removedProbableItems: [],
+    removedProbableItems: buildRemovedProbableItems(
+      transactions,
+      candidates,
+      projectionExclusions,
+      budgetGroupsById,
+      activeMonth,
+      isCurrentMonth,
+      todayKey,
+    ),
     groupSummaries: buildGroupSummaries(allItems, budgetGroups),
     categorySummaries: buildCategorySummaries(allItems),
   }
@@ -565,17 +634,25 @@ export function buildFinancialAnalysis(
   budgetGroups: BudgetGroup[],
   activeMonth: string,
   now = new Date(),
+  projectionExclusions: ProjectionExclusion[] = [],
 ): FinancialAnalysis {
   const currentMonthKey = getCurrentMonthKey(now)
   const monthSummaries = buildMonthSummaries(transactions)
   const recurringCandidates = buildRecurringCandidates(transactions, currentMonthKey)
 
   return {
-    overview: buildOverview(transactions, currentMonthKey, monthSummaries, recurringCandidates),
+    overview: buildOverview(
+      transactions,
+      currentMonthKey,
+      monthSummaries,
+      recurringCandidates,
+      projectionExclusions,
+    ),
     monthlyProjectionInsight: buildMonthlyProjectionInsight(
       transactions,
       budgetGroups,
       recurringCandidates,
+      projectionExclusions,
       activeMonth,
       currentMonthKey,
       now,

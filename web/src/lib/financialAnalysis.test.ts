@@ -1,6 +1,6 @@
 /* eslint-disable max-lines, max-lines-per-function */
 import { describe, expect, it } from 'vitest'
-import type { BudgetGroup, Transaction, TransactionType } from '../types'
+import type { BudgetGroup, ProjectionExclusion, Transaction, TransactionType } from '../types'
 import { buildFinancialAnalysis } from './financialAnalysis'
 
 const NOW = new Date(2026, 5, 11, 12)
@@ -43,6 +43,23 @@ function recurringHistory(
     transaction(`${description}-apr`, `2026-04-${String(days[0]).padStart(2, '0')}`, description, amount, type, category, budgetGroupId),
     transaction(`${description}-may`, `2026-05-${String(days[1]).padStart(2, '0')}`, description, amount, type, category, budgetGroupId),
   ]
+}
+
+function exclusion(
+  normalizedDescription: string,
+  scope: ProjectionExclusion['scope'],
+  monthStart: string,
+  type: ProjectionExclusion['type'] = 'Despesa',
+): ProjectionExclusion {
+  return {
+    id: `${type}:${normalizedDescription}:${scope}:${monthStart}`,
+    type,
+    description: normalizedDescription,
+    normalizedDescription,
+    scope,
+    monthStart,
+    createdAt: '2026-06-11T12:00:00Z',
+  }
 }
 
 describe('buildFinancialAnalysis', () => {
@@ -288,6 +305,161 @@ describe('buildFinancialAnalysis', () => {
       'expense-large',
       'expense-small',
     ])
+  })
+
+  it('removes a probable item only from the selected month for monthly scope', () => {
+    const transactions = recurringHistory('Internet', 150, 'Despesa', 'Moradia', 'needs')
+    const monthlyExclusion = exclusion('internet', 'month', '2026-07-01')
+
+    const july = buildFinancialAnalysis(transactions, BUDGET_GROUPS, '2026-07', NOW, [monthlyExclusion])
+    const august = buildFinancialAnalysis(transactions, BUDGET_GROUPS, '2026-08', NOW, [monthlyExclusion])
+
+    expect(july.monthlyProjectionInsight?.probableItems).toHaveLength(0)
+    expect(august.monthlyProjectionInsight?.probableItems).toHaveLength(1)
+  })
+
+  it('removes a probable item from the initial month onward for future scope', () => {
+    const transactions = recurringHistory('Internet', 150, 'Despesa', 'Moradia', 'needs')
+    const futureExclusion = exclusion('internet', 'from_month', '2026-07-01')
+
+    const june = buildFinancialAnalysis(transactions, BUDGET_GROUPS, '2026-06', NOW, [futureExclusion])
+    const july = buildFinancialAnalysis(transactions, BUDGET_GROUPS, '2026-07', NOW, [futureExclusion])
+    const august = buildFinancialAnalysis(transactions, BUDGET_GROUPS, '2026-08', NOW, [futureExclusion])
+
+    expect(june.monthlyProjectionInsight?.probableItems).toHaveLength(1)
+    expect(july.monthlyProjectionInsight?.probableItems).toHaveLength(0)
+    expect(august.monthlyProjectionInsight?.probableItems).toHaveLength(0)
+  })
+
+  it('applies exclusions to the dashboard projection horizon', () => {
+    const transactions = recurringHistory('Internet', 150, 'Despesa', 'Moradia', 'needs')
+    const futureExclusion = exclusion('internet', 'from_month', '2026-07-01')
+    const analysis = buildFinancialAnalysis(transactions, BUDGET_GROUPS, '2026-07', NOW, [futureExclusion])
+
+    expect(analysis.overview.projectedMonths.map((month) => month.probableExpenses)).toEqual([150, 0, 0])
+  })
+
+  it('recalculates probable revenue and net after removing revenue', () => {
+    const transactions = recurringHistory('Salário recorrente', 5000, 'Receita', 'Salário', null)
+    const revenueExclusion = exclusion('salario recorrente', 'month', '2026-07-01', 'Receita')
+    const analysis = buildFinancialAnalysis(transactions, BUDGET_GROUPS, '2026-07', NOW, [revenueExclusion])
+
+    expect(analysis.monthlyProjectionInsight?.totals).toMatchObject({
+      probableRevenue: 0,
+      totalRevenue: 0,
+      remainingNet: 0,
+    })
+  })
+
+  it('recalculates expense summaries after removing an expense', () => {
+    const transactions = [
+      ...recurringHistory('Internet', 150, 'Despesa', 'Moradia', 'needs'),
+      ...recurringHistory('Academia', 100, 'Despesa', 'Saúde', 'wants'),
+    ]
+    const analysis = buildFinancialAnalysis(
+      transactions,
+      BUDGET_GROUPS,
+      '2026-07',
+      NOW,
+      [exclusion('internet', 'month', '2026-07-01')],
+    )
+
+    expect(analysis.monthlyProjectionInsight?.totals.probableExpenses).toBe(100)
+    expect(analysis.monthlyProjectionInsight?.groupSummaries).toHaveLength(1)
+    expect(analysis.monthlyProjectionInsight?.categorySummaries.map((item) => item.category)).toEqual(['Saúde'])
+  })
+
+  it('recalculates current-month available balance and weekly suggestion', () => {
+    const transactions = [
+      transaction('income', '2026-06-01', 'Salário', 3000, 'Receita', 'Salário'),
+      ...recurringHistory('Internet', 150, 'Despesa', 'Moradia', 'needs', [20, 20]),
+    ]
+    const analysis = buildFinancialAnalysis(
+      transactions,
+      BUDGET_GROUPS,
+      '2026-06',
+      NOW,
+      [exclusion('internet', 'month', '2026-06-01')],
+    )
+
+    expect(analysis.monthlyProjectionInsight).toMatchObject({
+      availableToSpend: 3000,
+      weeklySpendingSuggestion: 1000,
+    })
+  })
+
+  it('does not subtract a candidate twice when exclusions overlap', () => {
+    const transactions = recurringHistory('Internet', 150, 'Despesa', 'Moradia', 'needs')
+    const exclusions = [
+      exclusion('internet', 'month', '2026-07-01'),
+      exclusion('internet', 'from_month', '2026-06-01'),
+    ]
+    const analysis = buildFinancialAnalysis(transactions, BUDGET_GROUPS, '2026-07', NOW, exclusions)
+
+    expect(analysis.monthlyProjectionInsight?.totals.probableExpenses).toBe(0)
+    expect(analysis.monthlyProjectionInsight?.removedProbableItems).toHaveLength(2)
+  })
+
+  it('keeps recurring detection available for a removed item', () => {
+    const transactions = recurringHistory('Internet', 150, 'Despesa', 'Moradia', 'needs')
+    const analysis = buildFinancialAnalysis(
+      transactions,
+      BUDGET_GROUPS,
+      '2026-07',
+      NOW,
+      [exclusion('internet', 'month', '2026-07-01')],
+    )
+
+    expect(analysis.monthlyProjectionInsight?.removedProbableItems[0]?.currentEstimate).toMatchObject({
+      description: 'Internet',
+      amount: 150,
+    })
+  })
+
+  it('keeps an obsolete exclusion restorable without creating an estimate', () => {
+    const obsoleteExclusion = exclusion('servico encerrado', 'from_month', '2026-06-01')
+    const analysis = buildFinancialAnalysis([], BUDGET_GROUPS, '2026-07', NOW, [obsoleteExclusion])
+
+    expect(analysis.monthlyProjectionInsight?.removedProbableItems).toEqual([{
+      exclusion: obsoleteExclusion,
+      currentEstimate: null,
+    }])
+  })
+
+  it('does not expose an estimate when a persisted match already exists', () => {
+    const transactions = [
+      ...recurringHistory('Internet', 150, 'Despesa', 'Moradia', 'needs'),
+      transaction('registered', '2026-07-20', 'Internet', 160, 'Despesa', 'Moradia', 'needs'),
+    ]
+    const analysis = buildFinancialAnalysis(
+      transactions,
+      BUDGET_GROUPS,
+      '2026-07',
+      NOW,
+      [exclusion('internet', 'month', '2026-07-01')],
+    )
+
+    expect(analysis.monthlyProjectionInsight?.removedProbableItems[0]?.currentEstimate).toBeNull()
+    expect(analysis.monthlyProjectionInsight?.totals.registeredExpenses).toBe(160)
+  })
+
+  it('keeps revenue and expense exclusions independent', () => {
+    const transactions = [
+      ...recurringHistory('Mensalidade', 500, 'Receita', 'Freelance', null),
+      ...recurringHistory('Mensalidade', 100, 'Despesa', 'Assinaturas', 'wants'),
+    ]
+    const analysis = buildFinancialAnalysis(
+      transactions,
+      BUDGET_GROUPS,
+      '2026-07',
+      NOW,
+      [exclusion('mensalidade', 'month', '2026-07-01', 'Despesa')],
+    )
+
+    expect(analysis.monthlyProjectionInsight?.totals).toMatchObject({
+      probableRevenue: 500,
+      probableExpenses: 0,
+    })
   })
 
   it('sorts expense groups by budget configuration and leaves ungrouped last', () => {
