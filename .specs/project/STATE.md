@@ -5,10 +5,10 @@
 - A skill `tlc-spec-driven` foi instalada em `~/.codex/skills/tlc-spec-driven` em 2026-06-03.
 - Este repositorio passara a usar `.specs/` como memoria persistente para planejamento e execucao.
 - Nao mexer automaticamente em fluxos marcados como arquivados sem uma solicitacao explicita.
-- O codebase foi mapeado com base em `tools/`, `web/` e `supabase/` em 2026-06-03.
-- Regras de negocio financeiras devem permanecer no pipeline de ingestao Python e/ou no schema do Supabase, nao na UI.
-- Mudancas em `type`, `category`, `budget_group` e `status` devem ser coordenadas entre SQL, Python, frontend e documentacao.
-- `App.jsx` pode permanecer central enquanto houver uma unica tela simples; novas responsabilidades relevantes devem disparar modularizacao.
+- O codebase foi remapeado integralmente em 2026-06-11 com base no frontend React/TypeScript modular, Supabase, Edge Functions, testes e deploy atuais.
+- Regras canonicas de ingestao e integridade devem permanecer nas Edge Functions e/ou no schema; agregacoes e projecoes de apresentacao podem permanecer no frontend enquanto volume e complexidade forem controlados.
+- Mudancas em `type`, `category` e `budget_group_id` devem ser coordenadas entre SQL, Edge Functions, frontend, ferramentas locais ainda ativas e documentacao.
+- `App.tsx` permanece como composition root e roteador; novas operacoes assincronas e regras de dominio devem ser extraidas para hooks e bibliotecas dedicadas.
 - Pastas de feature em `.specs/features/` devem seguir o padrao numerado `NNN-slug-da-feature`, com zero padding de 3 digitos.
 - A feature `002-regras-classificacao-por-usuario` sera planejada sobre o fluxo ativo de importacao em `supabase/functions/` e nao sobre scripts legados em `tools/`.
 - Para essa feature, a ordem planejada sera baseline global -> fallback `Outros` -> override por regra do usuario -> upsert em `transactions`.
@@ -24,20 +24,34 @@
 - A feature `005-detalhar-projecoes-na-analise-mensal` foi implementada e validada em 2026-06-11 com 53 testes unitarios e 19 testes Playwright.
 - A cobertura E2E da feature `005-detalhar-projecoes-na-analise-mensal` foi ampliada para 22 testes Playwright, incluindo formulas financeiras, deficit e cenario futuro apenas provavel.
 - O Static Site `my-finance-web` no Render usa rewrite `/*` -> `/index.html` para suportar acesso direto as rotas da SPA sem 404.
+- A feature `006-remover-estimativas-provaveis-da-projecao` atuara exclusivamente sobre itens `Provavel`, com escopo `Somente neste mes` ou `Neste e nos meses futuros`.
+- Exclusoes de estimativas provaveis serao preferencias persistentes por usuario, aplicadas depois da deteccao de recorrencias, sem apagar transacoes nem alterar o historico usado pela heuristica.
+- A restauracao de uma exclusao futura removera toda a regra desde seu mes inicial, mesmo quando acionada a partir de um mes posterior.
+- O design da feature `006-remover-estimativas-provaveis-da-projecao` propoe uma tabela `projection_exclusions` com RLS, identidade por tipo + descricao normalizada e `month_start` combinado com escopo mensal ou futuro.
+- As exclusoes da feature `006` deverao alimentar o mesmo `buildFinancialAnalysis` usado pela dashboard e pela pagina `Mensal`, evitando divergencia entre resumo, detalhe e indicadores.
+- As mutacoes de exclusao e restauracao serao otimistas com rollback; a remocao tambem oferecera `Desfazer` sem expiracao automatica.
+- As estimativas removidas da feature `006` ficarao recolhidas por padrao sob o controle `Ocultando X estimativa(s)`; a lista com restauracao sera exibida sob demanda e o estado aberto sera refletido na URL.
 
 ## Current Facts
 
-- O repositorio possui alteracoes locais em `README.md`, `.gitignore` e a arvore `supabase/`.
-- O frontend fica em `web/` e usa React + Vite + Supabase JS.
+- O frontend fica em `web/` e usa React 19, TypeScript 6, Vite 8 e Supabase JS.
+- A aplicacao web esta dividida em componentes, hooks e bibliotecas puras; `App.tsx` permanece como composition root e roteador History API.
+- O Supabase ativo possui `profiles`, `transactions`, `budget_groups` e `transaction_classification_rules`, alem de tres Edge Functions de importacao.
+- O baseline verificado em 2026-06-11 e de 53 testes Vitest passando; a suite Playwright possui 22 testes em 6 arquivos.
+- O build frontend atual passa, mas produz um chunk principal de 548,74 kB minificado e emite o warning de tamanho do Vite.
+- O GitHub Actions versionado faz deploy do Supabase, mas ainda nao executa gates automatizados do frontend.
 - Os extratores locais ficam em `tools/`.
 - O schema real ja possui `budget_groups` e `transactions.budget_group_id` via migrations de 2026-06-09, mesmo que a documentacao anterior em `.specs/features/001-gerenciar-budget-groups/` ainda reflita um estado mais antigo.
-- O parser de cartao Santander ja identifica `installment` e hoje persiste apenas a parcela presente na fatura importada.
- - O parser de cartao Santander ja identifica `installment` e hoje persiste apenas a parcela presente na fatura importada.
+- Os parsers ativos de cartao Santander e Nubank expandem compras parceladas em cronogramas mensais e usam `external_id` deterministico para idempotencia.
 - A dashboard mantem o horizonte resumido de tres meses, enquanto a pagina `Mensal` expoe totais, agregados e itens registrados/provaveis para o mes atual e meses futuros.
 
 ## Blockers
 
 - Nenhum bloqueio registrado.
+
+## Paused Work
+
+- A feature `006-remover-estimativas-provaveis-da-projecao` foi pausada em 2026-06-11 ao final do design, ainda em status `Draft`; retomar pela revisao/aprovacao do `design.md` e depois criar `tasks.md`.
 
 ## Deferred Ideas
 

@@ -1,136 +1,196 @@
 # Architecture
 
-**Pattern:** modular por area, com separacao clara entre ingestao local, leitura/edicao web e infraestrutura de dados.
+**Analyzed:** 2026-06-11
+**Pattern:** modular single-page frontend over Supabase, with serverless import functions and separate legacy batch tools.
 
 ## High-Level Structure
 
 ```text
-bank files / PDFs / CSVs
-        |
-        v
-tools/*.py
-  - extracao
-  - normalizacao
-  - agregacao
-        |
-        +--> JSON / CSV em inbox/
-        |
-        +--> revisao manual / importacao
+Browser
+  |
+  +-- React SPA
+  |     +-- components: presentation and interaction
+  |     +-- hooks: async workflows and application state
+  |     +-- lib: normalization, filtering and financial calculations
+  |     +-- manual History API router
+  |
+  +-- Supabase JS
+        +-- Auth
+        +-- PostgREST CRUD
+        +-- Edge Function invocation
+                 |
+                 +-- parse bank file
+                 +-- resolve budget groups
+                 +-- apply user rules
+                 +-- expand/deduplicate installments
+                 +-- insert transactions
 
-web/ React app
-        |
-        v
-Supabase JS client
-        |
-        v
-public.transactions + public.profiles
-        |
-        v
-RLS garante isolamento por usuario
+Supabase Postgres
+  +-- migrations define schema and RLS
+  +-- user_id is the ownership boundary
+
+Local/legacy workflow
+  bank files -> Python tools -> JSON/CSV in inbox -> archived Notion flow
 ```
 
-## Architectural Modules
+## Frontend Architecture
 
-### 1. Local ingestion pipeline
+### Application Composition
 
-**Location:** `tools/`
+**Location:** `web/src/App.tsx`
 
-**Purpose:** transformar arquivos brutos em estruturas normalizadas e auditaveis.
+`App` remains the composition root. It owns route/session-level state, initializes hooks and selects the current authenticated view. Business operations are delegated to hooks and pure libraries.
 
-**Implementation pattern:**
+Authenticated routes:
 
-- cada script tem CLI propria via `argparse`
-- parseia entrada para dataclasses imutaveis
-- escreve JSON como payload principal
-- opcionalmente escreve CSV derivado
-- imprime um resumo operacional no stdout
+- `/app/dashboard`;
+- `/app/mensal`;
+- `/app/importar`;
+- `/app/regras`;
+- `/app/budget-groups`.
 
-**Examples:**
+Routing uses `window.history.pushState`, `replaceState` and `popstate`. Monthly state is deep-linked through `?month=YYYY-MM`.
 
-- `tools/extract_santander_fatura.py`
-- `tools/extract_nubank_csv.py`
-- `tools/build_monthly_summary.py`
-- `tools/build_monthly_dashboard.py`
+### Hook-Oriented Application Services
 
-### 2. Thin client web over Supabase
+**Location:** `web/src/hooks/`
 
-**Location:** `web/src/`
+Observed responsibilities:
 
-**Purpose:** autenticar o usuario, ler `transactions`, calcular agregados no cliente e permitir recategorizacao leve.
+- `useAuthSession`: session bootstrap and recovery event handling;
+- `useAuthActions`: sign-in, signup, reset, password update and logout cleanup;
+- `useTransactionsData`: initial queries and normalized application state;
+- `useDashboardState`: derived filters, month data and financial analysis;
+- `useTransactionsImport`: file conversion and Edge Function invocation;
+- `useTransactionEditing`: transaction classification edits and learning prompt;
+- `useClassificationRuleManagement`: rule CRUD and historical reclassification;
+- `useBudgetGroupManagement`: budget group CRUD and orphan reconciliation.
 
-**Implementation pattern:**
+This is a pragmatic application-service layer rather than a formal domain layer.
 
-- `web/src/lib/supabase.js` encapsula a criacao do client
-- `web/src/App.jsx` concentra autenticacao, query, transformacao e renderizacao
-- componentes internos no mesmo arquivo dividem a UI por secao
-- agregacoes mensais sao calculadas no cliente a partir da lista completa carregada
+### Pure Domain And Presentation Logic
 
-**Boundary rule:** o frontend atual e um cliente direto do banco, nao uma camada de dominio completa.
+**Location:** `web/src/lib/`
 
-### 3. Database as policy boundary
+- `transactions.ts`: normalization, classification matching, filters and monthly grouping.
+- `financialAnalysis.ts`: recurring candidate detection, dashboard projections and monthly projection detail.
+- `monthKeys.ts`: local month/date arithmetic.
+- `formatters.ts`: locale-aware BRL, percentage, month and date formatting.
+- `supabase.ts`: client creation and configuration guard.
 
-**Location:** `supabase/`
+Financial projections are computed client-side from the complete transaction list. Recurring candidates use recent history, exclude transfers/installments and suppress estimates when a matching persisted transaction exists.
 
-**Purpose:** centralizar o schema canonico e as regras de acesso.
+### Component Organization
 
-**Implementation pattern:**
+**Location:** `web/src/components/`
 
-- migration inicial cria tabelas, triggers, indices e policies
-- `transactions.user_id` e o eixo de isolamento
-- checks no schema restringem valores de `type`, `category`, `budget_group` e `status`
-- triggers padronizam `updated_at`
+Views compose focused components:
+
+- dashboard overview;
+- monthly projection summary, breakdown and items;
+- transaction tables and edit dialog;
+- classification rule management;
+- budget group management;
+- import flow;
+- authenticated workspace shell.
+
+Radix-backed primitives live in `components/ui/`.
 
 ## Data Flows
 
-### Financial ingestion flow
+### Authentication
 
-1. arquivo bruto entra em `inbox/`
-2. script de `tools/` extrai ou normaliza os dados
-3. script gera JSON estruturado e, opcionalmente, CSV
-4. operador revisa totais, categorias e grupos
-5. dados seguem para o destino operacional
+1. `useAuthSession` calls `supabase.auth.getSession()`.
+2. `onAuthStateChange` updates session and detects password recovery.
+3. Unauthenticated users are normalized to `/login`.
+4. Auth actions call Supabase Auth directly.
+5. Logout clears user-owned frontend collections and selected month.
 
-### Dashboard flow
+### Initial Data Load
 
-1. usuario faz login por magic link
-2. app obtem sessao via Supabase Auth
-3. app consulta `transactions`
-4. `normalizeTransaction` converte payload do banco para shape da UI
-5. `buildMonthData` agrega receita, grupos e categorias por mes
-6. UI renderiza resumo e tabela editavel
-7. alteracoes de categoria/grupo executam `update` direto em `transactions`
+1. An authenticated session triggers `useTransactionsData`.
+2. The hook loads `budget_groups`.
+3. It loads `transaction_classification_rules`.
+4. It loads `transactions`, ordered by date descending.
+5. Database rows pass through explicit normalizers.
+6. React state feeds `useDashboardState`.
 
-## Organization Pattern
+The queries are currently sequential and the transaction query is not paginated.
 
-**Current approach:** separacao por runtime e responsabilidade.
+### Monthly Analysis And Projection
 
-- `tools/`: automacao batch, sem dependencia do app web
-- `web/`: experiencia interativa de leitura e edicao
-- `supabase/`: contrato persistente de dados
+1. Transactions are normalized and decorated with group names.
+2. `buildMonthData` builds realized monthly aggregates.
+3. `buildFinancialAnalysis` creates summaries and recurring candidates.
+4. `buildOverview` generates the three-month dashboard horizon.
+5. `buildMonthlyProjectionInsight` generates detailed current/future month items.
+6. Current-month indicators combine realized balance with remaining registered/probable items.
+7. `MonthlyView` renders summary, breakdown, item detail and the realized transaction table.
 
-Isso e bom para o tamanho atual do projeto. O que falta nao e uma nova arquitetura, e sim endurecer as fronteiras.
+### Transaction Editing And Rule Learning
 
-## Standards To Follow
+1. A user opens `TransactionEditModal`.
+2. `useTransactionEditing` persists type/category/group changes.
+3. If classification changed, a learning prompt can create a user rule.
+4. `useClassificationRuleManagement` upserts the rule.
+5. The user may reclassify matching historical transactions.
+6. Edge Functions apply the same persisted rules to later imports.
 
-### Keep business rules canonical in one place per runtime
+### Import Pipeline
 
-- Regras de classificacao financeira hoje aparecem em mais de um script.
-- Regra futura: dentro de Python, extrair heuristicas compartilhadas para um modulo comum quando duas ou mais ferramentas precisarem da mesma logica.
-- Regra futura: no frontend, tratar a tabela `transactions` como fonte de verdade e evitar recodificar regras de negocio que pertencem ao pipeline de ingestao.
+1. `ImportPanel` accepts Nubank CSV or Santander PDF.
+2. `useTransactionsImport` reads text or converts the PDF to base64.
+3. The matching Edge Function authenticates the bearer token.
+4. A bank-specific parser produces normalized candidate transactions.
+5. Shared code resolves named budget groups to user-owned IDs.
+6. User classification rules override baseline classification.
+7. Ignored rows and previously imported external IDs are removed.
+8. Installment schedules are expanded and duplicate purchase series are detected.
+9. Remaining rows are inserted into `transactions`.
+10. The frontend reloads all application data.
 
-### Preserve the three-layer boundary
+### Database Deployment
 
-- `tools/` nao deve depender do frontend.
-- `web/` nao deve importar arquivos operacionais de `inbox/`.
-- `supabase/` deve continuar sendo o unico lugar do schema canonico.
+1. A push to `main` touching `supabase/**` triggers GitHub Actions.
+2. The workflow links the configured Supabase project.
+3. `supabase db push` applies migrations.
+4. Three Edge Functions deploy in a matrix after migrations succeed.
 
-### Prefer compute-near-source for stable rules
+Frontend production deployment is handled separately by Render auto deploy.
 
-- classificacao e normalizacao pertencem ao pipeline de ingestao
-- validacao de acesso e enumeracoes pertencem ao banco
-- agregacoes de apresentacao podem ficar no cliente enquanto o volume for pequeno
+## Database Boundary
 
-### Promote server-side aggregation only when needed
+Supabase is both persistence and authorization boundary.
 
-- enquanto o volume de transacoes for baixo/moderado, `buildMonthData` no cliente e aceitavel
-- se a tabela crescer ou o app ganhar mais visoes, mover agregacoes para view SQL, RPC ou camada backend dedicada
+- `transactions.user_id`, `budget_groups.user_id` and rule `user_id` isolate tenants.
+- RLS policies allow authenticated users to operate only on owned rows.
+- triggers maintain `updated_at`.
+- checks constrain transaction types, categories and rule modes.
+- user creation seeds default 50/30/20 budget groups.
+- imported transactions use `external_id` for idempotency.
+
+## Local And Legacy Boundary
+
+`tools/` is not imported by the SPA or Edge Functions. It remains an operational/legacy path for local extraction and archived Notion outputs.
+
+The active product path is:
+
+```text
+web -> Supabase Auth/PostgREST/Functions -> Postgres
+```
+
+The legacy path is:
+
+```text
+local files -> Python -> inbox JSON/CSV -> Notion/manual review
+```
+
+## Module Boundaries
+
+- Components should not issue Supabase queries directly.
+- Hooks own asynchronous workflows and state mutation.
+- `lib/` owns pure transformations and financial calculations.
+- migrations own schema integrity and RLS.
+- Edge entrypoints own HTTP/auth orchestration.
+- Edge `_shared` modules own bank parsing and import rules.
+- Python tools remain independent of the active runtime.

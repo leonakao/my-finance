@@ -1,171 +1,184 @@
 # Code Conventions
 
-**Analyzed from:** `tools/*.py`, `web/src/App.jsx`, `web/src/lib/supabase.js`, `supabase/migrations/*.sql`
+**Analyzed:** 2026-06-11
 
-## Naming Conventions
+## Naming
 
 ### Files
 
-- Python scripts: `snake_case.py`
-- React entry/components: `PascalCase` para componente-raiz (`App.jsx`) e `camelCase` para utilitarios (`supabase.js`)
-- SQL migrations: timestamp prefix + snake case
+- React components: `PascalCase.tsx`, for example `MonthlyView.tsx`.
+- Hooks: `useCamelCase.ts`, for example `useTransactionsData.ts`.
+- Libraries and configuration modules: `camelCase.ts`, for example `financialAnalysis.ts`.
+- Tests: co-located `*.test.ts` or `*.test.tsx`.
+- Playwright: `web/e2e/*.spec.ts`.
+- Edge Function directories: kebab-case with `index.ts`.
+- Shared Edge modules: kebab-case, for example `classification-rules.ts`.
+- Python and shell: snake_case.
+- SQL migrations: UTC-like timestamp prefix plus snake_case description.
 
-**Examples:**
+### Code Symbols
 
-- `extract_santander_fatura.py`
-- `build_monthly_dashboard.py`
-- `App.jsx`
-- `20260603223000_init.sql`
+- React components and TypeScript types: PascalCase.
+- Functions, hooks, props and local variables: camelCase.
+- Event handlers: `handle*` or semantic callback names such as `onConfirm`.
+- Constants: `UPPER_SNAKE_CASE`.
+- Database columns and SQL identifiers: snake_case.
+- Domain values retain Portuguese labels such as `Despesa`, `Receita` and `Transferência`.
 
-### Functions
+## TypeScript
 
-- Python: `snake_case`
-- React helpers and handlers: `camelCase`
-- Event handlers no frontend: prefixo `handle`
+### Type Safety
 
-**Examples:**
+- Strict TypeScript is enabled.
+- `type` aliases are required by ESLint instead of `interface`.
+- Type-only imports use `import type`.
+- Explicit `any` is forbidden.
+- External database records have snake_case record types and explicit normalizers.
+- Application types use camelCase.
 
-- `extract_text_events`
-- `budget_group_for`
-- `normalizeTransaction`
-- `buildMonthData`
-- `handleSignIn`
-- `handleUpdate`
+Examples:
 
-### Variables
+- `TransactionRecord` -> `normalizeTransaction` -> `Transaction`;
+- `ClassificationRuleRecord` -> `normalizeClassificationRule` -> `ClassificationRule`;
+- `BudgetGroupRecord` -> `normalizeBudgetGroup` -> `BudgetGroup`.
 
-- Python local vars: `snake_case`
-- JS local vars/state: `camelCase`
-- Maps e collections recebem nomes descritivos do dominio
+### Imports
 
-**Examples:**
+Observed order is generally:
 
-- Python: `closing_month`, `statement_year`, `grouped_amounts`
-- JS: `selectedMonth`, `monthMap`, `monthTransactions`
+1. third-party runtime imports;
+2. React type imports;
+3. local components/hooks;
+4. local libraries/constants;
+5. local types.
 
-### Constants
+Type imports are separated where practical.
 
-- Python constants: `UPPER_SNAKE_CASE`
-- JS constants: `UPPER_SNAKE_CASE`
+### Function Design
 
-**Examples:**
+- Pure derivations live in `lib/`.
+- Async data operations live in hooks.
+- Components receive callbacks rather than importing persistence directly.
+- Small private helpers precede exported functions.
+- Functions return early for invalid or empty states.
 
-- `DATE_RE`
-- `MONEY_RE`
-- `SPENDING_GROUPS`
-- `GROUP_LABELS`
-- `GROUP_TARGETS`
-- `CATEGORY_OPTIONS`
+### React
 
-## Code Organization
+- Functional components only.
+- Controlled state is held in hooks or the nearest view.
+- Reusable dialogs use Radix through `AppDialog`.
+- Navigation uses semantic links/buttons and manual History API updates.
+- Async buttons preserve labels and show `.button-spinner`.
+- Feedback uses `role="status"` or `role="alert"`.
+- Components use native semantics before ARIA.
 
-### Python file shape
+### Error Handling
 
-Padrao atual observado:
+- Supabase calls inspect returned `error` explicitly.
+- Hooks clear prior feedback before mutations.
+- Errors are lifted to shared `setError`.
+- Functions HTTP handlers return JSON with explicit 400/401/405/500 statuses.
+- Import invocation unwraps `FunctionsHttpError` response bodies.
+- Parsing catches only expected recoverable cases; unexpected errors propagate.
 
-1. imports
-2. constants / regex
-3. dataclasses
-4. pure helper functions
-5. pipeline functions
-6. `write_*`
-7. `main()`
-8. `if __name__ == "__main__"`
+### Formatting And Locale
 
-Esse padrao deve continuar.
+- Currency, percentages and dates use `Intl` helpers in `formatters.ts`.
+- Financial UI uses Brazilian Portuguese and BRL.
+- Dates use ISO `YYYY-MM-DD` internally and localized labels at presentation.
+- Month keys use `YYYY-MM`.
 
-### React file shape
+## ESLint-Enforced Standards
 
-Padrao atual observado em `App.jsx`:
+Production TypeScript enforces:
 
-1. imports
-2. constants
-3. formatters / normalizers
-4. pequenos componentes de apresentacao
-5. componente container `App`
+- complexity <= 10;
+- nesting depth <= 3;
+- files <= 300 non-comment/non-blank lines;
+- functions <= 80 non-comment/non-blank lines;
+- curly braces and strict equality;
+- no floating promises;
+- exhaustive switch checking;
+- explicit function return types outside configured React exceptions;
+- no browser alerts;
+- no unused disable directives.
 
-Esse formato funciona no tamanho atual, mas com um limite:
+Large existing modules carry explicit disables:
 
-- ate 1 tela simples, pode ficar em um arquivo
-- ao introduzir nova view, filtro complexo ou mais de 3 componentes stateful, separar em modulos
+- `App.tsx`;
+- `financialAnalysis.ts`;
+- `transactions.ts`;
+- selected views/hooks with long functions.
 
-### SQL file shape
+These are exceptions, not the preferred pattern for new modules.
 
-- criar extensoes e funcoes primeiro
-- depois tabelas
-- depois indices e triggers
-- por fim RLS e policies
+## CSS
 
-Esse fluxo esta correto e deve ser mantido.
+- Theme tokens live in `styles/theme.css`.
+- element/reset/focus rules live in `styles/base.css`.
+- reusable feedback and common components live in `styles/components.css`.
+- most application-specific layouts remain in `App.css`.
+- classes use descriptive kebab-case.
+- focus styles use `:focus-visible`.
+- motion has reduced-motion handling.
+- tables are wrapped for horizontal overflow.
 
-## Type Safety And Data Contracts
+## Edge Functions
 
-### Python
+- Entry files follow a common sequence:
+  1. validate method and runtime configuration;
+  2. construct authenticated Supabase client;
+  3. resolve current user;
+  4. parse request body;
+  5. invoke bank parser;
+  6. resolve groups and rules;
+  7. deduplicate;
+  8. insert;
+  9. return operational counts.
+- Shared imports use Deno/npm specifiers.
+- Database payloads preserve snake_case.
+- Parser outputs use a shared `ParsedImportedTransaction` contract.
 
-- usar `@dataclass(frozen=True)` para registros transportados entre etapas
-- usar `Decimal` para valores monetarios
-- usar `Path` para caminhos de arquivo
-- funcoes devem declarar tipos de entrada e saida
+## SQL
 
-### Frontend
+Migration order within a file generally follows:
 
-- como o projeto esta em JS, todo payload externo deve passar por normalizacao explicita
-- `normalizeTransaction` e o padrao correto
-- qualquer novo recurso que leia Supabase deve ter funcao equivalente de normalizacao
+1. table/function definitions;
+2. indexes and constraints;
+3. triggers;
+4. RLS enablement;
+5. policies;
+6. data migration/backfill where required.
 
-### Database
+User-owned tables:
 
-- o schema deve continuar codificando enumeracoes e checks de integridade
-- evitar deixar validacoes criticas apenas na UI
+- reference `auth.users(id)` with `on delete cascade`;
+- include `created_at` and `updated_at`;
+- use `public.set_updated_at()`;
+- define separate select/insert/update/delete policies.
 
-## Error Handling
+## Python
 
-### Current pattern
+- Python scripts use only the standard library.
+- `from __future__ import annotations` is standard.
+- CLI parsing uses `argparse`.
+- Paths use `pathlib.Path`.
+- Money uses `Decimal`, not float.
+- Transport rows use frozen dataclasses.
+- JSON/CSV writers are explicit pipeline stages.
+- `main()` is guarded by `if __name__ == "__main__"`.
 
-- scripts falham naturalmente por excecao quando entrada invalida quebra contrato
-- frontend captura erros assinc nos fluxos de auth e query e projeta a mensagem em `error`
+## Shell
 
-### Standard to follow
-
-- scripts Python:
-  - validar pre-condicoes de entrada que sejam previsiveis
-  - falhar cedo com mensagem objetiva quando a entrada nao cumpre o contrato
-  - nao engolir excecoes silenciosamente, exceto em parsing oportunista e isolado
-- frontend:
-  - tratar cada chamada Supabase com ramo de erro explicito
-  - nao atualizar estado otimista sem caminho claro de rollback
+- Scripts use `#!/bin/sh` and `set -eu`.
+- Project roots are resolved relative to the script.
+- temporary files use `${TMPDIR:-/tmp}`.
+- background processes install cleanup traps.
+- integration scripts fail with explicit operational messages.
 
 ## Comments And Documentation
 
-### Current pattern
-
-- comentarios sao raros e usados quando a logica fica menos obvia
-- docstrings curtas explicam o objetivo do script
-
-### Standard to follow
-
-- manter comentarios raros e utilitarios
-- comentar heuristicas financeiras nao obvias e regras que parecem arbitrarias
-- documentar no README ou `.specs/` qualquer regra de classificacao que afete multiplos fluxos
-
-## Project Standards We Should Enforce
-
-### Money handling
-
-- nunca usar `float` em Python para valores monetarios
-- no frontend, converter para `Number` apenas para exibicao e agregacao visual
-- o valor persistido e transportado deve continuar saindo de fonte decimal ou numeric
-
-### Domain vocabulary
-
-- tratar `type`, `category`, `budget_group` e `status` como enums de dominio
-- antes de criar novo valor, atualizar migration/schema, UI e documentacao juntos
-
-### Modularity threshold
-
-- Python: se duas regras de classificacao forem compartilhadas, extrair modulo comum em `tools/`
-- React: se `App.jsx` passar a acumular novas responsabilidades, quebrar em:
-  - `components/`
-  - `lib/`
-  - `hooks/`
-  - `constants/`
+- Comments are uncommon and explain non-obvious parsing or heuristic behavior.
+- Complex financial and installment rules receive explanatory comments.
+- Public architecture/product decisions belong in `.specs/`.
+- The root README is operational but currently contains some stale schema and auth descriptions; treat code and migrations as canonical.

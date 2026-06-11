@@ -1,75 +1,156 @@
 # Project Structure
 
-**Analyzed:** 2026-06-03
+**Analyzed:** 2026-06-11
+**Root:** `/Users/leonakao/projects/personal/finance`
 
-## Top Level
+## Directory Tree
 
 ```text
 .
-├── .codex/        # config local do projeto para o agente
-├── .specs/        # memoria de planejamento, codebase e features
-├── inbox/         # arquivos de entrada e artefatos operacionais
-├── supabase/      # schema, migrations e config do Supabase
-├── tools/         # scripts locais de extracao e agregacao
-├── web/           # app React + Vite
+├── .github/workflows/
+│   └── supabase-deploy.yml
+├── .specs/
+│   ├── codebase/
+│   ├── features/
+│   ├── project/
+│   └── quick/
+├── inbox/
+├── supabase/
+│   ├── functions/
+│   │   ├── _shared/
+│   │   ├── import-nubank-csv/
+│   │   ├── import-santander-account-pdf/
+│   │   └── import-santander-pdf/
+│   ├── migrations/
+│   ├── config.toml
+│   └── seed.sql
+├── tools/
+├── web/
+│   ├── e2e/
+│   │   └── helpers/
+│   ├── public/
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── lib/
+│   │   ├── styles/
+│   │   └── test/
+│   ├── package.json
+│   ├── playwright.config.ts
+│   ├── tsconfig.json
+│   └── vite.config.ts
+├── AGENTS.md
 ├── README.md
 └── notion-finance.md
 ```
 
-## Module Roles
+Generated/local directories such as `web/node_modules`, `web/dist`, `web/test-results`, `supabase/.temp` and Python caches are not source modules.
 
-### `tools/`
+## Active Web Application
 
-- papel: processamento batch e normalizacao financeira
-- contrato: entrada por arquivo, saida por JSON e CSV, resumo no terminal
-- restricao: nao depender de UI nem de schema interno do frontend
+### Composition And Routing
 
-### `web/`
+- `web/src/App.tsx`: application composition, route normalization and top-level view selection.
+- `web/src/main.tsx`: React bootstrap.
+- `web/src/types.ts`: shared application contracts.
+- `web/src/constants.ts`: domain option sets.
 
-- papel: autenticacao, leitura e recategorizacao de transacoes
-- contrato: consumir somente o schema persistido no Supabase
-- restricao: nao incorporar logica pesada de ingestao
+### Components
 
-### `supabase/`
+**Location:** `web/src/components/`
 
-- papel: verdade canonica de dados e seguranca
-- contrato: migrations reproduziveis e politicas de acesso por usuario
-- restricao: qualquer mudanca de enum ou coluna deve nascer aqui
+- Views: `DashboardOverviewView`, `MonthlyView`, `ImportView`, `ClassificationRulesView`, `BudgetGroupsView`.
+- Projection: `MonthlyProjectionSummary`, `MonthlyProjectionBreakdown`, `MonthlyProjectionItems`.
+- Transactions: `TransactionTable`, `TransactionEditModal`, classification prompts.
+- Shell/auth: `WorkspaceLayout`, `SignIn`, `MissingConfig`.
+- UI primitives: `components/ui/AppDialog.tsx` and `ConfirmDialog.tsx`.
 
-### `inbox/`
+### Hooks
 
-- papel: workspace operacional local
-- restricao: nao versionar conteudo sensivel ou gerado
+**Location:** `web/src/hooks/`
 
-## Recommended Growth Structure
+Hooks are organized by workflow rather than by page. They own session, loading, CRUD and derived dashboard state.
 
-### If Python tooling grows
+### Libraries
 
-Migrar de scripts soltos para algo como:
+**Location:** `web/src/lib/`
 
-```text
-tools/
-├── finance_rules.py
-├── io_utils.py
-├── extract_santander_fatura.py
-├── extract_nubank_csv.py
-└── ...
-```
+- financial calculations;
+- transaction normalization/classification;
+- month arithmetic;
+- formatters;
+- Supabase client.
 
-Extrair modulo compartilhado apenas quando houver duplicacao real.
+### Styling
 
-### If frontend grows
+- `web/src/App.css`: feature and layout styles.
+- `web/src/index.css`: style entry imports.
+- `web/src/styles/`: theme, base and reusable component styles.
 
-Migrar de `App.jsx` central para:
+## Supabase
 
-```text
-web/src/
-├── components/
-├── hooks/
-├── lib/
-├── pages/
-├── constants/
-└── App.jsx
-```
+### Migrations
 
-Nao fazer isso antes de o crescimento justificar.
+**Location:** `supabase/migrations/`
+
+Eight migrations currently establish and evolve:
+
+- profiles;
+- transactions;
+- external ID idempotency;
+- budget groups and transaction foreign key migration;
+- user classification rules;
+- expanded categories;
+- removal of legacy `transactions.status`.
+
+### Edge Functions
+
+**Location:** `supabase/functions/`
+
+Each deployed function owns an HTTP endpoint. `_shared/` contains bank parsers and shared import stages.
+
+### Local Configuration
+
+- `supabase/config.toml`: local ports, Auth and runtime.
+- `supabase/seed.sql`: intentionally empty.
+
+## Tests
+
+- Co-located unit/component tests: `web/src/**/*.test.{ts,tsx}`.
+- Browser E2E tests: `web/e2e/*.spec.ts`.
+- E2E helpers: `web/e2e/helpers/`.
+- Import integration scenarios: `tools/test_import_*.sh`.
+- Function startup check: `tools/check_supabase_functions.sh`.
+
+## Local And Legacy Tools
+
+**Location:** `tools/`
+
+- active operational scripts: environment switching, Render build, E2E/function checks;
+- local extractors: Nubank CSV and Santander PDF;
+- archived Notion aggregators: monthly summary/dashboard.
+
+`inbox/` stores local financial source and generated files and is ignored by Git.
+
+## Specifications
+
+**Location:** `.specs/`
+
+- `project/`: roadmap and persistent state.
+- `features/`: numbered feature specs, designs and tasks.
+- `quick/`: small tracked changes.
+- `codebase/`: this brownfield map.
+
+## Where Capabilities Live
+
+| Capability | UI | State/Workflow | Pure Logic | Persistence |
+| --- | --- | --- | --- | --- |
+| Authentication | `SignIn` | `useAuthSession`, `useAuthActions` | redirect helpers in `App.tsx` | Supabase Auth |
+| Dashboard | `DashboardOverviewView` | `useDashboardState` | `financialAnalysis.ts` | `transactions`, `budget_groups` |
+| Monthly analysis | `MonthlyView` and projection components | `useDashboardState` | `financialAnalysis.ts`, `monthKeys.ts` | Supabase tables |
+| Transaction editing | `TransactionEditModal` | `useTransactionEditing` | `transactions.ts` | `transactions` |
+| Classification rules | prompts and `ClassificationRulesView` | `useClassificationRuleManagement` | `transactions.ts` | `transaction_classification_rules` |
+| Budget groups | `BudgetGroupsView` | `useBudgetGroupManagement` | normalizers in `transactions.ts` | `budget_groups` |
+| Import | `ImportView`, `ImportPanel` | `useTransactionsImport` | Edge `_shared` parsers | Edge Functions -> `transactions` |
+| Deployment | none | shell/GitHub Actions | none | Render and Supabase |

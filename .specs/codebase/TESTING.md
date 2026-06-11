@@ -1,112 +1,181 @@
-# Testing
+# Testing Infrastructure
 
 **Analyzed:** 2026-06-11
 
-## Current State
+## Frameworks
 
-### Python tools
+- Unit/component: Vitest 4.1.8.
+- DOM environment: jsdom 29.
+- React testing: Testing Library React 16.3 and User Event 14.6.
+- E2E: Playwright 1.60.
+- Import integration: POSIX shell, curl and jq against local Supabase.
+- Coverage: no coverage provider, target or enforcement configured.
 
-- nao ha suite automatizada documentada
-- a validacao hoje e operacional:
-  - conferir quantidade de transacoes
-  - conferir total agregado
-  - revisar classificacoes e descricoes
+## Verified Baseline
 
-### Frontend
+Commands run on 2026-06-11:
 
-- `web/package.json` expoe:
-  - `npm run lint`
-  - `npm run build`
-  - `npm run typecheck`
-  - `npm run test`
-  - `npm run test:e2e`
-- Vitest + Testing Library cobrem helpers, hooks e componentes.
-- Playwright cobre os fluxos autenticados principais.
-- Baseline em 2026-06-11: 3 arquivos e 10 testes unitarios passando.
+```text
+npm run test       -> 9 files, 53 tests passed
+npm run lint       -> passed
+npm run typecheck  -> passed
+npm run build      -> passed
+```
+
+The Playwright suite currently contains 22 tests across six spec files. It was not rerun during this mapping because it requires the local Supabase stack and Function server.
+
+## Test Organization
+
+### Unit And Component
+
+**Location:** co-located under `web/src/`
+**Naming:** `*.test.ts` and `*.test.tsx`
+
+Current coverage:
+
+- `lib/financialAnalysis.test.ts`: 19 financial projection tests;
+- `lib/monthKeys.test.ts`: 8 date/month tests;
+- `lib/transactions.test.ts`: 4 normalization/classification tests;
+- `hooks/useDashboardState.test.ts`: 3 derived state tests;
+- `hooks/useTransactionEditing.test.tsx`: 3 mutation/workflow tests;
+- projection component tests: 13 tests;
+- `TransactionEditModal.test.tsx`: 3 form tests.
+
+Patterns:
+
+- fixed dates are passed explicitly to pure functions;
+- financial fixtures use small transaction factories;
+- React components use semantic queries (`getByRole`, `getByText`);
+- hooks mock Supabase boundaries where needed;
+- tests favor observable behavior over snapshots.
+
+### E2E
+
+**Location:** `web/e2e/`
+
+Suites:
+
+- `dashboard.spec.ts`: 3;
+- `import.spec.ts`: 2;
+- `monthly-projection.spec.ts`: 3;
+- `monthly.spec.ts`: 8;
+- `rules.spec.ts`: 2;
+- `shell.spec.ts`: 4.
+
+Patterns:
+
+- each test creates a unique authenticated Supabase user;
+- fixtures are inserted through an authenticated Supabase client;
+- routes and UI are exercised in Chromium;
+- assertions use roles, labels and visible localized text;
+- `run_web_e2e.sh` starts local Edge Functions around Playwright.
+
+### Import Integration Scenarios
+
+**Location:** `tools/test_import_nubank_csv.sh` and `tools/test_import_santander_pdf.sh`
+
+These scripts:
+
+- create a unique local user;
+- invoke Edge Functions over HTTP;
+- run the same import twice;
+- assert first insertion and second-run idempotency;
+- query PostgREST for persisted rows;
+- verify installment schedules and dates.
+
+They are scenario tests, not unit tests for parser internals.
 
 ### Database
 
-- a integridade principal hoje vem de:
-  - constraints SQL
-  - indices
-  - triggers
-  - RLS
+Database behavior is primarily validated indirectly through:
 
-### Supabase Edge Functions
+- migration application in local Supabase;
+- RLS during authenticated E2E;
+- constraints during CRUD/import flows;
+- integration scripts.
 
-- nao havia check dedicado documentado para `supabase/functions/`
-- o check operacional minimo passa a ser:
-  - subir a stack local com `supabase start`
-  - rodar `sh tools/check_supabase_functions.sh`
+There is no dedicated SQL assertion suite for every policy or constraint.
 
-## Test Strategy We Should Follow
+## Configuration
 
-### Minimum gate for Python changes
+### Vitest
 
-- rodar o script alterado com uma amostra conhecida
-- conferir totais e contagens no stdout
-- validar um trecho do JSON gerado quando a logica de parse/classificacao mudar
+Configured in `web/vite.config.ts`:
 
-### Minimum gate for frontend changes
+- jsdom;
+- `src/test/setup.ts`;
+- excludes E2E, `node_modules` and `dist`.
 
-- helper puro ou regra financeira:
-  - teste unitario co-localizado
-  - `npm run test`
-  - `npm run typecheck`
-- componente ou hook:
-  - teste com Testing Library quando houver comportamento observavel
-  - `npm run test`
-  - `npm run typecheck`
-- integracao de pagina ou navegacao:
-  - Playwright no fluxo afetado
-  - `npm run test:e2e`
-- toda alteracao frontend:
-  - `npm run lint`
-  - `npm run build`
+### Playwright
 
-## Test Coverage Matrix
+Configured in `web/playwright.config.ts`:
 
-| Code layer | Required test | Parallel-safe |
+- test directory `e2e`;
+- 60-second timeout;
+- base URL `http://127.0.0.1:4173`;
+- trace retained on failure;
+- Vite web server reused when already running.
+
+`npm run test:e2e` wraps Playwright with `tools/run_web_e2e.sh`, which requires `supabase start` and starts `supabase functions serve --no-verify-jwt`.
+
+## Commands
+
+Run from `web/` unless noted:
+
+```bash
+npm run test
+npm run lint
+npm run typecheck
+npm run build
+npm run test:e2e
+```
+
+Run from repository root:
+
+```bash
+supabase start
+sh tools/check_supabase_functions.sh
+sh tools/test_import_nubank_csv.sh [csv-path] [account|card]
+sh tools/test_import_santander_pdf.sh [pdf-path]
+```
+
+## Coverage Matrix
+
+| Code layer | Required test | Location | Gate |
+| --- | --- | --- | --- |
+| Pure date/financial helper | Vitest unit | `web/src/lib/*.test.ts` | `npm run test && npm run typecheck` |
+| React component | Testing Library | co-located `*.test.tsx` | `npm run test && npm run lint` |
+| React hook | Vitest/Testing Library | `web/src/hooks/*.test.*` | `npm run test && npm run typecheck` |
+| Route/page composition | Playwright | `web/e2e/*.spec.ts` | `npm run test:e2e` |
+| Direct Supabase mutation | hook test plus E2E | hook + affected E2E suite | full frontend gate |
+| Edge parser/import behavior | shell scenario; unit currently missing | `tools/test_import_*.sh` | scenario script |
+| Migration/RLS | local migration plus authenticated scenario | migrations/E2E | `supabase db reset` plus affected tests |
+| Python extractor | manual representative fixture; automated suite missing | `tools/` + `inbox/` | run script and reconcile totals |
+| CSS-only behavior | owning component/E2E | component or E2E suite | lint/build plus visual interaction |
+
+## Parallelism Assessment
+
+| Test type | Parallel-safe | Isolation model | Evidence |
+| --- | --- | --- | --- |
+| Vitest | Yes | in-process isolated test files; pure fixtures/mocks | co-located unit tests |
+| Playwright | Mostly | unique user per test namespaces database rows | `createUserSession()` generates unique email |
+| Import shell scenarios | Not with identical temp names | fixed temp file paths per script and shared Function server | `tools/test_import_*.sh` |
+| Database reset/migration | No | shared local database | Supabase local stack |
+| Function startup check | No with another server on same port | shared local Functions port | `check_supabase_functions.sh` |
+
+Playwright tests may run in parallel at the framework level, but all use the same local Supabase instance and can still contend on Auth/function capacity.
+
+## Gate Levels
+
+| Gate | When | Command |
 | --- | --- | --- |
-| Pure financial/date helper | Unit (Vitest) | Yes |
-| React presentation component | Component (Testing Library) | Yes |
-| React hook/state derivation | Unit/component when behavior changes | Yes |
-| Page composition and routing | E2E (Playwright) | No |
-| CSS-only change | None; validate through owning component/page gate | Yes |
-| Type-only contract | Typecheck | Yes |
+| Quick unit | pure helper/component change | `npm run test && npm run typecheck` |
+| Frontend build | any frontend implementation | `npm run test && npm run lint && npm run typecheck && npm run build` |
+| Frontend full | route, persistence or user flow | `npm run test && npm run lint && npm run typecheck && npm run build && npm run test:e2e` |
+| Edge startup | shared/function code | `sh tools/check_supabase_functions.sh` |
+| Import scenario | parser, installment or dedupe change | relevant `sh tools/test_import_*.sh` |
+| Database | migration/RLS change | `supabase db reset` followed by affected frontend/scenario tests |
 
-## Gate Check Commands
+## CI Status
 
-Run from `web/`.
-
-| Gate | Commands |
-| --- | --- |
-| Type | `npm run typecheck` |
-| Unit | `npm run test && npm run typecheck` |
-| Build | `npm run lint && npm run typecheck && npm run build` |
-| Full | `npm run test && npm run lint && npm run typecheck && npm run build && npm run test:e2e` |
-
-### Minimum gate for Supabase changes
-
-- revisar migration para compatibilidade com dados existentes
-- validar impacto em `transactions` e policies de RLS
-- manter enum/checks sincronizados com o frontend
-- quando houver alteracao em `supabase/functions/`, rodar `sh tools/check_supabase_functions.sh`
-
-## Standards To Adopt
-
-### Short term
-
-- criar fixtures pequenas e anonimizadas para os scripts Python
-- registrar comandos de verificacao em cada feature ou quick task relevante
-
-### Medium term
-
-- adicionar testes de integracao para os pipelines principais de `tools/`
-- ampliar testes de componentes para estados vazios, erros e acessibilidade
-
-## Non-Negotiable Rules
-
-- toda mudanca em regra monetaria deve ser verificada com amostra real ou fixture representativa
-- toda mudanca em enum de dominio deve ser validada no banco e na UI
-- nunca considerar parser concluido sem reconciliar total com a origem quando esse fluxo exigir reconciliacao
+The repository GitHub workflow deploys Supabase but does not execute the test gates above. Render auto deploy also relies on local validation rather than a versioned frontend CI gate.

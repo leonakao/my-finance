@@ -26,6 +26,7 @@
 - Documentar comandos de validacao e testes usados em cada area.
 - Planejar e implementar a feature `003-importar-parcelas-por-mes` na worktree dedicada.
 - Feature `005-detalhar-projecoes-na-analise-mensal` concluida em 2026-06-11.
+- Especificar e implementar a feature `006-remover-estimativas-provaveis-da-projecao`.
 
 ## Open Product Decisions
 
