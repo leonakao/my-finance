@@ -4,13 +4,22 @@ import type { ReactNode } from 'react'
 type AppDialogProps = {
   children: ReactNode
   className?: string
+  description?: string
   eyebrow?: string
   onOpenChange: (open: boolean) => void
   open: boolean
   title: string
 }
 
-export function AppDialog({ children, className = '', eyebrow, onOpenChange, open, title }: AppDialogProps) {
+export function AppDialog({
+  children,
+  className = '',
+  description,
+  eyebrow,
+  onOpenChange,
+  open,
+  title,
+}: AppDialogProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -22,6 +31,7 @@ export function AppDialog({ children, className = '', eyebrow, onOpenChange, ope
               <Dialog.Title>{title}</Dialog.Title>
             </div>
           </div>
+          {description ? <Dialog.Description className="muted">{description}</Dialog.Description> : null}
           {children}
         </Dialog.Content>
       </Dialog.Portal>
