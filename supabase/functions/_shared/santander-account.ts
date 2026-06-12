@@ -1,5 +1,6 @@
 import { inflate } from 'npm:pako@2.1.0'
 import type { DefaultBudgetGroupName, ParsedImportedTransaction } from './budget-groups.ts'
+import { extractDateLikeMovementLines, extractMovementLines, parseMovementTransactions, type PdfLine } from './santander-account-parser.ts'
 
 type TextEvent = {
   page: number
@@ -7,24 +8,6 @@ type TextEvent = {
   x: number
   text: string
 }
-
-type PdfLine = {
-  page: number
-  y: number
-  text: string
-}
-
-type PendingTransaction = {
-  date: string
-  descriptionParts: string[]
-  amount: number | null
-  balance: number | null
-  startedWithDate: boolean
-}
-
-const datePrefixRe = /^(?<date>\d{2}\/\d{2})\s+(?<rest>.*)$/
-const amountSuffixRe =
-  /(?<description>.*?)(?:\s+|^)-?\s*(?<amount>\d{1,3}(?:\.\d{3})*,\d{2})(?<signal>-?)(?:\s+(?<balance>\d{1,3}(?:\.\d{3})*,\d{2}))?$/
 
 function binaryStringFromBytes(bytes: Uint8Array): string {
   let out = ''
@@ -85,6 +68,11 @@ function textFromTjArray(raw: string): string {
   return parts.map((part) => decodePdfString(part.slice(1, -1))).join('')
 }
 
+function textFromTjString(raw: string): string {
+  const match = raw.match(/\((?<text>(?:\\.|[^\\)])*)\)/s)
+  return match?.groups?.text ? decodePdfString(match.groups.text) : ''
+}
+
 function inflateStreams(pdfBytes: Uint8Array): string[] {
   const pdf = binaryStringFromBytes(pdfBytes)
   const streams: string[] = []
@@ -111,10 +99,10 @@ function extractTextEvents(pdfBytes: Uint8Array): TextEvent[] {
   const events: TextEvent[] = []
   let page = 0
   const commandRe =
-    /BT|ET|\/F\d+\s+1\s+Tf|[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+Tm|[-\d.]+\s+[-\d.]+\s+Td|\[(?:\\.|[^\]])*\]TJ/gs
+    /BT|ET|\/[A-Za-z0-9]+\s+[-\d.]+\s+Tf|[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+[-\d.]+\s+Tm|[-\d.]+\s+[-\d.]+\s+Td|\[(?:\\.|[^\]])*\]\s*TJ|\((?:\\.|[^\\)])*\)\s*Tj/gs
 
   for (const stream of inflateStreams(pdfBytes)) {
-    if (!stream.includes('TJ')) continue
+    if (!stream.includes('TJ') && !stream.includes('Tj')) continue
     page += 1
     let inText = false
     let x = 0
@@ -131,7 +119,7 @@ function extractTextEvents(pdfBytes: Uint8Array): TextEvent[] {
         continue
       }
       if (!inText) continue
-      if (token.startsWith('/F')) continue
+      if (token.endsWith(' Tf')) continue
       if (token.endsWith(' Tm')) {
         const parts = token.trim().split(/\s+/)
         x = Number(parts[4])
@@ -146,6 +134,13 @@ function extractTextEvents(pdfBytes: Uint8Array): TextEvent[] {
       }
       if (token.endsWith('TJ')) {
         const text = normalizeWhitespace(textFromTjArray(token.slice(0, -2)))
+        if (text) {
+          events.push({ page, x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, text })
+        }
+        continue
+      }
+      if (token.endsWith('Tj')) {
+        const text = normalizeWhitespace(textFromTjString(token.slice(0, -2)))
         if (text) {
           events.push({ page, x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, text })
         }
@@ -168,15 +163,15 @@ function eventsToLines(events: TextEvent[]): PdfLine[] {
     .map(([key, rowEvents]) => {
       const [pageText, yText] = key.split(':')
       let text = ''
-      let endX = -Infinity
+      let lastX = -Infinity
 
       for (const event of [...rowEvents].sort((left, right) => left.x - right.x)) {
-        const gap = event.x - endX
-        if (text && gap > 3 && !text.endsWith(' ') && !event.text.startsWith(' ')) {
+        const gap = event.x - lastX
+        if (text && gap > 8 && !text.endsWith(' ') && !event.text.startsWith(' ')) {
           text += ' '
         }
         text += event.text
-        endX = Math.max(endX, event.x + event.text.length)
+        lastX = event.x
       }
 
       return {
@@ -192,17 +187,8 @@ function eventsToLines(events: TextEvent[]): PdfLine[] {
     })
 }
 
-function decimalFromBrl(value: string): number {
-  return Number(value.replace(/\./g, '').replace(',', '.'))
-}
-
 function brlFromNumber(value: number): string {
   return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function isoFromStatementDate(date: string, year: number): string {
-  const [day, month] = date.split('/')
-  return `${year}-${month}-${day}`
 }
 
 function inferStatementYear(lines: PdfLine[]): number {
@@ -278,122 +264,6 @@ function budgetGroupFor(
   return 'Desejos'
 }
 
-function extractMovementLines(lines: PdfLine[]): string[] {
-  const movementLines: string[] = []
-  let inSection = false
-  let movementPage = 0
-
-  for (const line of lines) {
-    if (line.text === 'Movimentação') {
-      inSection = true
-      movementPage = line.page
-      continue
-    }
-
-    if (!inSection) continue
-    if (movementPage && line.page !== movementPage) break
-    if (line.text === 'Extrato' || line.text === 'Saldos por Período') break
-    if (line.y < 70) continue
-    movementLines.push(line.text)
-  }
-
-  return movementLines
-}
-
-function flushPending(
-  pending: PendingTransaction | null,
-  year: number,
-  transactions: Array<{ date: string; description: string; amount: number; balance: number | null }>,
-) {
-  if (!pending || pending.amount === null || !pending.date) return null
-  const description = normalizeWhitespace(pending.descriptionParts.join(' '))
-  if (!description) return null
-
-  transactions.push({
-    date: isoFromStatementDate(pending.date, year),
-    description,
-    amount: pending.amount,
-    balance: pending.balance,
-  })
-
-  return null
-}
-
-function parseMovementTransactions(lines: string[], year: number) {
-  const transactions: Array<{ date: string; description: string; amount: number; balance: number | null }> = []
-  let currentDate = ''
-  let pending: PendingTransaction | null = null
-
-  for (const rawLine of lines) {
-    let line = normalizeWhitespace(rawLine)
-    if (!line) continue
-
-    let lineDate = ''
-    const dateMatch = line.match(datePrefixRe)
-    if (dateMatch?.groups) {
-      lineDate = dateMatch.groups.date
-      line = normalizeWhitespace(dateMatch.groups.rest)
-      currentDate = lineDate
-    }
-
-    const amountMatch = line.match(amountSuffixRe)
-    const description = normalizeWhitespace(amountMatch?.groups?.description ?? line)
-    const amountText = amountMatch?.groups?.amount ?? ''
-    const balanceText = amountMatch?.groups?.balance ?? ''
-    const signedAmount = amountText
-      ? decimalFromBrl(amountText) * (amountMatch?.groups?.signal === '-' ? -1 : 1)
-      : null
-    const balance = balanceText ? decimalFromBrl(balanceText) : null
-
-    if (lineDate && !amountText && pending?.amount !== null && !pending.startedWithDate) {
-      pending.date = lineDate
-      if (description) pending.descriptionParts.push(description)
-      pending.startedWithDate = true
-      continue
-    }
-
-    if (amountText) {
-      if (pending?.amount !== null) pending = flushPending(pending, year, transactions)
-      pending = {
-        date: lineDate || currentDate,
-        descriptionParts: description ? [description] : [],
-        amount: signedAmount,
-        balance,
-        startedWithDate: Boolean(lineDate),
-      }
-      continue
-    }
-
-    if (!pending) {
-      pending = {
-        date: lineDate || currentDate,
-        descriptionParts: description ? [description] : [],
-        amount: null,
-        balance: null,
-        startedWithDate: Boolean(lineDate),
-      }
-      continue
-    }
-
-    if (lineDate && pending.amount !== null) {
-      pending = flushPending(pending, year, transactions)
-      pending = {
-        date: lineDate || currentDate,
-        descriptionParts: description ? [description] : [],
-        amount: null,
-        balance: null,
-        startedWithDate: true,
-      }
-      continue
-    }
-
-    if (description) pending.descriptionParts.push(description)
-  }
-
-  flushPending(pending, year, transactions)
-  return transactions
-}
-
 export async function parseSantanderAccountPdf(params: {
   userId: string
   pdfBytes: Uint8Array
@@ -403,7 +273,8 @@ export async function parseSantanderAccountPdf(params: {
   const lines = eventsToLines(events)
   const statementYear = inferStatementYear(lines)
   const movementLines = extractMovementLines(lines)
-  const parsedTransactions = parseMovementTransactions(movementLines, statementYear)
+  const effectiveMovementLines = movementLines.length > 0 ? movementLines : extractDateLikeMovementLines(lines)
+  const parsedTransactions = parseMovementTransactions(effectiveMovementLines, statementYear)
 
   return parsedTransactions.map((transaction, index) => {
     const type = typeFor(transaction.description, transaction.amount)
@@ -429,4 +300,38 @@ export async function parseSantanderAccountPdf(params: {
       source: 'Santander',
     }
   })
+}
+
+export function inspectSantanderAccountPdf(pdfBytes: Uint8Array) {
+  const streams = inflateStreams(pdfBytes)
+  const events = extractTextEvents(pdfBytes)
+  const lines = eventsToLines(events)
+  const statementYear = inferStatementYear(lines)
+  const movementLines = extractMovementLines(lines)
+  const effectiveMovementLines = movementLines.length > 0 ? movementLines : extractDateLikeMovementLines(lines)
+  const parsedTransactions = parseMovementTransactions(effectiveMovementLines, statementYear)
+
+  return {
+    streamCount: streams.length,
+    streamOperatorHints: streams.slice(0, 10).map((stream) => ({
+      hasTJ: stream.includes('TJ'),
+      hasTj: stream.includes(' Tj'),
+      hasTm: stream.includes(' Tm'),
+      hasTd: stream.includes(' Td'),
+      snippet: stream.slice(0, 300),
+    })),
+    eventCount: events.length,
+    lineCount: lines.length,
+    statementYear,
+    movementLineCount: movementLines.length,
+    effectiveMovementLineCount: effectiveMovementLines.length,
+    parsedTransactionCount: parsedTransactions.length,
+    sampleTexts: events.slice(0, 20).map((event) => event.text),
+    sampleLines: lines.slice(0, 20).map((line) => line.text),
+    dateLikeLines: lines
+      .map((line) => line.text)
+      .filter((text) => /\b\d{2}\/\d{2}\b/.test(text) || /^\d{2}\s/.test(text))
+      .slice(0, 50),
+    movementLines: effectiveMovementLines.slice(0, 30),
+  }
 }

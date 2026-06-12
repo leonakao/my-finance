@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { resolveImportedTransactionBudgetGroups } from '../_shared/budget-groups.ts'
 import { applyUserClassificationRulesWithCount, loadUserClassificationRules } from '../_shared/classification-rules.ts'
 import { dropTransactionsAlreadyImported } from '../_shared/installments.ts'
-import { parseSantanderAccountPdf } from '../_shared/santander-account.ts'
+import { inspectSantanderAccountPdf, parseSantanderAccountPdf } from '../_shared/santander-account.ts'
 
 type ImportPayload = {
   filename?: string
@@ -118,5 +118,6 @@ Deno.serve(async (request) => {
     insertedTotal,
     filename: payload.filename ?? '',
     kind: 'santander-account-pdf',
+    ...(imported === 0 ? { debug: inspectSantanderAccountPdf(pdfBytes) } : {}),
   })
 })
