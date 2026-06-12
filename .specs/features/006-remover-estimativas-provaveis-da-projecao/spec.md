@@ -120,31 +120,31 @@ Esta feature permite ao usuario excluir apenas estimativas marcadas como `Provav
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| PEXC-01 | P1: Remover do mes selecionado | Tasks | Mapped |
-| PEXC-02 | P1: Remover do mes selecionado | Tasks | Mapped |
-| PEXC-03 | P1: Remover do mes selecionado | Tasks | Mapped |
-| PEXC-04 | P1: Remover do mes selecionado | Tasks | Mapped |
-| PEXC-05 | P1: Remover do mes selecionado | Tasks | Mapped |
-| PEXC-06 | P1: Remover do mes selecionado | Tasks | Mapped |
-| PEXC-07 | P1: Remover a partir do mes | Tasks | Mapped |
-| PEXC-08 | P1: Remover a partir do mes | Tasks | Mapped |
-| PEXC-09 | P1: Remover a partir do mes | Tasks | Mapped |
-| PEXC-10 | P1: Remover a partir do mes | Tasks | Mapped |
-| PEXC-11 | P1: Remover a partir do mes | Tasks | Mapped |
-| PEXC-12 | P1: Revisar e restaurar | Tasks | Mapped |
-| PEXC-13 | P1: Revisar e restaurar | Tasks | Mapped |
-| PEXC-14 | P1: Revisar e restaurar | Tasks | Mapped |
-| PEXC-15 | P1: Revisar e restaurar | Tasks | Mapped |
-| PEXC-16 | P1: Revisar e restaurar | Tasks | Mapped |
-| PEXC-17 | P1: Revisar e restaurar | Tasks | Mapped |
-| PEXC-18 | P1: Revisar e restaurar | Tasks | Mapped |
-| PEXC-19 | P2: Fluxo seguro e acessivel | Tasks | Mapped |
-| PEXC-20 | P2: Fluxo seguro e acessivel | Tasks | Mapped |
-| PEXC-21 | P2: Fluxo seguro e acessivel | Tasks | Mapped |
-| PEXC-22 | P2: Fluxo seguro e acessivel | Tasks | Mapped |
-| PEXC-23 | P2: Fluxo seguro e acessivel | Tasks | Mapped |
-| PEXC-24 | P1: Revisar e restaurar | Tasks | Mapped |
-| PEXC-25 | P2: Fluxo seguro e acessivel | Tasks | Mapped |
+| PEXC-01 | P1: Remover do mes selecionado | Execute | Verified |
+| PEXC-02 | P1: Remover do mes selecionado | Execute | Verified |
+| PEXC-03 | P1: Remover do mes selecionado | Execute | Verified |
+| PEXC-04 | P1: Remover do mes selecionado | Execute | Verified |
+| PEXC-05 | P1: Remover do mes selecionado | Execute | Verified |
+| PEXC-06 | P1: Remover do mes selecionado | Execute | Verified |
+| PEXC-07 | P1: Remover a partir do mes | Execute | Verified |
+| PEXC-08 | P1: Remover a partir do mes | Execute | Verified |
+| PEXC-09 | P1: Remover a partir do mes | Execute | Verified |
+| PEXC-10 | P1: Remover a partir do mes | Execute | Verified |
+| PEXC-11 | P1: Remover a partir do mes | Execute | Verified |
+| PEXC-12 | P1: Revisar e restaurar | Execute | Verified |
+| PEXC-13 | P1: Revisar e restaurar | Execute | Verified |
+| PEXC-14 | P1: Revisar e restaurar | Execute | Verified |
+| PEXC-15 | P1: Revisar e restaurar | Execute | Verified |
+| PEXC-16 | P1: Revisar e restaurar | Execute | Verified |
+| PEXC-17 | P1: Revisar e restaurar | Execute | Verified |
+| PEXC-18 | P1: Revisar e restaurar | Execute | Verified |
+| PEXC-19 | P2: Fluxo seguro e acessivel | Execute | Verified |
+| PEXC-20 | P2: Fluxo seguro e acessivel | Execute | Verified |
+| PEXC-21 | P2: Fluxo seguro e acessivel | Execute | Verified |
+| PEXC-22 | P2: Fluxo seguro e acessivel | Execute | Verified |
+| PEXC-23 | P2: Fluxo seguro e acessivel | Execute | Verified |
+| PEXC-24 | P1: Revisar e restaurar | Execute | Verified |
+| PEXC-25 | P2: Fluxo seguro e acessivel | Execute | Verified |
 
 **Coverage:** 25 total, 25 mapeados em tarefas, 0 pendentes
 

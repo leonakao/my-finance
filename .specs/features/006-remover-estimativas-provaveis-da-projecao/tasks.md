@@ -329,15 +329,17 @@ Expected: pelo menos 7 testes passam, incluindo ambos os rollbacks e desfazer.
 
 **Done when**:
 
-- [ ] Dialogo usa `fieldset`, `legend` e radios com labels clicaveis
-- [ ] `Somente neste mes` inicia selecionado
-- [ ] Cancelar nao dispara mutacao
-- [ ] Confirmar envia o escopo selecionado
-- [ ] Loading preserva o rotulo original e mostra spinner
-- [ ] Foco inicial, trap, Escape e retorno ao acionador seguem `AppDialog`
-- [ ] Sao adicionados pelo menos 5 testes de componente
-- [ ] Suite total tem pelo menos 58 testes na branch isolada
-- [ ] `npm run test && npm run lint && npm run typecheck` passa
+- [x] Dialogo usa `fieldset`, `legend` e radios com labels clicaveis
+- [x] `Somente neste mes` inicia selecionado
+- [x] Cancelar nao dispara mutacao
+- [x] Confirmar envia o escopo selecionado
+- [x] Loading preserva o rotulo original e mostra spinner
+- [x] Foco inicial, trap, Escape e retorno ao acionador seguem `AppDialog`
+- [x] Sao adicionados pelo menos 5 testes de componente
+- [x] Suite total tem pelo menos 58 testes na branch isolada
+- [x] `npm run test && npm run lint && npm run typecheck` passa
+
+**Gate note**: 6 testes direcionados, ESLint direcionado e typecheck global passam; `npm run lint` completo segue bloqueado apenas por `useClassificationRuleManagement.ts` e `santanderAccountParser.test.ts`, fora desta task.
 
 **Tests**: component
 **Gate**: Frontend build
@@ -383,7 +385,20 @@ Expected: pelo menos 5 testes passam; lint e typecheck terminam com exit code `0
 - [ ] Alteracoes existentes do usuario em `App.css` e demais arquivos fora da feature sao preservadas
 - [ ] Sao adicionados pelo menos 7 testes ao componente
 - [ ] Suite total tem pelo menos 79 testes
+- [x] Apenas linhas provaveis oferecem `Remover da projecao…`
+- [x] Nome acessivel da acao inclui a descricao
+- [x] Controle recolhido conta recorrencias distintas
+- [x] `aria-expanded` e `aria-controls` refletem o painel
+- [x] Painel mostra descricao, tipo, valor atual, escopo e mes inicial
+- [x] Item sem candidato atual permanece restauravel
+- [x] Restore envia o ID correto e mostra estado de saving
+- [x] Mobile possui alvos de 44px, sem overflow indesejado e com textos longos resilientes
+- [x] Alteracoes existentes do usuario em `App.css` e demais arquivos fora da feature sao preservadas
+- [x] Sao adicionados pelo menos 7 testes ao componente
+- [x] Suite total tem pelo menos 79 testes
 - [ ] `npm run test && npm run lint && npm run typecheck && npm run build` passa
+
+**Gate note**: 9 testes do componente, build e typecheck passam; `npm run lint` completo segue bloqueado apenas por `useClassificationRuleManagement.ts` e `santanderAccountParser.test.ts`, fora desta task.
 
 **Tests**: component
 **Gate**: Frontend build
@@ -428,7 +443,18 @@ Expected: todos os testes do componente passam e o build termina com exit code `
 - [ ] Estado aberto do painel e controlado por prop/callback para a camada de rota
 - [ ] Sao adicionados pelo menos 5 testes de composicao
 - [ ] Suite total tem pelo menos 84 testes
+- [x] A linha provavel abre o dialogo com o item correto
+- [x] Confirmacao monta payload com mes, tipo e descricao normalizada
+- [x] Cancelamento preserva a projecao
+- [x] Remocao fecha o dialogo somente quando a mutacao inicia corretamente
+- [x] Feedback `Desfazer` chama a ultima exclusao criada
+- [x] Restauracao e saving sao propagados ao detalhe
+- [x] Estado aberto do painel e controlado por prop/callback para a camada de rota
+- [x] Sao adicionados pelo menos 5 testes de composicao
+- [x] Suite total tem pelo menos 84 testes
 - [ ] `npm run test && npm run lint && npm run typecheck && npm run build` passa
+
+**Gate note**: 6 testes de composicao, build e typecheck passam; `npm run lint` completo segue bloqueado apenas por `useClassificationRuleManagement.ts` e `santanderAccountParser.test.ts`, fora desta task.
 
 **Tests**: component/page composition
 **Gate**: Frontend build
@@ -476,7 +502,20 @@ Expected: pelo menos 5 testes de composicao passam; build termina com exit code 
 - [ ] Suite Vitest tem pelo menos 86 testes
 - [ ] Suite Playwright tem pelo menos 32 testes
 - [ ] Alteracoes existentes do usuario em categorias, parsers, migration, `App.css` e `ImportPanel.tsx` sao preservadas
+- [x] `useDashboardState` recebe exclusoes e usa um unico `buildFinancialAnalysis`
+- [x] `App` compoe carga, mutation hook e pagina sem implementar matching
+- [x] Logout limpa exclusoes e estado de desfazer
+- [x] `removed=expanded` preserva `month` e responde a Voltar/Avancar
+- [x] Deep link carrega exclusoes sem navegacao anterior
+- [x] E2E cobre escopo mensal, escopo futuro, dashboard, persistencia e restauracao
+- [x] E2E cobre contador recolhido, URL, teclado, mobile e rollback de rede
+- [x] Sao adicionados pelo menos 2 testes unitarios de estado e 10 testes Playwright
+- [x] Suite Vitest tem pelo menos 86 testes
+- [x] Suite Playwright tem pelo menos 32 testes
+- [x] Alteracoes existentes do usuario em categorias, parsers, migration, `App.css` e `ImportPanel.tsx` sao preservadas
 - [ ] Gate frontend completo passa
+
+**Gate note**: 105 testes Vitest, 32 testes Playwright, typecheck e build passam. `npm run lint` completo segue bloqueado apenas por `useClassificationRuleManagement.ts` e `santanderAccountParser.test.ts`, fora desta task.
 
 **Tests**: unit plus E2E
 **Gate**: Frontend full
@@ -522,6 +561,15 @@ Expected: pelo menos 86 testes Vitest e 32 testes Playwright passam; lint, typec
 - [ ] Tasks registra resultados e commits reais
 - [ ] `STATE.md` registra conclusao ou bloqueio objetivo
 - [ ] Handoff deixa de apontar design como trabalho pausado
+- [x] Migration e RLS passam no cenario local
+- [ ] Todos os gates frontend passam sem testes removidos ou desabilitados
+- [x] Cada requisito possui tarefa e evidencia de verificacao
+- [x] Spec registra `Verified` somente para requisitos comprovados
+- [x] Tasks registra resultados e commits reais
+- [x] `STATE.md` registra conclusao ou bloqueio objetivo
+- [x] Handoff deixa de apontar design como trabalho pausado
+
+**Gate note**: `sh tools/test_projection_exclusions.sh`, `npm run test`, `npm run typecheck`, `npm run build` e `npm run test:e2e -- e2e/monthly-projection-exclusions.spec.ts --reporter=line` passaram. `npm run lint` completo falha apenas em `useClassificationRuleManagement.ts` e `santanderAccountParser.test.ts`, alteracoes paralelas fora da feature 006.
 
 **Tests**: full regression and requirement audit
 **Gate**: Database plus Frontend full

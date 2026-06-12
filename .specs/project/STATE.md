@@ -33,13 +33,14 @@
 - As estimativas removidas da feature `006` ficarao recolhidas por padrao sob o controle `Ocultando X estimativa(s)`; a lista com restauracao sera exibida sob demanda e o estado aberto sera refletido na URL.
 - O design da feature `006-remover-estimativas-provaveis-da-projecao` foi aprovado ao avancar para Tasks.
 - A feature `006` possui 11 tarefas planejadas, 25 requisitos mapeados e gate final de migration/RLS, Vitest, lint, typecheck, build e Playwright.
+- A feature `006-remover-estimativas-provaveis-da-projecao` foi implementada em 2026-06-12 com exclusoes persistentes, dialogo de escopo, painel recolhido, restauracao, `Desfazer`, URL `removed=expanded` e cobertura E2E dedicada.
 
 ## Current Facts
 
 - O frontend fica em `web/` e usa React 19, TypeScript 6, Vite 8 e Supabase JS.
 - A aplicacao web esta dividida em componentes, hooks e bibliotecas puras; `App.tsx` permanece como composition root e roteador History API.
 - O Supabase ativo possui `profiles`, `transactions`, `budget_groups` e `transaction_classification_rules`, alem de tres Edge Functions de importacao.
-- O baseline verificado em 2026-06-11 e de 53 testes Vitest passando; a suite Playwright possui 22 testes em 6 arquivos.
+- O baseline verificado em 2026-06-12 e de 105 testes Vitest passando; a suite Playwright possui 32 testes e inclui o fluxo persistente de exclusoes de projecao.
 - O build frontend atual passa, mas produz um chunk principal de 548,74 kB minificado e emite o warning de tamanho do Vite.
 - O GitHub Actions versionado faz deploy do Supabase, mas ainda nao executa gates automatizados do frontend.
 - Os extratores locais ficam em `tools/`.
@@ -49,7 +50,7 @@
 
 ## Blockers
 
-- Nenhum bloqueio registrado.
+- `npm run lint` global ainda falha em `web/src/hooks/useClassificationRuleManagement.ts` e `web/src/lib/santanderAccountParser.test.ts`, alteracoes paralelas fora da feature `006`.
 
 ## Paused Work
 

@@ -1,34 +1,34 @@
 # Handoff
 
-**Date:** 2026-06-11T16:13:22-03:00
+**Date:** 2026-06-12T09:26:00-03:00
 **Feature:** `006-remover-estimativas-provaveis-da-projecao`
-**Task:** Tasks - planejamento concluido, pronto para Execute
+**Task:** Execute - concluida
 
 ## Completed
 
-- Especificacao criada com 25 requisitos para excluir somente estimativas `Provavel`.
-- Design aprovado com persistencia em `projection_exclusions`, RLS, filtro compartilhado pela dashboard e pagina `Mensal`, mutacoes otimistas, rollback, desfazer e restauracao.
-- UX revisada para manter removidos recolhidos sob `Ocultando X estimativa(s)`, com detalhes sob demanda e estado `removed=expanded` na URL.
-- Mapeamento brownfield dos sete documentos em `.specs/codebase/` atualizado para o codigo atual.
-- Baseline verificado: 53 testes Vitest, lint, typecheck e build passando.
-- `tasks.md` criado com 11 tarefas, dependencias, commits, gates e cobertura 25/25.
+- T1 a T10 concluidas e validadas.
+- T7: `ProjectionExclusionDialog` e `AppDialog` acessivel com 6 testes direcionados.
+- T8: acoes `Remover da projeção…`, disclosure `Ocultando X estimativa(s)`, restauracao e estados de saving.
+- T9: composicao da `MonthlyView` com dialogo, `Desfazer` e painel controlado por rota.
+- T10: integracao em `App.tsx`, `useDashboardState`, `useAuthActions`, helpers Supabase E2E e 10 testes Playwright.
+- T11: rastreabilidade atualizada para 25/25 requisitos `Verified`.
 
-## In Progress
+## Validation
 
-- Planejamento concluido; nenhuma implementacao da feature 006 iniciada.
-- Proxima tarefa: T1, contrato persistente de exclusoes.
+- `sh tools/test_projection_exclusions.sh` passou.
+- `cd web && npm run test` passou com 105 testes Vitest.
+- `cd web && npm run typecheck` passou.
+- `cd web && npm run build` passou.
+- `cd web && npm run test:e2e -- e2e/monthly-projection-exclusions.spec.ts --reporter=line` passou com 10 testes Playwright.
 
-## Pending
+## Residual Issues
 
-- Executar T1 e validar migration, constraints e RLS no Supabase local.
-- Seguir as fases e commits definidos em `tasks.md`.
-
-## Blockers
-
-- Nenhum bloqueio tecnico.
+- `cd web && npm run lint` ainda falha apenas em:
+  - `src/hooks/useClassificationRuleManagement.ts`
+  - `src/lib/santanderAccountParser.test.ts`
+- Esses erros pertencem a alteracoes paralelas fora da feature `006` e nao foram incluidos na implementacao.
 
 ## Context
 
-- Branch: `main`, 11 commits a frente de `origin/main`.
-- Uncommitted: planejamento da feature 006 e alteracoes locais do usuario em categorias, parsers, migration, `App.css` e `ImportPanel.tsx`; nao reverter esse trabalho paralelo.
-- Decisoes relacionadas: entradas da feature 006 em `.specs/project/STATE.md`.
+- Preservar alteracoes paralelas em `ImportPanel.tsx`, `useClassificationRuleManagement.ts`, arquivos Santander e migrations nao relacionadas.
+- O proximo passo seguro e revisar/commitar apenas os arquivos da feature `006` e os artefatos `.specs/`.
