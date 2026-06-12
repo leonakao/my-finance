@@ -27,6 +27,7 @@ import { supabase } from './lib/supabase'
 import type {
   BudgetGroup,
   ClassificationRule,
+  ClassificationRulePayload,
   DecoratedTransaction,
   FinancialOverview,
   GroupOption,
@@ -127,14 +128,7 @@ type AuthenticatedAppProps = {
   classificationRules: ClassificationRule[]
   createBudgetGroup: (payload: { name: string; targetPercentage: number }) => Promise<boolean>
   createProjectionExclusion: (payload: ProjectionExclusionPayload) => Promise<boolean>
-  createRuleManually: (payload: {
-    matchMode: 'description' | 'description_amount'
-    matchDescription: string
-    matchAmount: number | null
-    type: TransactionType
-    category: string
-    budgetGroupId: string | null
-  }) => Promise<ClassificationRule | null>
+  createRuleManually: (payload: ClassificationRulePayload) => Promise<ClassificationRule | null>
   currentMonth: string
   currentPath: AuthenticatedPath
   deleteBudgetGroup: (id: string) => Promise<boolean>
@@ -180,14 +174,7 @@ type AuthenticatedAppProps = {
   typeOptions: TransactionType[]
   undoLastProjectionExclusion: () => Promise<boolean>
   updateBudgetGroup: (id: string, payload: { name: string; targetPercentage: number }) => Promise<boolean>
-  updateClassificationRule: (id: string, payload: {
-    matchMode: 'description' | 'description_amount'
-    matchDescription: string
-    matchAmount: number | null
-    type: TransactionType
-    category: string
-    budgetGroupId: string | null
-  }) => Promise<boolean>
+  updateClassificationRule: (id: string, payload: ClassificationRulePayload) => Promise<boolean>
 }
 
 type UnauthenticatedAppProps = {
@@ -451,8 +438,7 @@ function App() {
   } = useClassificationRuleManagement(
     classificationRules,
     setClassificationRules,
-    transactions,
-    setTransactions,
+    loadTransactions,
     setError,
     setFeedback,
   )

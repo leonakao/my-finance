@@ -10,6 +10,8 @@ export type UserClassificationRule = {
   match_description: string
   match_description_normalized: string
   match_amount: number | null
+  match_institution: string | null
+  match_account: string | null
   type: ImportedTransaction['type']
   category: string
   budget_group_id: string | null
@@ -23,6 +25,39 @@ export function normalizeRuleDescription(description: string): string {
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+function normalizeRuleContextValue(value: string | null | undefined): string | null {
+  const normalized = String(value ?? '').trim()
+  return normalized === '' ? null : normalized
+}
+
+function normalizeCategoryForType(type: ImportedTransaction['type'], category: string): string {
+  const categoriesByType: Record<ImportedTransaction['type'], string[]> = {
+    Despesa: [
+      'Alimentação',
+      'Moradia',
+      'Transporte',
+      'Saúde',
+      'Pets',
+      'Seguros',
+      'Educação',
+      'Lazer',
+      'Compras',
+      'Assinaturas',
+      'Telefone',
+      'Cuidados pessoais',
+      'Trabalho',
+      'Impostos e taxas',
+      'Serviços financeiros',
+      'Outros',
+    ],
+    Receita: ['Salário', 'Freelance', 'Reembolso', 'Rendimentos', 'Venda', 'Benefícios', 'Outros'],
+    Transferência: ['Investimentos', 'Pagamento de fatura', 'Transferência entre contas', 'Reserva', 'Outros'],
+  }
+
+  const options = categoriesByType[type]
+  return options.includes(category) ? category : 'Outros'
 }
 
 function compareRules(left: UserClassificationRule, right: UserClassificationRule): number {
@@ -41,6 +76,14 @@ function matchesRule(transaction: ImportedTransaction, rule: UserClassificationR
   if (!transactionDescription || !rule.match_description_normalized) return false
   if (!transactionDescription.includes(rule.match_description_normalized)) return false
 
+  if (rule.match_institution !== null && normalizeRuleContextValue(transaction.institution) !== rule.match_institution) {
+    return false
+  }
+
+  if (rule.match_account !== null && normalizeRuleContextValue(transaction.account) !== rule.match_account) {
+    return false
+  }
+
   if (rule.match_mode === 'description_amount') {
     return Number(rule.match_amount ?? 0).toFixed(2) === Number(transaction.amount).toFixed(2)
   }
@@ -55,7 +98,7 @@ export async function loadUserClassificationRules(
   const { data, error } = await supabase
     .from('transaction_classification_rules')
     .select(
-      'id, user_id, match_mode, match_description, match_description_normalized, match_amount, type, category, budget_group_id, updated_at',
+      'id, user_id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, updated_at',
     )
     .eq('user_id', userId)
 
@@ -71,11 +114,14 @@ export function applyUserClassificationRule(
   const matchedRule = rules.find((rule) => matchesRule(transaction, rule))
   if (!matchedRule) return transaction
 
+  const nextType = matchedRule.type
+  const nextCategory = normalizeCategoryForType(nextType, matchedRule.category)
+
   return {
     ...transaction,
-    type: matchedRule.type,
-    category: matchedRule.category,
-    budget_group_id: matchedRule.budget_group_id,
+    type: nextType,
+    category: nextCategory,
+    budget_group_id: nextType === 'Receita' ? null : matchedRule.budget_group_id,
   }
 }
 
@@ -101,7 +147,12 @@ export function applyUserClassificationRulesWithCount(
   let classifiedCount = 0
   const classifiedTransactions = transactions.map((transaction) => {
     const classifiedTransaction = applyUserClassificationRule(transaction, rules)
-    if (classifiedTransaction !== transaction) {
+    const changed =
+      classifiedTransaction.type !== transaction.type
+      || classifiedTransaction.category !== transaction.category
+      || (classifiedTransaction.budget_group_id ?? null) !== (transaction.budget_group_id ?? null)
+
+    if (changed) {
       classifiedCount += 1
     }
     return classifiedTransaction

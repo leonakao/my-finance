@@ -1,3 +1,5 @@
+/* eslint-disable complexity */
+/* eslint-disable max-lines */
 /* eslint-disable max-lines-per-function */
 import { Pencil, Trash2 } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
@@ -52,6 +54,8 @@ function RuleForm({
   const [matchMode, setMatchMode] = useState(initialValue.matchMode)
   const [matchDescription, setMatchDescription] = useState(initialValue.matchDescription)
   const [matchAmount, setMatchAmount] = useState(initialValue.matchAmount === null ? '' : String(initialValue.matchAmount))
+  const [matchInstitution, setMatchInstitution] = useState(initialValue.matchInstitution ?? '')
+  const [matchAccount, setMatchAccount] = useState(initialValue.matchAccount ?? '')
   const [type, setType] = useState(initialValue.type)
   const [category, setCategory] = useState(normalizeCategoryForType(initialValue.type, initialValue.category))
   const [budgetGroupId, setBudgetGroupId] = useState(initialValue.budgetGroupId ?? '')
@@ -82,6 +86,8 @@ function RuleForm({
       matchMode,
       matchDescription: trimmedDescription,
       matchAmount: matchMode === 'description_amount' ? Number(matchAmount) : null,
+      matchInstitution: matchInstitution.trim() || null,
+      matchAccount: matchAccount.trim() || null,
       type,
       category,
       budgetGroupId: nextBudgetGroupIdForType(type, budgetGroupId || null),
@@ -157,6 +163,28 @@ function RuleForm({
             ))}
           </select>
         </label>
+        <label>
+          Instituição
+          <input
+            value={matchInstitution}
+            onChange={(event) => setMatchInstitution(event.target.value)}
+            disabled={saving}
+            autoComplete="off"
+            name="matchInstitution"
+            placeholder="Ex.: Nubank…"
+          />
+        </label>
+        <label>
+          Conta
+          <input
+            value={matchAccount}
+            onChange={(event) => setMatchAccount(event.target.value)}
+            disabled={saving}
+            autoComplete="off"
+            name="matchAccount"
+            placeholder="Ex.: Cartão de crédito…"
+          />
+        </label>
       </div>
       {warning ? <p className="feedback warning" role="status">{warning}</p> : null}
       <div className="modal-actions">
@@ -200,6 +228,13 @@ function RuleRow({ budgetGroups, rule, saving, onSave, onDelete }: RuleRowProps)
         <div className="muted">
           {rule.matchMode === 'description_amount' ? `Nome + valor (${toCurrency(rule.matchAmount ?? 0)})` : 'Nome'}
         </div>
+        {rule.matchInstitution || rule.matchAccount ? (
+          <div className="muted">
+            {rule.matchInstitution ? `Instituição: ${rule.matchInstitution}` : null}
+            {rule.matchInstitution && rule.matchAccount ? ' • ' : null}
+            {rule.matchAccount ? `Conta: ${rule.matchAccount}` : null}
+          </div>
+        ) : null}
       </div>
       <div className="rule-summary">
         <span>{rule.type}</span>
@@ -259,6 +294,8 @@ export function ClassificationRulesView({
             matchMode: 'description',
             matchDescription: '',
             matchAmount: null,
+            matchInstitution: null,
+            matchAccount: null,
             type: 'Despesa',
             category: getDefaultCategoryForType('Despesa'),
             budgetGroupId: null,

@@ -79,6 +79,8 @@ export type ClassificationRule = {
   matchDescription: string
   matchDescriptionNormalized: string
   matchAmount: number | null
+  matchInstitution: string | null
+  matchAccount: string | null
   type: TransactionType
   category: string
   budgetGroupId: string | null
@@ -89,6 +91,8 @@ export type ClassificationRulePayload = {
   matchMode: ClassificationRuleMatchMode
   matchDescription: string
   matchAmount: number | null
+  matchInstitution?: string | null
+  matchAccount?: string | null
   type: TransactionType
   category: string
   budgetGroupId: string | null
@@ -100,6 +104,8 @@ export type ClassificationRuleRecord = {
   match_description: string | null
   match_description_normalized: string | null
   match_amount: number | string | null
+  match_institution: string | null
+  match_account: string | null
   type: TransactionType | null
   category: string | null
   budget_group_id: string | null

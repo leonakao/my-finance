@@ -2,66 +2,24 @@
 import { useState, type Dispatch, type SetStateAction } from 'react'
 import { getSupabaseOrThrow } from '../lib/supabase'
 import {
-  reclassifyTransactionsWithRules,
-  normalizeCategoryForType,
   getClassificationSnapshot,
   normalizeClassificationRule,
-  normalizeRuleDescription,
   sortClassificationRules,
 } from '../lib/transactions'
+import {
+  buildRulePayload,
+  formatReclassificationFeedback,
+  reclassifyWithBackend,
+  normalizeRuleContextValue,
+  saveClassificationRule,
+} from './useClassificationRuleManagement.utils'
 import type {
   ClassificationRule,
   ClassificationRulePayload,
   ReclassificationCandidate,
   RulePromptOverrides,
   Transaction,
-  TransactionType,
 } from '../types'
-
-type RulePayloadRecord = {
-  user_id: string
-  match_mode: 'description' | 'description_amount'
-  match_description: string
-  match_description_normalized: string
-  match_amount: number | null
-  type: TransactionType
-  category: string
-  budget_group_id: string | null
-}
-
-function buildRulePayload(payload: ClassificationRulePayload, userId: string): RulePayloadRecord {
-  const normalizedDescription = normalizeRuleDescription(payload.matchDescription)
-  const normalizedType = payload.type
-  const normalizedCategory = normalizeCategoryForType(normalizedType, payload.category)
-
-  return {
-    user_id: userId,
-    match_mode: payload.matchMode,
-    match_description: payload.matchDescription.trim(),
-    match_description_normalized: normalizedDescription,
-    match_amount: payload.matchMode === 'description_amount' ? Number(payload.matchAmount) : null,
-    type: normalizedType,
-    category: normalizedCategory,
-    budget_group_id: normalizedType === 'Receita' ? null : (payload.budgetGroupId ?? null),
-  }
-}
-
-async function findExistingRule(payload: RulePayloadRecord) {
-  let query = getSupabaseOrThrow()
-    .from('transaction_classification_rules')
-    .select(
-      'id, match_mode, match_description, match_description_normalized, match_amount, type, category, budget_group_id, updated_at',
-    )
-    .eq('match_mode', payload.match_mode)
-    .eq('match_description_normalized', payload.match_description_normalized)
-
-  query =
-    payload.match_mode === 'description_amount'
-      ? query.eq('match_amount', payload.match_amount)
-      : query.is('match_amount', null)
-
-  return query.maybeSingle()
-}
 
 async function getAuthenticatedUserId() {
   const {
@@ -79,8 +37,7 @@ async function getAuthenticatedUserId() {
 export function useClassificationRuleManagement(
   classificationRules: ClassificationRule[],
   setClassificationRules: Dispatch<SetStateAction<ClassificationRule[]>>,
-  transactions: Transaction[],
-  setTransactions: Dispatch<SetStateAction<Transaction[]>>,
+  loadTransactions: () => Promise<boolean>,
   setError: Dispatch<SetStateAction<string>>,
   setFeedback: Dispatch<SetStateAction<string>>,
 ) {
@@ -100,40 +57,20 @@ export function useClassificationRuleManagement(
       return null
     }
 
-    const databasePayload = buildRulePayload(payload, userId)
     setSavingRuleId(options.savingRuleId ?? 'new')
     setError('')
     setFeedback('')
 
-    const { data: existingRule, error: existingError } = await findExistingRule(databasePayload)
-    if (existingError) {
-      setError(existingError.message)
+    const result = await saveClassificationRule(payload, userId, classificationRules)
+    if ('error' in result) {
+      setError(result.error)
       setSavingRuleId('')
       return null
     }
 
-    const ruleQuery = existingRule
-      ? getSupabaseOrThrow()
-          .from('transaction_classification_rules')
-          .update(databasePayload)
-          .eq('id', existingRule.id)
-      : getSupabaseOrThrow().from('transaction_classification_rules').insert(databasePayload)
-
-    const { data, error } = await ruleQuery
-      .select(
-        'id, match_mode, match_description, match_description_normalized, match_amount, type, category, budget_group_id, updated_at',
-      )
-      .single()
-
-    if (error) {
-      setError(error.message)
-      setSavingRuleId('')
-      return null
-    }
-
-    const normalizedRule = normalizeClassificationRule(data)
+    const normalizedRule = result.normalizedRule
     const nextRules = sortClassificationRules(
-      existingRule
+      result.persisted
         ? classificationRules.map((rule) => (rule.id === normalizedRule.id ? normalizedRule : rule))
         : [...classificationRules, normalizedRule],
     )
@@ -142,7 +79,7 @@ export function useClassificationRuleManagement(
       ruleId: normalizedRule.id,
       rules: nextRules,
     })
-    setFeedback(existingRule ? 'Regra atualizada com sucesso.' : 'Regra criada com sucesso.')
+    setFeedback(result.persisted ? 'Regra atualizada com sucesso.' : 'Regra criada com sucesso.')
     setSavingRuleId('')
     return normalizedRule
   }
@@ -153,11 +90,15 @@ export function useClassificationRuleManagement(
     overrides: RulePromptOverrides = {},
   ) {
     const classificationSnapshot = getClassificationSnapshot(transaction)
+    const matchInstitution = normalizeRuleContextValue(transaction.institution)
+    const matchAccount = normalizeRuleContextValue(transaction.account)
 
     return upsertClassificationRule({
       matchMode,
       matchDescription: overrides.matchDescription ?? transaction.description,
       matchAmount: overrides.matchAmount ?? transaction.amount,
+      matchInstitution,
+      matchAccount,
       type: classificationSnapshot.type,
       category: classificationSnapshot.category,
       budgetGroupId: classificationSnapshot.budget_group_id,
@@ -177,13 +118,14 @@ export function useClassificationRuleManagement(
     setError('')
     setFeedback('')
 
-    const databasePayload = buildRulePayload(payload, userId)
+    const existingRule = classificationRules.find((rule) => rule.id === id) ?? null
+    const databasePayload = buildRulePayload(payload, userId, existingRule)
     const { data, error } = await getSupabaseOrThrow()
       .from('transaction_classification_rules')
       .update(databasePayload)
       .eq('id', id)
       .select(
-        'id, match_mode, match_description, match_description_normalized, match_amount, type, category, budget_group_id, updated_at',
+        'id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, updated_at',
       )
       .single()
 
@@ -236,57 +178,25 @@ export function useClassificationRuleManagement(
 
     setReclassifying(true)
     setError('')
+    setFeedback('')
 
-    const { changedCount, transactions: nextTransactions } = reclassifyTransactionsWithRules(
-      transactions,
-      reclassificationCandidate.rules,
-    )
+    try {
+      const updatedCount = await reclassifyWithBackend(reclassificationCandidate.ruleId)
+      const reloaded = await loadTransactions()
+      if (!reloaded) {
+        return false
+      }
 
-    if (!changedCount) {
-      setFeedback('Nenhuma transação existente precisou ser reclassificada.')
+      setFeedback(formatReclassificationFeedback(updatedCount))
       setReclassificationCandidate(null)
-      setReclassifying(false)
       return true
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Falha ao reclassificar transações.')
+
+      return false
+    } finally {
+      setReclassifying(false)
     }
-
-    const changedTransactions = nextTransactions.filter((transaction, index) => {
-      const previousTransaction = transactions[index]
-      if (!previousTransaction) {
-        return false
-      }
-      return (
-        transaction.type !== previousTransaction.type
-        || transaction.category !== previousTransaction.category
-        || (transaction.budgetGroupId ?? null) !== (previousTransaction.budgetGroupId ?? null)
-      )
-    })
-
-    for (const transaction of changedTransactions) {
-      const { error } = await getSupabaseOrThrow()
-        .from('transactions')
-        .update({
-          type: transaction.type,
-          category: transaction.category,
-          budget_group_id: transaction.budgetGroupId,
-        })
-        .eq('id', transaction.id)
-
-      if (error) {
-        setError(error.message)
-        setReclassifying(false)
-        return false
-      }
-    }
-
-    setTransactions(nextTransactions)
-    setFeedback(
-      changedCount === 1
-        ? '1 transação existente foi reclassificada.'
-        : `${changedCount} transações existentes foram reclassificadas.`,
-    )
-    setReclassificationCandidate(null)
-    setReclassifying(false)
-    return true
   }
 
   return {

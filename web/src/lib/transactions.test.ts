@@ -1,6 +1,6 @@
-import type { BudgetGroup, ClassificationRule, Transaction } from '../types'
 /* eslint-disable max-lines-per-function */
 import { describe, expect, it } from 'vitest'
+import type { BudgetGroup, ClassificationRule, Transaction } from '../types'
 import {
   buildFinancialOverview,
   buildMonthData,
@@ -46,6 +46,8 @@ describe('reclassifyTransactionsWithRules', () => {
         matchDescription: 'ifood mercado',
         matchDescriptionNormalized: 'ifood mercado',
         matchAmount: null,
+        matchInstitution: null,
+        matchAccount: null,
         type: 'Despesa',
         category: 'Alimentação',
         budgetGroupId: 'group-1',
@@ -56,6 +58,8 @@ describe('reclassifyTransactionsWithRules', () => {
         matchDescription: 'pagamento de fatura',
         matchDescriptionNormalized: 'pagamento de fatura',
         matchAmount: null,
+        matchInstitution: null,
+        matchAccount: null,
         type: 'Transferência',
         category: 'Pagamento de fatura',
         budgetGroupId: 'group-2',
@@ -96,6 +100,8 @@ describe('reclassifyTransactionsWithRules', () => {
         matchDescription: 'salario',
         matchDescriptionNormalized: 'salario',
         matchAmount: null,
+        matchInstitution: null,
+        matchAccount: null,
         type: 'Receita',
         category: 'Alimentação',
         budgetGroupId: 'group-1',

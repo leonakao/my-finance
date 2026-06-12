@@ -88,6 +88,11 @@ export function normalizeRuleDescription(description: string | null | undefined)
     .trim()
 }
 
+function normalizeRuleContextValue(value: string | null | undefined): string | null {
+  const normalized = String(value ?? '').trim()
+  return normalized === '' ? null : normalized
+}
+
 export function getClassificationSnapshot(transaction: TransactionLike): ClassificationSnapshot {
   const type = transaction.type ?? 'Despesa'
   return {
@@ -113,6 +118,8 @@ export function normalizeClassificationRule(row: ClassificationRuleRecord): Clas
     matchDescription: row.match_description ?? '',
     matchDescriptionNormalized: row.match_description_normalized ?? '',
     matchAmount: normalizeRuleMatchAmount(row.match_amount),
+    matchInstitution: normalizeRuleContextValue(row.match_institution),
+    matchAccount: normalizeRuleContextValue(row.match_account),
     type,
     category: normalizeCategoryForType(type, row.category ?? 'Outros'),
     budgetGroupId: row.budget_group_id ?? null,
@@ -163,6 +170,36 @@ function normalizeRuleMatchAmountFromRule(rule: RuleLike): number | null {
   return value === null || value === undefined ? null : Number(value)
 }
 
+function normalizeRuleMatchContextValue(
+  rule: RuleLike,
+  key: 'matchInstitution' | 'match_institution' | 'matchAccount' | 'match_account',
+): string | null {
+  const value = rule[key]
+  return normalizeRuleContextValue(value ?? null)
+}
+
+function matchesRuleContext(transaction: TransactionLike, rule: RuleLike): boolean {
+  const ruleInstitution = normalizeRuleMatchContextValue(rule, 'matchInstitution')
+  if (ruleInstitution !== null && normalizeRuleContextValue(transaction.institution) !== ruleInstitution) {
+    return false
+  }
+
+  const ruleAccount = normalizeRuleMatchContextValue(rule, 'matchAccount')
+  if (ruleAccount !== null && normalizeRuleContextValue(transaction.account) !== ruleAccount) {
+    return false
+  }
+
+  return true
+}
+
+function matchesRuleAmount(transaction: TransactionLike, rule: RuleLike): boolean {
+  if (normalizeRuleMatchMode(rule) !== 'description_amount') {
+    return true
+  }
+
+  return Number(transaction.amount ?? 0).toFixed(2) === Number(normalizeRuleMatchAmountFromRule(rule) ?? 0).toFixed(2)
+}
+
 export function doesClassificationRuleMatchTransaction(transaction: TransactionLike, rule: RuleLike): boolean {
   const transactionDescription = normalizeRuleDescription(transaction.description ?? '')
   const ruleDescription = normalizeRuleMatchDescriptionNormalized(rule)
@@ -170,16 +207,14 @@ export function doesClassificationRuleMatchTransaction(transaction: TransactionL
   if (!transactionDescription || !ruleDescription) {
     return false
   }
-
   if (!transactionDescription.includes(ruleDescription)) {
     return false
   }
-
-  if (normalizeRuleMatchMode(rule) === 'description_amount') {
-    return Number(transaction.amount ?? 0).toFixed(2) === Number(normalizeRuleMatchAmountFromRule(rule) ?? 0).toFixed(2)
+  if (!matchesRuleContext(transaction, rule)) {
+    return false
   }
 
-  return true
+  return matchesRuleAmount(transaction, rule)
 }
 
 export function applyClassificationRulesToTransaction(transaction: Transaction, rules: ClassificationRule[]): Transaction {

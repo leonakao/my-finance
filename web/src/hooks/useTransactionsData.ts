@@ -17,9 +17,9 @@ export function useTransactionsData(
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [selectedMonth, setSelectedMonth] = useState('')
 
-  const loadTransactions = useCallback(async () => {
+  const loadTransactions = useCallback(async (): Promise<boolean> => {
     if (!supabase || !session) {
-      return
+      return false
     }
 
     setLoading(true)
@@ -33,18 +33,18 @@ export function useTransactionsData(
     if (budgetGroupsError) {
       setError(budgetGroupsError.message)
       setLoading(false)
-      return
+      return false
     }
 
     const { data: classificationRulesData, error: classificationRulesError } = await supabase
       .from('transaction_classification_rules')
-      .select('id, match_mode, match_description, match_description_normalized, match_amount, type, category, budget_group_id, updated_at')
+      .select('id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, updated_at')
       .order('updated_at', { ascending: false })
 
     if (classificationRulesError) {
       setError(classificationRulesError.message)
       setLoading(false)
-      return
+      return false
     }
 
     const { data: projectionExclusionsData, error: projectionExclusionsError } = await supabase
@@ -55,7 +55,7 @@ export function useTransactionsData(
     if (projectionExclusionsError) {
       setError(projectionExclusionsError.message)
       setLoading(false)
-      return
+      return false
     }
 
     const { data, error: queryError } = await supabase
@@ -66,7 +66,7 @@ export function useTransactionsData(
     if (queryError) {
       setError(queryError.message)
       setLoading(false)
-      return
+      return false
     }
 
     setBudgetGroups(budgetGroupsData.map(normalizeBudgetGroup))
@@ -77,6 +77,7 @@ export function useTransactionsData(
 
     setSelectedMonth((current) => (current !== '' ? current : getCurrentMonthKey()))
     setLoading(false)
+    return true
   }, [session, setError, setLoading])
 
   useEffect(() => {

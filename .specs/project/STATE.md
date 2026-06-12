@@ -34,6 +34,7 @@
 - O design da feature `006-remover-estimativas-provaveis-da-projecao` foi aprovado ao avancar para Tasks.
 - A feature `006` possui 11 tarefas planejadas, 25 requisitos mapeados e gate final de migration/RLS, Vitest, lint, typecheck, build e Playwright.
 - A feature `006-remover-estimativas-provaveis-da-projecao` foi implementada em 2026-06-12 com exclusoes persistentes, dialogo de escopo, painel recolhido, restauracao, `Desfazer`, URL `removed=expanded` e cobertura E2E dedicada.
+- A feature `007-reclassificar-historico-e-refinar-match` foi planejada em 2026-06-12 para mover a reaplicacao de regras do frontend para uma operacao canonica no backend e adicionar filtros opcionais de `institution` e `account` ao match.
 
 ## Current Facts
 
@@ -62,6 +63,7 @@
 - Formalizar testes automatizados para os scripts de extracao e para o frontend.
 - Extrair um modulo Python compartilhado para enums e heuristicas financeiras quando a duplicacao justificar.
 - Evoluir regras por usuario com filtros extras como `institution`, `account` ou `source` se o match por descricao se mostrar insuficiente.
+- Avaliar filtro adicional por `source` ou match por tokens inteiros se `institution` e `account` ainda nao reduzirem colisao o bastante na feature `007`.
 
 ## Preferences
 

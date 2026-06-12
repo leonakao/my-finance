@@ -14,7 +14,7 @@ export function ReclassificationPromptModal({
   return (
     <AppDialog open onOpenChange={(open) => !open && onDismiss()} className="prompt-panel" eyebrow="Reclassificação" title="Reclassificar transações existentes?">
       <p className="muted">
-        A nova regra também pode ser aplicada às transações já importadas.
+        A nova regra também pode ser aplicada às transações já importadas e persistidas no banco, não só ao que está visível na tela.
       </p>
       <div className="modal-actions">
         <button type="button" className="ghost" onClick={onDismiss} disabled={reclassifying}>

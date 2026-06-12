@@ -27,6 +27,7 @@
 - Planejar e implementar a feature `003-importar-parcelas-por-mes` na worktree dedicada.
 - Feature `005-detalhar-projecoes-na-analise-mensal` concluida em 2026-06-11.
 - Especificar e implementar a feature `006-remover-estimativas-provaveis-da-projecao`.
+- Especificar a feature `007-reclassificar-historico-e-refinar-match` para mover a reaplicacao de regras ao backend e endurecer o criterio de enquadramento.
 
 ## Open Product Decisions
 

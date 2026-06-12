@@ -56,7 +56,7 @@ function buildImportRequest(kind: ImportKind, invoice: string, file: File, pdfBa
 }
 
 export function useTransactionsImport(
-  loadTransactions: () => Promise<void>,
+  loadTransactions: () => Promise<boolean>,
   setError: Dispatch<SetStateAction<string>>,
   setFeedback: Dispatch<SetStateAction<string>>,
 ) {

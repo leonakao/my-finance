@@ -1,3 +1,4 @@
+/* eslint-disable complexity */
 import { useState } from 'react'
 import { AppDialog } from './ui/AppDialog'
 import type { RulePromptOverrides, Transaction } from '../types'
@@ -34,6 +35,13 @@ export function ClassificationRulePrompt({ transaction, onDismiss, onRemember }:
       <p className="muted">
         Revise o nome e o valor que vão compor a regra. O sistema pode lembrar pelo nome ou pelo nome + valor.
       </p>
+      {transaction.institution || transaction.account ? (
+        <p className="muted">
+          {transaction.institution ? `Instituição: ${transaction.institution}` : null}
+          {transaction.institution && transaction.account ? ' • ' : null}
+          {transaction.account ? `Conta: ${transaction.account}` : null}
+        </p>
+      ) : null}
       <div className="modal-grid">
         <label className="full-width">
           Nome da regra
