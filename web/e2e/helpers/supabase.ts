@@ -239,3 +239,40 @@ export async function fetchTransactionsByExternalIds(client: TestSupabaseClient,
 
   return data
 }
+
+export async function seedProjectionExclusion(client: TestSupabaseClient, userId: string, overrides = {}) {
+  const exclusion = {
+    user_id: userId,
+    type: 'Despesa',
+    description: 'Internet e2e',
+    normalized_description: 'internet e2e',
+    scope: 'month',
+    month_start: '2026-06-01',
+    ...overrides,
+  }
+
+  const { data, error } = await client
+    .from('projection_exclusions')
+    .insert(exclusion)
+    .select('id, type, description, normalized_description, scope, month_start')
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}
+
+export async function fetchProjectionExclusions(client: TestSupabaseClient) {
+  const { data, error } = await client
+    .from('projection_exclusions')
+    .select('id, type, description, normalized_description, scope, month_start')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    throw error
+  }
+
+  return data
+}

@@ -19,6 +19,7 @@ import { useAuthSession } from './hooks/useAuthSession'
 import { useBudgetGroupManagement } from './hooks/useBudgetGroupManagement'
 import { useClassificationRuleManagement } from './hooks/useClassificationRuleManagement'
 import { useDashboardState } from './hooks/useDashboardState'
+import { useProjectionExclusionManagement } from './hooks/useProjectionExclusionManagement'
 import { useTransactionEditing } from './hooks/useTransactionEditing'
 import { useTransactionsData } from './hooks/useTransactionsData'
 import { useTransactionsImport } from './hooks/useTransactionsImport'
@@ -31,6 +32,8 @@ import type {
   GroupOption,
   MonthData,
   MonthlyProjectionInsight,
+  ProjectionExclusion,
+  ProjectionExclusionPayload,
   ReclassificationCandidate,
   RulePromptOverrides,
   Transaction,
@@ -83,6 +86,10 @@ function readMonthFromSearch(search: string): string {
   return /^\d{4}-\d{2}$/.test(month) ? month : ''
 }
 
+function readRemovedPanelExpandedFromSearch(search: string): boolean {
+  return new URLSearchParams(search).get('removed') === 'expanded'
+}
+
 function getPageMetadata(pathname: AuthenticatedPath) {
   switch (pathname) {
     case '/app/mensal':
@@ -119,6 +126,7 @@ type AuthenticatedAppProps = {
   categoryOptions: string[]
   classificationRules: ClassificationRule[]
   createBudgetGroup: (payload: { name: string; targetPercentage: number }) => Promise<boolean>
+  createProjectionExclusion: (payload: ProjectionExclusionPayload) => Promise<boolean>
   createRuleManually: (payload: {
     matchMode: 'description' | 'description_amount'
     matchDescription: string
@@ -144,20 +152,25 @@ type AuthenticatedAppProps = {
   handleSignOut: () => Promise<void>
   importLoading: boolean
   loading: boolean
+  lastCreatedProjectionExclusion: ProjectionExclusion | null
   monthData: MonthData | null
   months: string[]
   monthlyProjectionInsight: MonthlyProjectionInsight | null
   navigateTo: (pathname: AuthenticatedPath) => void
   openMonthlyAnalysis: (monthKey: string) => void
+  onToggleRemovedPanel: (expanded: boolean) => void
   orphanedCount: number
   promptTransaction: Transaction | null
   reclassificationCandidate: ReclassificationCandidate | null
   reclassifyExistingTransactions: () => Promise<boolean>
   reclassifying: boolean
   rememberClassification: (matchMode: 'description' | 'description_amount', overrides?: RulePromptOverrides) => Promise<boolean>
+  removedPanelExpanded: boolean
+  restoreProjectionExclusion: (id: string) => Promise<boolean>
   saveTransactionEdit: (transactionId: string, payload: TransactionEditPayload) => Promise<void>
   savingGroupId: string
   savingId: string
+  savingProjectionExclusionId: string
   savingRuleId: string
   selectedMonth: string
   setSelectedMonth: Dispatch<SetStateAction<string>>
@@ -165,6 +178,7 @@ type AuthenticatedAppProps = {
   closeTransactionEditor: () => void
   transactionFilters: TransactionFilters
   typeOptions: TransactionType[]
+  undoLastProjectionExclusion: () => Promise<boolean>
   updateBudgetGroup: (id: string, payload: { name: string; targetPercentage: number }) => Promise<boolean>
   updateClassificationRule: (id: string, payload: {
     matchMode: 'description' | 'description_amount'
@@ -195,6 +209,7 @@ function AuthenticatedApp({
   categoryOptions,
   classificationRules,
   createBudgetGroup,
+  createProjectionExclusion,
   createRuleManually,
   currentMonth,
   currentPath,
@@ -213,20 +228,25 @@ function AuthenticatedApp({
   handleSignOut,
   importLoading,
   loading,
+  lastCreatedProjectionExclusion,
   monthData,
   months,
   monthlyProjectionInsight,
   navigateTo,
   openMonthlyAnalysis,
+  onToggleRemovedPanel,
   orphanedCount,
   promptTransaction,
   reclassificationCandidate,
   reclassifyExistingTransactions,
   reclassifying,
   rememberClassification,
+  removedPanelExpanded,
+  restoreProjectionExclusion,
   saveTransactionEdit,
   savingGroupId,
   savingId,
+  savingProjectionExclusionId,
   savingRuleId,
   selectedMonth,
   setSelectedMonth,
@@ -234,6 +254,7 @@ function AuthenticatedApp({
   closeTransactionEditor,
   transactionFilters,
   typeOptions,
+  undoLastProjectionExclusion,
   updateBudgetGroup,
   updateClassificationRule,
 }: AuthenticatedAppProps) {
@@ -252,6 +273,7 @@ function AuthenticatedApp({
       <MonthlyView
         activeMonth={selectedMonth}
         categoryOptions={categoryOptions}
+        createProjectionExclusion={createProjectionExclusion}
         currentMonth={currentMonth}
         error={error}
         feedback={feedback}
@@ -259,14 +281,20 @@ function AuthenticatedApp({
         groupOptions={groupOptions}
         handleEditTransaction={handleEditTransaction}
         loading={loading}
+        lastCreatedProjectionExclusion={lastCreatedProjectionExclusion}
         monthData={monthData}
         months={months}
+        onToggleRemovedPanel={onToggleRemovedPanel}
         projectionInsight={monthlyProjectionInsight}
+        removedPanelExpanded={removedPanelExpanded}
+        restoreProjectionExclusion={restoreProjectionExclusion}
         savingId={savingId}
+        savingProjectionExclusionId={savingProjectionExclusionId}
         setSelectedMonth={setSelectedMonth}
         setTransactionFilters={setTransactionFilters}
         transactionFilters={transactionFilters}
         typeOptions={typeOptions}
+        undoLastProjectionExclusion={undoLastProjectionExclusion}
       />
     )
   } else if (currentPath === '/app/importar') {
@@ -388,6 +416,7 @@ function App() {
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState('')
   const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname || '/')
+  const [removedPanelExpanded, setRemovedPanelExpanded] = useState(() => readRemovedPanelExpandedFromSearch(window.location.search))
   const [transactionFilters, setTransactionFilters] = useState<TransactionFilters>({
     search: '',
     type: 'all',
@@ -400,6 +429,8 @@ function App() {
     setBudgetGroups,
     classificationRules,
     setClassificationRules,
+    projectionExclusions,
+    setProjectionExclusions,
     transactions,
     setTransactions,
     selectedMonth,
@@ -427,6 +458,20 @@ function App() {
   )
 
   const {
+    savingProjectionExclusionId,
+    lastCreatedProjectionExclusion,
+    createProjectionExclusion,
+    restoreProjectionExclusion,
+    undoLastProjectionExclusion,
+    clearProjectionExclusionUndo,
+  } = useProjectionExclusionManagement(
+    projectionExclusions,
+    setProjectionExclusions,
+    setError,
+    setFeedback,
+  )
+
+  const {
     savingId,
     editingTransaction,
     promptTransaction,
@@ -445,7 +490,15 @@ function App() {
   )
 
   const { signInLoading, handleSignIn, handleSignUp, handlePasswordReset, handlePasswordUpdate, handleSignOut } =
-    useAuthActions(setBudgetGroups, setClassificationRules, setTransactions, setSelectedMonth, setError, setFeedback)
+    useAuthActions(
+      setBudgetGroups,
+      setClassificationRules,
+      setProjectionExclusions,
+      setTransactions,
+      setSelectedMonth,
+      setError,
+      setFeedback,
+    )
 
   const { importLoading, handleImport } = useTransactionsImport(loadTransactions, setError, setFeedback)
   const {
@@ -459,7 +512,7 @@ function App() {
     typeOptions,
     categoryOptions,
     groupOptions,
-  } = useDashboardState(budgetGroups, transactions, selectedMonth, transactionFilters)
+  } = useDashboardState(budgetGroups, projectionExclusions, transactions, selectedMonth, transactionFilters)
 
   useEffect(() => {
     const handlePopState = () => {
@@ -470,6 +523,9 @@ function App() {
         if (monthFromSearch) {
           setSelectedMonth(monthFromSearch)
         }
+        setRemovedPanelExpanded(readRemovedPanelExpandedFromSearch(window.location.search))
+      } else {
+        setRemovedPanelExpanded(false)
       }
     }
     window.addEventListener('popstate', handlePopState)
@@ -485,7 +541,16 @@ function App() {
     if (monthFromSearch !== '' && monthFromSearch !== selectedMonth) {
       setSelectedMonth(monthFromSearch)
     }
+
   }, [currentPath, selectedMonth, setSelectedMonth])
+
+  useEffect(() => {
+    if (currentPath === '/app/mensal') {
+      return
+    }
+
+    clearProjectionExclusionUndo()
+  }, [clearProjectionExclusionUndo, currentPath])
 
   useEffect(() => {
     if (loading) {
@@ -560,6 +625,11 @@ function App() {
     } else {
       searchParams.delete('month')
     }
+    if (removedPanelExpanded) {
+      searchParams.set('removed', 'expanded')
+    } else {
+      searchParams.delete('removed')
+    }
     writePathWithSearch('/app/mensal', searchParams)
     setCurrentPath('/app/mensal')
   }
@@ -570,6 +640,7 @@ function App() {
       categoryOptions={categoryOptions}
       classificationRules={classificationRules}
       createBudgetGroup={createBudgetGroup}
+      createProjectionExclusion={createProjectionExclusion}
       createRuleManually={upsertClassificationRule}
       currentMonth={currentMonth}
       currentPath={authenticatedPath}
@@ -592,6 +663,7 @@ function App() {
       }}
       importLoading={importLoading}
       loading={loading}
+      lastCreatedProjectionExclusion={lastCreatedProjectionExclusion}
       monthData={monthData}
       months={months}
       monthlyProjectionInsight={monthlyProjectionInsight}
@@ -603,8 +675,14 @@ function App() {
           if (activeMonth !== '') {
             searchParams.set('month', activeMonth)
           }
+          if (removedPanelExpanded) {
+            searchParams.set('removed', 'expanded')
+          } else {
+            searchParams.delete('removed')
+          }
           writePathWithSearch(pathname, searchParams)
         } else {
+          clearProjectionExclusionUndo()
           writePath(pathname)
         }
         setCurrentPath(pathname)
@@ -615,6 +693,25 @@ function App() {
         setSelectedMonth(monthKey)
         const searchParams = new URLSearchParams(window.location.search)
         searchParams.set('month', monthKey)
+        if (removedPanelExpanded) {
+          searchParams.set('removed', 'expanded')
+        } else {
+          searchParams.delete('removed')
+        }
+        writePathWithSearch('/app/mensal', searchParams)
+        setCurrentPath('/app/mensal')
+      }}
+      onToggleRemovedPanel={(expanded) => {
+        setRemovedPanelExpanded(expanded)
+        const searchParams = new URLSearchParams(window.location.search)
+        if (activeMonth !== '') {
+          searchParams.set('month', activeMonth)
+        }
+        if (expanded) {
+          searchParams.set('removed', 'expanded')
+        } else {
+          searchParams.delete('removed')
+        }
         writePathWithSearch('/app/mensal', searchParams)
         setCurrentPath('/app/mensal')
       }}
@@ -624,9 +721,12 @@ function App() {
       reclassifyExistingTransactions={reclassifyExistingTransactions}
       reclassifying={reclassifying}
       rememberClassification={rememberClassification}
+      removedPanelExpanded={removedPanelExpanded}
+      restoreProjectionExclusion={restoreProjectionExclusion}
       saveTransactionEdit={saveTransactionEdit}
       savingGroupId={savingGroupId}
       savingId={savingId}
+      savingProjectionExclusionId={savingProjectionExclusionId}
       savingRuleId={savingRuleId}
       selectedMonth={activeMonth}
       setSelectedMonth={navigateToMonth}
@@ -634,6 +734,7 @@ function App() {
       closeTransactionEditor={closeTransactionEditor}
       transactionFilters={transactionFilters}
       typeOptions={typeOptions}
+      undoLastProjectionExclusion={undoLastProjectionExclusion}
       updateBudgetGroup={updateBudgetGroup}
       updateClassificationRule={updateClassificationRule}
     />

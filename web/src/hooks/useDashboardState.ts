@@ -3,6 +3,7 @@ import type {
   GroupOption,
   MonthData,
   MonthlyProjectionInsight,
+  ProjectionExclusion,
   Transaction,
   TransactionFilters,
   TransactionType,
@@ -20,6 +21,7 @@ import {
 
 export function useDashboardState(
   budgetGroups: BudgetGroup[],
+  projectionExclusions: ProjectionExclusion[],
   transactions: Transaction[],
   selectedMonth: string,
   transactionFilters: TransactionFilters,
@@ -47,7 +49,7 @@ export function useDashboardState(
   const {
     overview: financialOverview,
     monthlyProjectionInsight,
-  } = buildFinancialAnalysis(transactions, budgetGroups, activeMonth)
+  } = buildFinancialAnalysis(transactions, budgetGroups, activeMonth, new Date(), projectionExclusions)
 
   return {
     activeMonth,

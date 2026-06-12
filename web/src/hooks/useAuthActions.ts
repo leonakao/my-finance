@@ -1,6 +1,6 @@
 import { useState, type Dispatch, type SetStateAction } from 'react'
 import { getSupabaseOrThrow } from '../lib/supabase'
-import type { BudgetGroup, ClassificationRule, Transaction } from '../types'
+import type { BudgetGroup, ClassificationRule, ProjectionExclusion, Transaction } from '../types'
 
 function getPasswordResetRedirectUrl() {
   const env = import.meta.env
@@ -34,6 +34,7 @@ async function updatePassword(password: string) {
 export function useAuthActions(
   setBudgetGroups: Dispatch<SetStateAction<BudgetGroup[]>>,
   setClassificationRules: Dispatch<SetStateAction<ClassificationRule[]>>,
+  setProjectionExclusions: Dispatch<SetStateAction<ProjectionExclusion[]>>,
   setTransactions: Dispatch<SetStateAction<Transaction[]>>,
   setSelectedMonth: Dispatch<SetStateAction<string>>,
   setError: Dispatch<SetStateAction<string>>,
@@ -94,6 +95,7 @@ export function useAuthActions(
     await getSupabaseOrThrow().auth.signOut()
     setBudgetGroups([])
     setClassificationRules([])
+    setProjectionExclusions([])
     setTransactions([])
     setSelectedMonth('')
   }
