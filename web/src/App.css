@@ -1184,7 +1184,7 @@ button.danger {
 
 .monthly-projection-items-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1120px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -1210,24 +1210,28 @@ button.danger {
 }
 
 .monthly-projection-items-table th:nth-child(1) {
-  width: 13%;
+  width: 11%;
 }
 
 .monthly-projection-items-table th:nth-child(2) {
-  width: 23%;
+  width: 21%;
 }
 
 .monthly-projection-items-table th:nth-child(3),
 .monthly-projection-items-table th:nth-child(6) {
-  width: 11%;
+  width: 10%;
 }
 
 .monthly-projection-items-table th:nth-child(4),
 .monthly-projection-items-table th:nth-child(5) {
-  width: 14%;
+  width: 12%;
 }
 
 .monthly-projection-items-table th:nth-child(7) {
+  width: 14%;
+}
+
+.monthly-projection-items-table th:nth-child(8) {
   width: 14%;
 }
 
@@ -1246,6 +1250,14 @@ button.danger {
 
 .projection-description > span {
   display: block;
+}
+
+.projection-inline-action {
+  min-height: 44px;
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  touch-action: manipulation;
 }
 
 .projection-origin-badge {
@@ -1285,6 +1297,71 @@ button.danger {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
+}
+
+.projection-removed-disclosure {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.projection-removed-toggle {
+  width: 100%;
+  min-height: 44px;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.projection-removed-toggle span,
+.projection-removed-toggle small {
+  min-width: 0;
+}
+
+.projection-removed-toggle small {
+  color: var(--color-text-muted);
+}
+
+.projection-removed-panel {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.projection-removed-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.projection-removed-card {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.projection-removed-copy {
+  min-width: 0;
+}
+
+.projection-removed-copy strong,
+.projection-removed-copy p {
+  overflow-wrap: anywhere;
+}
+
+.projection-removed-copy p {
+  margin-top: 4px;
+  color: var(--color-text-secondary);
 }
 
 .mobile-sidebar-sheet {
@@ -1370,6 +1447,14 @@ button.danger {
 
   .transactions-table {
     min-width: 720px;
+  }
+
+  .projection-removed-card {
+    grid-template-columns: 1fr;
+  }
+
+  .projection-inline-action {
+    justify-content: center;
   }
 
   .rule-row,

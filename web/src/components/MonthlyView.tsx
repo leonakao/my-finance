@@ -1,12 +1,15 @@
 /* eslint-disable max-lines-per-function */
 /* eslint-disable complexity */
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import type { Dispatch, SetStateAction } from 'react'
+import { useState, type Dispatch, type SetStateAction } from 'react'
 import type {
   DecoratedTransaction,
   GroupOption,
   MonthData,
   MonthlyProjectionInsight,
+  ProjectionExclusion,
+  ProjectionLineItem,
+  ProjectionExclusionScope,
   TransactionFilters,
   TransactionType,
 } from '../types'
@@ -16,10 +19,18 @@ import { DashboardContent } from './DashboardContent'
 import { MonthlyProjectionBreakdown } from './MonthlyProjectionBreakdown'
 import { MonthlyProjectionItems } from './MonthlyProjectionItems'
 import { MonthlyProjectionSummary } from './MonthlyProjectionSummary'
+import { ProjectionExclusionDialog } from './ProjectionExclusionDialog'
 
 type MonthlyViewProps = {
   activeMonth: string
   categoryOptions: string[]
+  createProjectionExclusion: (payload: {
+    type: ProjectionLineItem['type']
+    description: string
+    normalizedDescription: string
+    scope: ProjectionExclusionScope
+    monthKey: string
+  }) => Promise<boolean>
   currentMonth: string
   error: string
   feedback: string
@@ -27,19 +38,26 @@ type MonthlyViewProps = {
   groupOptions: GroupOption[]
   handleEditTransaction: (transactionId: string) => void
   loading: boolean
+  lastCreatedProjectionExclusion: ProjectionExclusion | null
   monthData: MonthData | null
   months: string[]
+  onToggleRemovedPanel: (expanded: boolean) => void
   projectionInsight: MonthlyProjectionInsight | null
+  removedPanelExpanded: boolean
+  restoreProjectionExclusion: (id: string) => Promise<boolean>
   savingId: string
+  savingProjectionExclusionId: string
   setSelectedMonth: Dispatch<SetStateAction<string>>
   setTransactionFilters: Dispatch<SetStateAction<TransactionFilters>>
   transactionFilters: TransactionFilters
   typeOptions: TransactionType[]
+  undoLastProjectionExclusion: () => Promise<boolean>
 }
 
 export function MonthlyView({
   activeMonth,
   categoryOptions,
+  createProjectionExclusion,
   currentMonth,
   error,
   feedback,
@@ -47,19 +65,44 @@ export function MonthlyView({
   groupOptions,
   handleEditTransaction,
   loading,
+  lastCreatedProjectionExclusion,
   monthData,
   months,
+  onToggleRemovedPanel,
   projectionInsight,
+  removedPanelExpanded,
+  restoreProjectionExclusion,
   savingId,
+  savingProjectionExclusionId,
   setSelectedMonth,
   setTransactionFilters,
   transactionFilters,
   typeOptions,
+  undoLastProjectionExclusion,
 }: MonthlyViewProps) {
+  const [selectedProbableItem, setSelectedProbableItem] = useState<ProjectionLineItem | null>(null)
   const currentIndex = months.indexOf(activeMonth)
   const previousMonth = currentIndex > 0 ? months[currentIndex - 1] : ''
   const nextMonth = currentIndex >= 0 && currentIndex < months.length - 1 ? months[currentIndex + 1] : ''
   const futureMonth = isFutureMonth(activeMonth)
+
+  async function handleConfirmProjectionExclusion(scope: ProjectionExclusionScope) {
+    if (selectedProbableItem === null) {
+      return
+    }
+
+    const created = await createProjectionExclusion({
+      type: selectedProbableItem.type,
+      description: selectedProbableItem.description,
+      normalizedDescription: selectedProbableItem.normalizedDescription,
+      scope,
+      monthKey: activeMonth,
+    })
+
+    if (created) {
+      setSelectedProbableItem(null)
+    }
+  }
 
   return (
     <div className="page-stack">
@@ -144,12 +187,39 @@ export function MonthlyView({
       ) : null}
       {error ? <p className="feedback error" role="alert">{error}</p> : null}
       {feedback && !error ? <p className="feedback" role="status">{feedback}</p> : null}
+      {lastCreatedProjectionExclusion !== null && !error ? (
+        <p className="feedback" role="status">
+          <span className="feedback-copy">
+            Estimativa “{lastCreatedProjectionExclusion.description}” removida da projeção.
+          </span>
+          <button
+            type="button"
+            className="ghost feedback-action"
+            disabled={savingProjectionExclusionId !== ''}
+            onClick={() => void undoLastProjectionExclusion()}
+          >
+            {savingProjectionExclusionId === lastCreatedProjectionExclusion.id ? (
+              <span className="button-spinner" aria-hidden="true" />
+            ) : null}
+            Desfazer
+          </button>
+        </p>
+      ) : null}
 
       {!loading && projectionInsight !== null ? (
         <>
           <MonthlyProjectionSummary insight={projectionInsight} />
           <MonthlyProjectionBreakdown insight={projectionInsight} />
-          <MonthlyProjectionItems insight={projectionInsight} />
+          <MonthlyProjectionItems
+            insight={projectionInsight}
+            onRemoveProbableItem={setSelectedProbableItem}
+            onRestoreExclusion={(id) => {
+              void restoreProjectionExclusion(id)
+            }}
+            onToggleRemovedPanel={onToggleRemovedPanel}
+            removedPanelExpanded={removedPanelExpanded}
+            savingProjectionExclusionId={savingProjectionExclusionId}
+          />
         </>
       ) : null}
 
@@ -172,6 +242,13 @@ export function MonthlyView({
           typeOptions={typeOptions}
         />
       ) : null}
+      <ProjectionExclusionDialog
+        item={selectedProbableItem}
+        monthKey={activeMonth}
+        saving={savingProjectionExclusionId.startsWith('optimistic:')}
+        onClose={() => setSelectedProbableItem(null)}
+        onConfirm={handleConfirmProjectionExclusion}
+      />
     </div>
   )
 }

@@ -1,8 +1,17 @@
-import { dateLabel, toCurrency } from '../lib/formatters'
-import type { MonthlyProjectionInsight, ProjectionLineItem } from '../types'
+import { monthLabel, dateLabel, toCurrency } from '../lib/formatters'
+import type {
+  MonthlyProjectionInsight,
+  ProjectionLineItem,
+  RemovedProjectionItem,
+} from '../types'
 
 type MonthlyProjectionItemsProps = {
   insight: MonthlyProjectionInsight
+  onRemoveProbableItem: (item: ProjectionLineItem) => void
+  onRestoreExclusion: (id: string) => void
+  onToggleRemovedPanel: (expanded: boolean) => void
+  removedPanelExpanded: boolean
+  savingProjectionExclusionId: string
 }
 
 function RegisteredItemsTable({ items }: { items: ProjectionLineItem[] }) {
@@ -52,7 +61,13 @@ function basisLabel(item: ProjectionLineItem): string {
   return `${occurrences} em ${months} · Última em ${dateLabel(item.basis.lastObservedDate)}`
 }
 
-function ProbableItemsTable({ items }: { items: ProjectionLineItem[] }) {
+function ProbableItemsTable({
+  items,
+  onRemoveProbableItem,
+}: {
+  items: ProjectionLineItem[]
+  onRemoveProbableItem: (item: ProjectionLineItem) => void
+}) {
   return (
     <div className="table-wrap monthly-projection-items-wrap">
       <table className="monthly-projection-items-table">
@@ -66,6 +81,7 @@ function ProbableItemsTable({ items }: { items: ProjectionLineItem[] }) {
             <th>Grupo</th>
             <th>Base da estimativa</th>
             <th>Valor médio</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -81,6 +97,16 @@ function ProbableItemsTable({ items }: { items: ProjectionLineItem[] }) {
               <td>{item.budgetGroupName}</td>
               <td className="projection-basis">{basisLabel(item)}</td>
               <td className="projection-amount">{toCurrency(item.amount)}</td>
+              <td>
+                <button
+                  type="button"
+                  className="ghost projection-inline-action"
+                  aria-label={`Remover ${item.description} da projeção`}
+                  onClick={() => onRemoveProbableItem(item)}
+                >
+                  Remover da projeção…
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -89,7 +115,98 @@ function ProbableItemsTable({ items }: { items: ProjectionLineItem[] }) {
   )
 }
 
-export function MonthlyProjectionItems({ insight }: MonthlyProjectionItemsProps) {
+function countDistinctRemovedItems(items: RemovedProjectionItem[]) {
+  return new Set(items.map(({ exclusion }) => `${exclusion.type}:${exclusion.normalizedDescription}`)).size
+}
+
+function removedScopeLabel(item: RemovedProjectionItem) {
+  const month = monthLabel(item.exclusion.monthStart.slice(0, 7))
+  return item.exclusion.scope === 'month' ? `Somente em ${month}` : `Desde ${month}`
+}
+
+function RemovedItemsDisclosure({
+  items,
+  monthKey,
+  onRestoreExclusion,
+  onToggleRemovedPanel,
+  removedPanelExpanded,
+  savingProjectionExclusionId,
+}: {
+  items: RemovedProjectionItem[]
+  monthKey: string
+  onRestoreExclusion: (id: string) => void
+  onToggleRemovedPanel: (expanded: boolean) => void
+  removedPanelExpanded: boolean
+  savingProjectionExclusionId: string
+}) {
+  const disclosureId = `monthly-projection-removed-${monthKey}`
+  const hiddenCount = countDistinctRemovedItems(items)
+  const countLabel = hiddenCount === 1 ? 'Ocultando 1 estimativa' : `Ocultando ${hiddenCount} estimativas`
+
+  return (
+    <div className="projection-removed-disclosure">
+      <button
+        type="button"
+        className="ghost projection-removed-toggle"
+        aria-controls={disclosureId}
+        aria-expanded={removedPanelExpanded}
+        onClick={() => onToggleRemovedPanel(!removedPanelExpanded)}
+      >
+        <span>{countLabel}</span>
+        <small aria-hidden="true">{removedPanelExpanded ? 'Ocultar detalhes' : 'Mostrar detalhes'}</small>
+      </button>
+
+      {removedPanelExpanded ? (
+        <div
+          id={disclosureId}
+          className="projection-removed-panel"
+          role="region"
+          aria-label={`Estimativas removidas de ${monthLabel(monthKey)}`}
+        >
+          <ul className="projection-removed-list">
+            {items.map(({ exclusion, currentEstimate }) => {
+              const saving = savingProjectionExclusionId === exclusion.id
+              return (
+                <li key={exclusion.id} className="projection-removed-card">
+                  <div className="projection-removed-copy">
+                    <strong>{exclusion.description}</strong>
+                    <p>
+                      {exclusion.type} · {removedScopeLabel({ exclusion, currentEstimate })}
+                    </p>
+                    {currentEstimate ? (
+                      <p>Valor médio atual: {toCurrency(currentEstimate.amount)}</p>
+                    ) : (
+                      <p>A recorrência não está mais sendo estimada.</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="ghost projection-inline-action"
+                    aria-label={`Restaurar ${exclusion.description} na projeção`}
+                    disabled={saving}
+                    onClick={() => onRestoreExclusion(exclusion.id)}
+                  >
+                    {saving ? <span className="button-spinner" aria-hidden="true" /> : null}
+                    Restaurar
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+export function MonthlyProjectionItems({
+  insight,
+  onRemoveProbableItem,
+  onRestoreExclusion,
+  onToggleRemovedPanel,
+  removedPanelExpanded,
+  savingProjectionExclusionId,
+}: MonthlyProjectionItemsProps) {
   const headingId = `monthly-projection-items-${insight.monthKey}`
 
   return (
@@ -113,10 +230,23 @@ export function MonthlyProjectionItems({ insight }: MonthlyProjectionItemsProps)
       <section className="monthly-projection-item-section" aria-labelledby={`${headingId}-probable`}>
         <h3 id={`${headingId}-probable`}>Estimativas prováveis</h3>
         {insight.probableItems.length > 0 ? (
-          <ProbableItemsTable items={insight.probableItems} />
+          <ProbableItemsTable
+            items={insight.probableItems}
+            onRemoveProbableItem={onRemoveProbableItem}
+          />
         ) : (
           <p className="projection-empty-copy">Nenhuma recorrência provável identificada.</p>
         )}
+        {insight.removedProbableItems.length > 0 ? (
+          <RemovedItemsDisclosure
+            items={insight.removedProbableItems}
+            monthKey={insight.monthKey}
+            onRestoreExclusion={onRestoreExclusion}
+            onToggleRemovedPanel={onToggleRemovedPanel}
+            removedPanelExpanded={removedPanelExpanded}
+            savingProjectionExclusionId={savingProjectionExclusionId}
+          />
+        ) : null}
       </section>
     </section>
   )
