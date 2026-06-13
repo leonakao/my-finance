@@ -154,7 +154,7 @@ export function parseInfinitePayCsv(params: {
       account: 'Conta digital',
       institution: 'InfinitePay',
       ignored: false,
-      notes: 'Importado de CSV de extrato InfinitePay via Edge Function.',
+      notes: '',
       invoice: '',
       installment: '',
       external_id: `infinitepay:${row.Data}:${row.Hora}:${row['Tipo de transação']}:${row.Nome}:${row.Detalhe}:${Math.abs(amount).toFixed(2)}`,

@@ -342,10 +342,6 @@ export function parseSantanderPdf(params: {
       ? `${statementYear.toString().padStart(4, '0')}-${closingMonth.toString().padStart(2, '0')}-${Math.min(day, new Date(statementYear, closingMonth, 0).getDate()).toString().padStart(2, '0')}`
       : originalDate
     const purchaseKey = `santander-card:${originalDate}:${index}:${card}:${description}:${amount.toFixed(2)}`
-    const notes = installment
-      ? `Importado de PDF de fatura Santander via Edge Function. Compra original em ${originalDate}. Parcela ${installment}.`
-      : 'Importado de PDF de fatura Santander via Edge Function.'
-
     const transaction: ParsedImportedTransaction = {
       user_id: params.userId,
       date: effectiveDate,
@@ -357,7 +353,7 @@ export function parseSantanderPdf(params: {
       account: 'Cartão de crédito',
       institution: 'Santander',
       ignored: false,
-      notes,
+      notes: '',
       invoice: params.invoice || (params.filename ?? ''),
       installment,
       external_id: purchaseKey,

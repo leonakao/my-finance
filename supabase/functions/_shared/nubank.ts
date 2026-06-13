@@ -227,7 +227,7 @@ export function parseNubankCsv(params: {
         account: 'Cartão de crédito',
         institution: 'Nubank',
         ignored,
-        notes: 'Importado de CSV de fatura do cartão Nubank via Edge Function.',
+        notes: '',
         invoice,
         installment,
         external_id: `nubank-card:${row.date}:${index + 1}:${description}:${Math.abs(amount).toFixed(2)}`,
@@ -243,14 +243,14 @@ export function parseNubankCsv(params: {
       return expandInstallmentSchedule({
         transaction: {
           ...transaction,
-          notes: 'Importado de CSV de fatura do cartão Nubank via Edge Function.',
+          notes: '',
           external_id: purchaseKey,
         },
         originalDate,
         purchaseKey,
       }).map((expandedTransaction) => ({
         ...expandedTransaction,
-        notes: `Importado de CSV de fatura do cartão Nubank via Edge Function. Compra original em ${originalDate}. Parcela ${expandedTransaction.installment}.`,
+        notes: '',
       }))
     })
   }
@@ -278,7 +278,7 @@ export function parseNubankCsv(params: {
       account: 'Conta principal',
       institution: 'Nubank',
       ignored,
-      notes: 'Importado de CSV de extrato da conta Nubank via Edge Function.',
+      notes: '',
       invoice: '',
       installment: '',
       external_id: row['Identificador'],

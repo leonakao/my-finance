@@ -279,9 +279,6 @@ export async function parseSantanderAccountPdf(params: {
   return parsedTransactions.map((transaction, index) => {
     const type = typeFor(transaction.description, transaction.amount)
     const category = categoryFor(transaction.description)
-    const notesParts = ['Importado de PDF de extrato Santander via Edge Function.']
-    if (transaction.balance !== null) notesParts.push(`Saldo após lançamento: R$ ${brlFromNumber(transaction.balance)}.`)
-
     return {
       user_id: params.userId,
       date: transaction.date,
@@ -293,7 +290,7 @@ export async function parseSantanderAccountPdf(params: {
       account: 'Conta principal',
       institution: 'Santander',
       ignored: false,
-      notes: notesParts.join(' '),
+      notes: '',
       invoice: '',
       installment: '',
       external_id: `santander-account:${transaction.date}:${index + 1}:${transaction.description}:${Math.abs(transaction.amount).toFixed(2)}`,

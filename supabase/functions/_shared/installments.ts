@@ -89,7 +89,7 @@ export function expandInstallmentSchedule(params: ExpandInstallmentParams): Pars
       ...params.transaction,
       date: addMonthsPreservingDay(params.originalDate, index),
       installment: installmentLabel,
-      notes: `Importado de PDF de fatura Santander via Edge Function. Compra original em ${params.originalDate}. Parcela ${installmentLabel}.`,
+      notes: '',
       external_id: buildInstallmentExternalId(params.purchaseKey, current, installment.total),
     }
   })
