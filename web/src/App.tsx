@@ -543,6 +543,22 @@ function App() {
   } = useDashboardState(budgetGroups, projectionExclusions, transactions, selectedMonth, transactionFilters)
 
   useEffect(() => {
+    setTransactionFilters((current) => {
+      const categoryValid = current.category === 'all' || categoryOptions.includes(current.category as string)
+      const typeValid = current.type === 'all' || typeOptions.includes(current.type as TransactionType)
+      const groupValid =
+        current.group === 'all' || groupOptions.some((o) => o.value === current.group)
+      if (categoryValid && typeValid && groupValid) return current
+      return {
+        ...current,
+        category: categoryValid ? current.category : 'all',
+        type: typeValid ? current.type : 'all',
+        group: groupValid ? current.group : 'all',
+      }
+    })
+  }, [categoryOptions, typeOptions, groupOptions, setTransactionFilters])
+
+  useEffect(() => {
     const handlePopState = () => {
       const pathname = window.location.pathname || '/'
       setCurrentPath(pathname)
