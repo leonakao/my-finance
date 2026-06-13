@@ -82,7 +82,7 @@ test('reclassifica transação com notes nulo sem falhar', async ({ page }) => {
   const matchingTransaction = await seedTransaction(supabase, userId, {
     description: 'Compra e2e supermercado central',
     amount: 73.2,
-    notes: null,
+    notes: '',
   })
   await seedClassificationRule(supabase, userId, {
     match_description: 'supermercado',
@@ -119,7 +119,7 @@ test('aplica notes da regra em transação sem notes', async ({ page }) => {
   const matchingTransaction = await seedTransaction(supabase, userId, {
     description: 'Compra e2e supermercado central',
     amount: 73.2,
-    notes: null,
+    notes: '',
   })
   await seedClassificationRule(supabase, userId, {
     match_description: 'supermercado',

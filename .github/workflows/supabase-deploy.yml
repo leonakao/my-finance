@@ -58,6 +58,7 @@ jobs:
           - import-nubank-csv
           - import-santander-pdf
           - import-santander-account-pdf
+          - reclassify-transactions-by-rule
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
