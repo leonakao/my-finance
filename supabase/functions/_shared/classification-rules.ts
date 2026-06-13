@@ -123,7 +123,7 @@ export function applyUserClassificationRule(
     type: nextType,
     category: nextCategory,
     budget_group_id: nextType === 'Receita' ? null : matchedRule.budget_group_id,
-    notes: transaction.notes.trim() === '' ? (matchedRule.notes ?? '') : transaction.notes,
+    notes: (transaction.notes ?? '').trim() === '' ? (matchedRule.notes ?? '') : transaction.notes,
   }
 }
 

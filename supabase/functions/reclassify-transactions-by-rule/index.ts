@@ -67,7 +67,7 @@ async function loadCandidateTransactions(
   const { data, error } = await query
   if (error) throw error
 
-  return (data ?? []) as ReclassifiableTransaction[]
+  return (data ?? []).map((tx) => ({ ...tx, notes: tx.notes ?? '' })) as ReclassifiableTransaction[]
 }
 
 Deno.serve(async (request) => {
