@@ -216,7 +216,7 @@ export async function fetchRules(client: TestSupabaseClient) {
 export async function fetchTransactions(client: TestSupabaseClient) {
   const { data, error } = await client
     .from('transactions')
-    .select('id, description, budget_group_id, category, type, source')
+    .select('id, description, budget_group_id, category, type, source, notes')
     .order('created_at', { ascending: true })
 
   if (error) {
@@ -229,7 +229,7 @@ export async function fetchTransactions(client: TestSupabaseClient) {
 export async function fetchTransactionsByExternalIds(client: TestSupabaseClient, externalIds: string[]) {
   const { data, error } = await client
     .from('transactions')
-    .select('id, external_id, description, amount, type, category, source')
+    .select('id, external_id, description, amount, type, category, source, notes')
     .in('external_id', externalIds)
     .order('external_id', { ascending: true })
 

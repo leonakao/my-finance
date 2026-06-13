@@ -43,18 +43,21 @@ test('imports a Nubank account CSV from inbox and persists the imported transact
         type: 'Transferência',
         category: 'Investimentos',
         source: 'Nubank',
+        notes: '',
       }),
       expect.objectContaining({
         external_id: '69f64a22-1ba6-4d1d-bd8c-80712945a1ff',
         type: 'Despesa',
         category: 'Outros',
         source: 'Nubank',
+        notes: '',
       }),
       expect.objectContaining({
         external_id: '69f9bf96-d62d-4360-a6c4-9f264769c707',
         type: 'Receita',
         category: 'Outros',
         source: 'Nubank',
+        notes: '',
       }),
     ]),
   )
@@ -114,12 +117,14 @@ test('imports an InfinitePay CSV and ignores all rows on reimport', async ({ pag
         type: 'Receita',
         category: 'Venda',
         source: 'InfinitePay',
+        notes: '',
       }),
       expect.objectContaining({
         description: 'Pix Mayara Machado Guedes Vicente - Enviado',
         type: 'Despesa',
         category: 'Outros',
         source: 'InfinitePay',
+        notes: '',
       }),
     ]),
   )
