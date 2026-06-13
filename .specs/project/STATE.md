@@ -35,6 +35,14 @@
 - A feature `006` possui 11 tarefas planejadas, 25 requisitos mapeados e gate final de migration/RLS, Vitest, lint, typecheck, build e Playwright.
 - A feature `006-remover-estimativas-provaveis-da-projecao` foi implementada em 2026-06-12 com exclusoes persistentes, dialogo de escopo, painel recolhido, restauracao, `Desfazer`, URL `removed=expanded` e cobertura E2E dedicada.
 - A feature `007-reclassificar-historico-e-refinar-match` foi planejada em 2026-06-12 para mover a reaplicacao de regras do frontend para uma operacao canonica no backend e adicionar filtros opcionais de `institution` e `account` ao match.
+- A feature `008-marcar-transacao-recorrente-ate-data-limite` foi especificada em 2026-06-12 para adicionar recorrencia manual mensal por transacao e notas editaveis/replicaveis por regra.
+- Na feature `008`, a politica aprovada para notas vindas de regra e: preencher `transactions.notes` apenas quando a transacao estiver sem nota; nunca sobrescrever nota manual existente.
+- Na feature `008`, parcelamentos importados e recorrencias manuais devem convergir para o mesmo modelo fisico em `transactions`, ligados por `origin_transaction_id` a uma transacao principal comum.
+- Na feature `008`, a recomendacao de design e adicionar tambem `transactions.source_kind` para distinguir origem (`manual`, `manual_recurring`, `imported_installment` etc.) sem depender de inferencia frágil.
+- Na feature `008`, o usuario tambem deve poder criar transacoes manuais em qualquer mes e corrigir linhas incorretas por exclusao fisica ou por `transactions.is_ignored`, sem reintroduzir o `status` legado.
+- Na feature `008`, `transactions.source_kind` foi mantido no escopo aprovado da implementacao.
+- Na feature `008`, transacoes ignoradas ficam ocultas por padrao e podem ser reveladas por um checkbox de filtro `Exibir ignoradas`, mantendo um caminho claro de restauracao.
+- Na feature `008`, a cobertura planejada deve explicitar que `notes` de regra nao sobrescreve nota manual existente tambem no fluxo visivel ao usuario.
 
 ## Current Facts
 

@@ -38,8 +38,9 @@ export function useDashboardState(
   groupOptions: GroupOption[]
 } {
   const currentMonth = getCurrentMonthKey()
+  const activeTransactions = transactions.filter((transaction) => !transaction.isIgnored)
   const visibleTransactions = decorateTransactions(transactions, budgetGroups)
-  const monthMap = buildMonthData(visibleTransactions, budgetGroups)
+  const monthMap = buildMonthData(decorateTransactions(activeTransactions, budgetGroups), budgetGroups)
   const months = buildMonthRange(transactions)
   const activeMonth = selectedMonth !== '' ? selectedMonth : currentMonth
   const monthData = activeMonth ? (monthMap.get(activeMonth) ?? null) : null
@@ -49,7 +50,7 @@ export function useDashboardState(
   const {
     overview: financialOverview,
     monthlyProjectionInsight,
-  } = buildFinancialAnalysis(transactions, budgetGroups, activeMonth, new Date(), projectionExclusions)
+  } = buildFinancialAnalysis(activeTransactions, budgetGroups, activeMonth, new Date(), projectionExclusions)
 
   return {
     activeMonth,

@@ -56,6 +56,7 @@ function RuleForm({
   const [matchAmount, setMatchAmount] = useState(initialValue.matchAmount === null ? '' : String(initialValue.matchAmount))
   const [matchInstitution, setMatchInstitution] = useState(initialValue.matchInstitution ?? '')
   const [matchAccount, setMatchAccount] = useState(initialValue.matchAccount ?? '')
+  const [notes, setNotes] = useState(initialValue.notes ?? '')
   const [type, setType] = useState(initialValue.type)
   const [category, setCategory] = useState(normalizeCategoryForType(initialValue.type, initialValue.category))
   const [budgetGroupId, setBudgetGroupId] = useState(initialValue.budgetGroupId ?? '')
@@ -91,6 +92,7 @@ function RuleForm({
       type,
       category,
       budgetGroupId: nextBudgetGroupIdForType(type, budgetGroupId || null),
+      notes,
     })
 
     if (saved && onCancel) {
@@ -185,6 +187,17 @@ function RuleForm({
             placeholder="Ex.: Cartão de crédito…"
           />
         </label>
+        <label className="full-width">
+          Notas
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            disabled={saving}
+            name="notes"
+            rows={3}
+            placeholder="Preencha automaticamente quando a transação estiver sem nota…"
+          />
+        </label>
       </div>
       {warning ? <p className="feedback warning" role="status">{warning}</p> : null}
       <div className="modal-actions">
@@ -233,6 +246,11 @@ function RuleRow({ budgetGroups, rule, saving, onSave, onDelete }: RuleRowProps)
             {rule.matchInstitution ? `Instituição: ${rule.matchInstitution}` : null}
             {rule.matchInstitution && rule.matchAccount ? ' • ' : null}
             {rule.matchAccount ? `Conta: ${rule.matchAccount}` : null}
+          </div>
+        ) : null}
+        {rule.notes ? (
+          <div className="muted">
+            Nota padrão: {rule.notes}
           </div>
         ) : null}
       </div>
@@ -296,6 +314,7 @@ export function ClassificationRulesView({
             matchAmount: null,
             matchInstitution: null,
             matchAccount: null,
+            notes: '',
             type: 'Despesa',
             category: getDefaultCategoryForType('Despesa'),
             budgetGroupId: null,

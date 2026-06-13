@@ -20,6 +20,8 @@ export function AppDialog({
   open,
   title,
 }: AppDialogProps) {
+  const resolvedDescription = description ?? `${title}.`
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -31,7 +33,9 @@ export function AppDialog({
               <Dialog.Title>{title}</Dialog.Title>
             </div>
           </div>
-          {description ? <Dialog.Description className="muted">{description}</Dialog.Description> : null}
+          <Dialog.Description className={description ? 'muted' : 'sr-only'}>
+            {resolvedDescription}
+          </Dialog.Description>
           {children}
         </Dialog.Content>
       </Dialog.Portal>

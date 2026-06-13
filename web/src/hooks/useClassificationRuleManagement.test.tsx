@@ -96,6 +96,7 @@ describe('useClassificationRuleManagement', () => {
       type: 'Despesa',
       category: 'Assinaturas',
       budget_group_id: null,
+      notes: 'Streaming da família',
       updated_at: '2026-06-12T12:00:00Z',
     }
     const ruleClient = buildRuleClient(insertedRule)
@@ -115,6 +116,7 @@ describe('useClassificationRuleManagement', () => {
           budgetGroupId: null,
           institution: 'Nubank',
           account: 'Cartão de crédito',
+          notes: 'Streaming da família',
         },
         'description',
       )
@@ -139,6 +141,7 @@ describe('useClassificationRuleManagement', () => {
       type: 'Despesa',
       category: 'Outros',
       budget_group_id: null,
+      notes: 'Streaming da família',
     })
     expect(functionsInvoke).toHaveBeenCalledWith('reclassify-transactions-by-rule', {
       body: { rule_id: 'rule-1' },
@@ -160,6 +163,7 @@ describe('useClassificationRuleManagement', () => {
       type: 'Despesa',
       category: 'Alimentação',
       budget_group_id: null,
+      notes: null,
       updated_at: '2026-06-12T12:00:00Z',
     }
     fromSpy.mockReturnValue(buildRuleClient(insertedRule))
@@ -178,6 +182,7 @@ describe('useClassificationRuleManagement', () => {
           budgetGroupId: null,
           institution: '',
           account: '',
+          notes: '',
         },
         'description',
       )
@@ -208,6 +213,7 @@ describe('useClassificationRuleManagement', () => {
       type: 'Receita',
       category: 'Salário',
       budget_group_id: null,
+      notes: null,
       updated_at: '2026-06-12T12:00:00Z',
     }
     fromSpy.mockReturnValue(buildRuleClient(insertedRule))
@@ -226,6 +232,7 @@ describe('useClassificationRuleManagement', () => {
           budgetGroupId: null,
           institution: '',
           account: '',
+          notes: '',
         },
         'description',
       )

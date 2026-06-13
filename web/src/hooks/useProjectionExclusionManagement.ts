@@ -142,6 +142,7 @@ export function useProjectionExclusionManagement(
 
   async function restoreProjectionExclusion(id: string): Promise<boolean> {
     const exclusion = projectionExclusions.find((item) => item.id === id)
+      ?? (lastCreatedProjectionExclusion?.id === id ? lastCreatedProjectionExclusion : null)
     if (!exclusion || savingProjectionExclusionId !== '') {
       return false
     }

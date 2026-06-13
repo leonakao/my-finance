@@ -8,6 +8,7 @@ const EMPTY_FILTERS: TransactionFilters = {
   type: 'all',
   category: 'all',
   group: 'all',
+  showIgnored: false,
 }
 
 const EXCLUSIONS: ProjectionExclusion[] = [{

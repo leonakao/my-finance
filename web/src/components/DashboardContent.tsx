@@ -24,8 +24,10 @@ type DashboardContentProps = {
   filteredTransactions: DecoratedTransaction[]
   groupOptions: GroupOption[]
   handleEditTransaction: (transactionId: string) => void
+  onIgnoreTransaction: (transactionId: string, ignored: boolean) => Promise<void>
+  onDeleteTransaction: (transactionId: string) => Promise<void>
   monthData: MonthData | null
-  onFiltersChange: (field: keyof TransactionFilters, value: string) => void
+  onFiltersChange: (field: keyof TransactionFilters, value: string | boolean) => void
   savingId: string
   transactionFilters: TransactionFilters
   typeOptions: TransactionType[]
@@ -37,6 +39,8 @@ export function DashboardContent({
   filteredTransactions,
   groupOptions,
   handleEditTransaction,
+  onIgnoreTransaction,
+  onDeleteTransaction,
   monthData,
   onFiltersChange,
   savingId,
@@ -73,6 +77,8 @@ export function DashboardContent({
             transactions={filteredTransactions}
             savingId={savingId}
             onEdit={handleEditTransaction}
+            onIgnore={onIgnoreTransaction}
+            onDelete={onDeleteTransaction}
             filters={transactionFilters}
             onFiltersChange={onFiltersChange}
             typeOptions={typeOptions}

@@ -165,7 +165,7 @@ test('restores a removed estimate from the expanded disclosure', async ({ page }
 
   await expect(page.getByRole('table', { name: 'Estimativas prováveis' }).getByText(description)).toBeVisible()
   await expect(page.getByRole('button', { name: /Ocultando 1 estimativa/i })).not.toBeVisible()
-  expect(await fetchProjectionExclusions(supabase)).toHaveLength(0)
+  await expect.poll(async () => (await fetchProjectionExclusions(supabase)).length).toBe(0)
 })
 
 test('supports undo immediately after a removal', async ({ page }) => {

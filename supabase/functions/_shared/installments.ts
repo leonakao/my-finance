@@ -12,6 +12,8 @@ type ExpandInstallmentParams = {
   purchaseKey: string
 }
 
+export type ImportedTransactionSourceKind = 'manual' | 'manual_recurring' | 'imported_installment' | 'imported_statement' | 'imported_card'
+
 function isoParts(value: string) {
   const match = value.match(/^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/)
   if (!match?.groups) return null
@@ -60,6 +62,19 @@ export function formatInstallment(current: number, total: number): string {
 
 export function buildInstallmentExternalId(purchaseKey: string, current: number, total: number): string {
   return `${purchaseKey}:installment:${current.toString().padStart(2, '0')}-${total.toString().padStart(2, '0')}`
+}
+
+export function getInstallmentAnchorExternalId(externalId: string, installment: string): string | null {
+  const parsed = parseInstallment(installment)
+  if (!parsed || parsed.total === 1) {
+    return null
+  }
+
+  return buildInstallmentExternalId(
+    externalId.replace(/:installment:\d{2}-\d{2}$/, ''),
+    1,
+    parsed.total,
+  )
 }
 
 export function expandInstallmentSchedule(params: ExpandInstallmentParams): ParsedImportedTransaction[] {
@@ -204,5 +219,66 @@ export async function dropTransactionsAlreadyImported(
   return {
     transactions: filteredTransactions,
     alreadyImportedCount: installmentDuplicatesCount + (withoutInstallmentDuplicates.length - filteredTransactions.length),
+  }
+}
+
+export function inferImportedSourceKind(
+  source: 'card' | 'statement',
+  transaction: Pick<ParsedImportedTransaction, 'installment'>,
+): ImportedTransactionSourceKind {
+  if (parseInstallment(transaction.installment)?.total && parseInstallment(transaction.installment)?.total !== 1) {
+    return 'imported_installment'
+  }
+
+  return source === 'statement' ? 'imported_statement' : 'imported_card'
+}
+
+export async function syncImportedInstallmentOrigins(
+  supabase: SupabaseClient,
+  userId: string,
+  transactions: Array<Pick<ParsedImportedTransaction, 'external_id' | 'installment'>>,
+): Promise<void> {
+  const installmentTransactions = transactions.filter((transaction) => {
+    const installment = parseInstallment(transaction.installment)
+    return installment !== null && installment.total > 1
+  })
+
+  if (!installmentTransactions.length) {
+    return
+  }
+
+  const externalIds = [...new Set(installmentTransactions.map((transaction) => transaction.external_id))]
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('id, external_id')
+    .eq('user_id', userId)
+    .in('external_id', externalIds)
+
+  if (error) {
+    throw error
+  }
+
+  const idsByExternalId = new Map((data ?? []).map((row) => [row.external_id, row.id]))
+
+  for (const transaction of installmentTransactions) {
+    const anchorExternalId = getInstallmentAnchorExternalId(transaction.external_id, transaction.installment)
+    if (!anchorExternalId || transaction.external_id === anchorExternalId) {
+      continue
+    }
+
+    const anchorId = idsByExternalId.get(anchorExternalId)
+    const childId = idsByExternalId.get(transaction.external_id)
+    if (!anchorId || !childId) {
+      continue
+    }
+
+    const { error: updateError } = await supabase
+      .from('transactions')
+      .update({ origin_transaction_id: anchorId })
+      .eq('id', childId)
+
+    if (updateError) {
+      throw updateError
+    }
   }
 }

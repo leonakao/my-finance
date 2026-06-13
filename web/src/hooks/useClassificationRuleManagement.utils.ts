@@ -14,6 +14,7 @@ export type RulePayloadRecord = {
   type: TransactionType
   category: string
   budget_group_id: string | null
+  notes: string | null
 }
 
 type RuleContext = Pick<ClassificationRule, 'matchInstitution' | 'matchAccount'>
@@ -34,6 +35,11 @@ function getRuleBudgetGroupId(type: TransactionType, budgetGroupId: string | nul
 
 function resolveRuleContextValue(value: string | null | undefined, fallback: string | null | undefined): string | null {
   return normalizeRuleContextValue(value ?? fallback ?? null)
+}
+
+function normalizeRuleNotes(value: string | null | undefined): string | null {
+  const normalized = String(value ?? '').trim()
+  return normalized === '' ? null : normalized
 }
 
 export function findMatchingRule(
@@ -72,6 +78,7 @@ export function buildRulePayload(
     type: normalizedType,
     category: normalizedCategory,
     budget_group_id: getRuleBudgetGroupId(normalizedType, payload.budgetGroupId ?? null),
+    notes: normalizeRuleNotes(payload.notes),
   }
 }
 
@@ -81,7 +88,7 @@ async function findExistingRule(
   let query = getSupabaseOrThrow()
     .from('transaction_classification_rules')
     .select(
-      'id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, updated_at',
+      'id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, notes, updated_at',
     )
     .eq('match_mode', payload.match_mode)
     .eq('match_description_normalized', payload.match_description_normalized)
@@ -114,7 +121,7 @@ async function persistRule(
 
   const result = await query
     .select(
-      'id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, updated_at',
+      'id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, notes, updated_at',
     )
     .single()
 

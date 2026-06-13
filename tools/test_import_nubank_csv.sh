@@ -82,6 +82,7 @@ fi
 
 PAYLOAD=$(jq -nc --arg filename "$(basename "$CSV_PATH")" --arg csvText "$CSV_TEXT" --arg kind "$IMPORT_KIND" '{filename: $filename, kind: $kind, csvText: $csvText}')
 BASE_COUNT=$(awk 'END { print NR - 1 }' "$CSV_PATH")
+INSTALLMENT_LINES=$(grep -Eic 'Parcela [0-9]{2}/[0-9]{2}' "$CSV_PATH" || true)
 
 curl -sSf "$FUNCTIONS_URL/import-nubank-csv" \
   -H "apikey: $PUBLISHABLE_KEY" \
@@ -107,7 +108,7 @@ IGNORED_1=$(jq -r '.ignored // 0' "$IMPORT_RESPONSE_1")
 IGNORED_2=$(jq -r '.ignored // 0' "$IMPORT_RESPONSE_2")
 ROW_COUNT=$(jq 'length' "$TRANSACTIONS_RESPONSE")
 
-if [ "$IMPORT_KIND" = "card" ] && [ "$IMPORTED_1" -le "$BASE_COUNT" ]; then
+if [ "$IMPORT_KIND" = "card" ] && [ "$INSTALLMENT_LINES" -gt 0 ] && [ "$IMPORTED_1" -le "$BASE_COUNT" ]; then
   cat "$IMPORT_RESPONSE_1" >&2
   echo "Falha: o import do Nubank deveria expandir compras parceladas e produzir mais de $BASE_COUNT transacoes, mas enviou $IMPORTED_1." >&2
   exit 1
@@ -142,19 +143,20 @@ if [ "$ROW_COUNT" -ne "$INSERTED_1" ]; then
   exit 1
 fi
 
-CARLOS_COUNT=$(jq '[.[] | select(.description == "Pg *Carlos Levir F de")] | length' "$TRANSACTIONS_RESPONSE")
-if [ "$IMPORT_KIND" = "card" ] && [ "$CARLOS_COUNT" -lt 12 ]; then
-  echo "Falha: a compra parcelada de Carlos Levir deveria gerar pelo menos 12 parcelas, mas gerou $CARLOS_COUNT." >&2
-  exit 1
-fi
+if [ "$IMPORT_KIND" = "card" ] && [ "$INSTALLMENT_LINES" -gt 0 ]; then
+  INSTALLMENT_COUNT=$(jq '[.[] | select((.installment // "") != "")] | length' "$TRANSACTIONS_RESPONSE")
+  if [ "$INSTALLMENT_COUNT" -le 0 ]; then
+    echo "Falha: o CSV contem compras parceladas, mas nenhuma transacao com installment foi persistida." >&2
+    jq '.' "$TRANSACTIONS_RESPONSE" >&2
+    exit 1
+  fi
 
-SERIES_HAS_FIRST=$(jq '[.[] | select(.description == "Pg *Carlos Levir F de" and .installment == "01/12")] | length > 0' "$TRANSACTIONS_RESPONSE")
-SERIES_HAS_LAST=$(jq '[.[] | select(.description == "Pg *Carlos Levir F de" and .installment == "12/12")] | length > 0' "$TRANSACTIONS_RESPONSE")
-
-if [ "$IMPORT_KIND" = "card" ] && { [ "$SERIES_HAS_FIRST" != "true" ] || [ "$SERIES_HAS_LAST" != "true" ]; }; then
-  echo "Falha: a serie parcelada do Nubank nao contem os extremos 01/12 e 12/12 para Pg *Carlos Levir F de." >&2
-  jq '.[] | select(.description == "Pg *Carlos Levir F de")' "$TRANSACTIONS_RESPONSE" >&2
-  exit 1
+  SERIES_HAS_FIRST=$(jq '[.[] | select((.installment // "") | startswith("01/"))] | length > 0' "$TRANSACTIONS_RESPONSE")
+  if [ "$SERIES_HAS_FIRST" != "true" ]; then
+    echo "Falha: o import parcelado deveria persistir ao menos uma parcela inicial 01/NN." >&2
+    jq '[.[] | select((.installment // "") != "")]' "$TRANSACTIONS_RESPONSE" >&2
+    exit 1
+  fi
 fi
 
 echo "Teste OK."

@@ -123,6 +123,7 @@ export function normalizeClassificationRule(row: ClassificationRuleRecord): Clas
     type,
     category: normalizeCategoryForType(type, row.category ?? 'Outros'),
     budgetGroupId: row.budget_group_id ?? null,
+    notes: row.notes ?? '',
     updatedAt: row.updated_at ?? '',
   }
 }
@@ -274,6 +275,9 @@ export function normalizeTransaction(row: TransactionRecord): Transaction {
     institution: row.institution ?? '',
     notes: row.notes ?? '',
     installment: row.installment ?? '',
+    originTransactionId: row.origin_transaction_id ?? null,
+    isIgnored: row.is_ignored ?? false,
+    sourceKind: row.source_kind ?? 'manual',
   }
 }
 
@@ -384,6 +388,10 @@ export function filterTransactions(transactions: DecoratedTransaction[], filters
   const searchTerm = filters.search.trim().toLowerCase()
 
   return transactions.filter((transaction) => {
+    if (!filters.showIgnored && transaction.isIgnored) {
+      return false
+    }
+
     if (searchTerm) {
       const haystack = `${transaction.description} ${transaction.institution} ${transaction.notes}`.toLowerCase()
       if (!haystack.includes(searchTerm)) {

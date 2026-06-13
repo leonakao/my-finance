@@ -37,6 +37,7 @@ type MonthlyViewProps = {
   filteredTransactions: DecoratedTransaction[]
   groupOptions: GroupOption[]
   handleEditTransaction: (transactionId: string) => void
+  onOpenCreateTransaction: () => void
   loading: boolean
   lastCreatedProjectionExclusion: ProjectionExclusion | null
   monthData: MonthData | null
@@ -49,6 +50,8 @@ type MonthlyViewProps = {
   savingProjectionExclusionId: string
   setSelectedMonth: Dispatch<SetStateAction<string>>
   setTransactionFilters: Dispatch<SetStateAction<TransactionFilters>>
+  onIgnoreTransaction: (transactionId: string, ignored: boolean) => Promise<void>
+  onDeleteTransaction: (transactionId: string) => Promise<void>
   transactionFilters: TransactionFilters
   typeOptions: TransactionType[]
   undoLastProjectionExclusion: () => Promise<boolean>
@@ -64,6 +67,7 @@ export function MonthlyView({
   filteredTransactions,
   groupOptions,
   handleEditTransaction,
+  onOpenCreateTransaction,
   loading,
   lastCreatedProjectionExclusion,
   monthData,
@@ -76,6 +80,8 @@ export function MonthlyView({
   savingProjectionExclusionId,
   setSelectedMonth,
   setTransactionFilters,
+  onIgnoreTransaction,
+  onDeleteTransaction,
   transactionFilters,
   typeOptions,
   undoLastProjectionExclusion,
@@ -150,6 +156,9 @@ export function MonthlyView({
                 Hoje
               </button>
             ) : null}
+            <button type="button" onClick={onOpenCreateTransaction}>
+              Nova transação
+            </button>
           </div>
           <p className="muted">
             {futureMonth
@@ -231,12 +240,14 @@ export function MonthlyView({
           groupOptions={groupOptions}
           handleEditTransaction={handleEditTransaction}
           monthData={monthData}
-          onFiltersChange={(field: keyof TransactionFilters, value: string) =>
+          onFiltersChange={(field: keyof TransactionFilters, value: string | boolean) =>
             setTransactionFilters((current) => ({
               ...current,
               [field]: value,
             }))
           }
+          onDeleteTransaction={onDeleteTransaction}
+          onIgnoreTransaction={onIgnoreTransaction}
           savingId={savingId}
           transactionFilters={transactionFilters}
           typeOptions={typeOptions}

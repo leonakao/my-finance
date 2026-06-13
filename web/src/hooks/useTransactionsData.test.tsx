@@ -29,7 +29,23 @@ function setSuccessfulResponses() {
     data: [{ id: 'group-1', name: 'Necessidades', target_percentage: 50 }],
     error: null,
   })
-  responses.set('transaction_classification_rules', { data: [], error: null })
+  responses.set('transaction_classification_rules', {
+    data: [{
+      id: 'rule-1',
+      match_mode: 'description',
+      match_description: 'Pix mae',
+      match_description_normalized: 'pix mae',
+      match_amount: null,
+      match_institution: null,
+      match_account: null,
+      type: 'Despesa',
+      category: 'Outros',
+      budget_group_id: null,
+      notes: 'Emprestimo familiar',
+      updated_at: '2026-06-12T12:00:00Z',
+    }],
+    error: null,
+  })
   responses.set('projection_exclusions', {
     data: [{
       id: 'exclusion-1',
@@ -42,7 +58,25 @@ function setSuccessfulResponses() {
     }],
     error: null,
   })
-  responses.set('transactions', { data: [], error: null })
+  responses.set('transactions', {
+    data: [{
+      id: 'tx-1',
+      date: '2026-06-10',
+      description: 'Pix mae',
+      amount: 200,
+      type: 'Despesa',
+      category: 'Outros',
+      budget_group_id: null,
+      account: 'Conta principal',
+      institution: 'Nubank',
+      notes: 'Parcela 1',
+      installment: '',
+      origin_transaction_id: 'anchor-1',
+      is_ignored: true,
+      source_kind: 'manual_recurring',
+    }],
+    error: null,
+  })
 }
 
 describe('useTransactionsData', () => {
@@ -67,6 +101,24 @@ describe('useTransactionsData', () => {
       monthStart: '2026-06-01',
     })
     expect(fromSpy).toHaveBeenCalledWith('projection_exclusions')
+  })
+
+  it('loads and normalizes transaction origin metadata and rule notes', async () => {
+    const { result } = renderHook(() => useTransactionsData(SESSION, vi.fn(), vi.fn()))
+
+    await waitFor(() => {
+      expect(result.current.transactions).toHaveLength(1)
+      expect(result.current.classificationRules).toHaveLength(1)
+    })
+
+    expect(result.current.transactions[0]).toMatchObject({
+      originTransactionId: 'anchor-1',
+      isIgnored: true,
+      sourceKind: 'manual_recurring',
+    })
+    expect(result.current.classificationRules[0]).toMatchObject({
+      notes: 'Emprestimo familiar',
+    })
   })
 
   it('exposes the projection exclusion setter', async () => {

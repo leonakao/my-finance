@@ -20,6 +20,7 @@ const rule: ClassificationRule = {
   type: 'Despesa',
   category: 'Assinaturas',
   budgetGroupId: 'group-1',
+  notes: 'Streaming da família',
 }
 
 function renderView(overrides: Partial<ComponentProps<typeof ClassificationRulesView>> = {}) {
@@ -52,6 +53,7 @@ describe('ClassificationRulesView', () => {
 
     expect(screen.getByText((content) => content.includes('Instituição: Nubank'))).toBeTruthy()
     expect(screen.getByText((content) => content.includes('Conta: Cartão de crédito'))).toBeTruthy()
+    expect(screen.getByText((content) => content.includes('Nota padrão: Streaming da família'))).toBeTruthy()
   })
 
   it('submits institution and account with a new rule', async () => {
@@ -61,6 +63,7 @@ describe('ClassificationRulesView', () => {
     await user.type(screen.getByLabelText('Descrição'), 'assinatura premium')
     await user.type(screen.getByLabelText('Instituição'), 'Nubank')
     await user.type(screen.getByLabelText('Conta'), 'Cartão de crédito')
+    await user.type(screen.getByLabelText('Notas'), 'Streaming da família')
     await user.click(screen.getByRole('button', { name: 'Criar regra' }))
 
     await waitFor(() => {
@@ -70,6 +73,7 @@ describe('ClassificationRulesView', () => {
         matchAmount: null,
         matchInstitution: 'Nubank',
         matchAccount: 'Cartão de crédito',
+        notes: 'Streaming da família',
         type: 'Despesa',
         category: 'Outros',
         budgetGroupId: null,

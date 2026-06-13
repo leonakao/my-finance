@@ -14,6 +14,22 @@ type MonthlyProjectionItemsProps = {
   savingProjectionExclusionId: string
 }
 
+function registeredBadgeLabel(item: ProjectionLineItem): string {
+  if (item.sourceKind === 'manual_recurring') {
+    return 'Planejado recorrente'
+  }
+
+  if (item.sourceKind === 'imported_installment') {
+    return 'Planejado parcelado'
+  }
+
+  if (item.sourceKind === 'imported_statement' || item.sourceKind === 'imported_card') {
+    return 'Registrado importado'
+  }
+
+  return 'Registrado'
+}
+
 function RegisteredItemsTable({ items }: { items: ProjectionLineItem[] }) {
   return (
     <div className="table-wrap monthly-projection-items-wrap">
@@ -36,7 +52,7 @@ function RegisteredItemsTable({ items }: { items: ProjectionLineItem[] }) {
               <td>{dateLabel(item.date)}</td>
               <th scope="row" className="projection-description">
                 <span>{item.description}</span>
-                <small className="projection-origin-badge is-registered">Registrado</small>
+                <small className="projection-origin-badge is-registered">{registeredBadgeLabel(item)}</small>
               </th>
               <td>{item.type}</td>
               <td>{item.category}</td>

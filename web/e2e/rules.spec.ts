@@ -18,7 +18,7 @@ test('creates a user rule from the remember-classification flow', async ({ page 
   await page.getByRole('link', { name: 'Mensal' }).click()
 
   await page.getByRole('button', { name: 'Editar' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Editar classificação' })
+  const dialog = page.getByRole('dialog', { name: 'Editar transação' })
   await dialog.getByLabel('Categoria').selectOption('Alimentação')
   await dialog.getByLabel('Grupo').selectOption(selectableBudgetGroup.id)
   await dialog.getByRole('button', { name: 'Salvar' }).click()
@@ -26,7 +26,7 @@ test('creates a user rule from the remember-classification flow', async ({ page 
   await expect(page.getByRole('heading', { name: 'Lembrar esta classificação?' })).toBeVisible()
   await page.getByLabel('Nome da regra').fill('supermercado')
   await page.getByRole('button', { name: 'Lembrar pelo nome + valor' }).click()
-  await expect(page.getByText('Reclassificar transações existentes?')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reclassificar transações existentes?' })).toBeVisible()
   await page.getByRole('button', { name: 'Agora não' }).click()
 
   await page.getByRole('link', { name: 'Regras' }).click()
@@ -61,7 +61,7 @@ test('shows reclassification CTA after editing a saved rule and updates matching
   await page.getByLabel('Grupo').last().selectOption(selectableBudgetGroup.id)
   await page.getByRole('button', { name: 'Salvar regra' }).click()
 
-  await expect(page.getByText('Reclassificar transações existentes?')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reclassificar transações existentes?' })).toBeVisible()
   await page.getByRole('button', { name: 'Reclassificar' }).click()
   await expect(page.getByText(/reclassificada/)).toBeVisible()
 

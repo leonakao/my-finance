@@ -18,6 +18,7 @@ const EMPTY_FILTERS: TransactionFilters = {
   type: 'all',
   category: 'all',
   group: 'all',
+  showIgnored: false,
 }
 
 const PROBABLE_ITEM: ProjectionLineItem = {
@@ -112,6 +113,7 @@ function renderMonthlyView(overrides: {
       filteredTransactions={[] as DecoratedTransaction[]}
       groupOptions={[] as GroupOption[]}
       handleEditTransaction={vi.fn()}
+      onOpenCreateTransaction={vi.fn()}
       loading={false}
       lastCreatedProjectionExclusion={overrides.lastCreatedProjectionExclusion ?? null}
       monthData={null}
@@ -124,6 +126,8 @@ function renderMonthlyView(overrides: {
       savingProjectionExclusionId={overrides.savingProjectionExclusionId ?? ''}
       setSelectedMonth={setSelectedMonth}
       setTransactionFilters={setTransactionFilters}
+      onIgnoreTransaction={vi.fn(() => Promise.resolve())}
+      onDeleteTransaction={vi.fn(() => Promise.resolve())}
       transactionFilters={EMPTY_FILTERS}
       typeOptions={[] as TransactionType[]}
       undoLastProjectionExclusion={undoLastProjectionExclusion}

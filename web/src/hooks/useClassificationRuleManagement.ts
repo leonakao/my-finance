@@ -102,6 +102,7 @@ export function useClassificationRuleManagement(
       type: classificationSnapshot.type,
       category: classificationSnapshot.category,
       budgetGroupId: classificationSnapshot.budget_group_id,
+      notes: transaction.notes ?? '',
     })
   }
 
@@ -125,7 +126,7 @@ export function useClassificationRuleManagement(
       .update(databasePayload)
       .eq('id', id)
       .select(
-        'id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, updated_at',
+        'id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, notes, updated_at',
       )
       .single()
 

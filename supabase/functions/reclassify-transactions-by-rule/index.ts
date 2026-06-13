@@ -12,6 +12,7 @@ type ReclassifiableTransaction = {
   type: 'Despesa' | 'Receita' | 'Transferência'
   category: string
   budget_group_id: string | null
+  notes: string
   account: string
   institution: string
   description_normalized: string
@@ -47,7 +48,7 @@ async function loadCandidateTransactions(
 ): Promise<ReclassifiableTransaction[]> {
   let query = supabase
     .from('transactions')
-    .select('id, description, amount, type, category, budget_group_id, account, institution, description_normalized')
+    .select('id, description, amount, type, category, budget_group_id, notes, account, institution, description_normalized')
     .eq('user_id', userId)
     .ilike('description_normalized', `%${escapeLikePattern(rule.match_description_normalized)}%`)
 
@@ -147,18 +148,25 @@ Deno.serve(async (request) => {
 
   const { transactions: classifiedTransactions } = applyUserClassificationRulesWithCount(candidateTransactions, rules)
 
-  const updatesBySnapshot = new Map<string, { ids: string[]; type: ReclassifiableTransaction['type']; category: string; budget_group_id: string | null }>()
+  const updatesBySnapshot = new Map<string, {
+    ids: string[]
+    type: ReclassifiableTransaction['type']
+    category: string
+    budget_group_id: string | null
+    notes: string
+  }>()
   candidateTransactions.forEach((transaction, index) => {
     const nextTransaction = classifiedTransactions[index]
     if (
       transaction.type === nextTransaction.type
       && transaction.category === nextTransaction.category
       && (transaction.budget_group_id ?? null) === (nextTransaction.budget_group_id ?? null)
+      && transaction.notes === nextTransaction.notes
     ) {
       return
     }
 
-    const key = `${nextTransaction.type}::${nextTransaction.category}::${nextTransaction.budget_group_id ?? ''}`
+    const key = `${nextTransaction.type}::${nextTransaction.category}::${nextTransaction.budget_group_id ?? ''}::${nextTransaction.notes}`
     const group = updatesBySnapshot.get(key)
     if (group) {
       group.ids.push(transaction.id)
@@ -170,6 +178,7 @@ Deno.serve(async (request) => {
       type: nextTransaction.type,
       category: nextTransaction.category,
       budget_group_id: nextTransaction.budget_group_id ?? null,
+      notes: nextTransaction.notes,
     })
   })
 
@@ -182,6 +191,7 @@ Deno.serve(async (request) => {
           type: group.type,
           category: group.category,
           budget_group_id: group.budget_group_id,
+          notes: group.notes,
         })
         .in('id', idsChunk)
         .select('id')

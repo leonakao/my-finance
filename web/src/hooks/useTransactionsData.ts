@@ -38,7 +38,7 @@ export function useTransactionsData(
 
     const { data: classificationRulesData, error: classificationRulesError } = await supabase
       .from('transaction_classification_rules')
-      .select('id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, updated_at')
+      .select('id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, notes, updated_at')
       .order('updated_at', { ascending: false })
 
     if (classificationRulesError) {
@@ -60,7 +60,7 @@ export function useTransactionsData(
 
     const { data, error: queryError } = await supabase
       .from('transactions')
-      .select('id, date, description, amount, type, category, budget_group_id, account, institution, notes, installment')
+      .select('id, date, description, amount, type, category, budget_group_id, account, institution, notes, installment, origin_transaction_id, is_ignored, source_kind')
       .order('date', { ascending: false })
 
     if (queryError) {

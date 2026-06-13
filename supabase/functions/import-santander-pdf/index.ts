@@ -1,7 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { resolveImportedTransactionBudgetGroups } from '../_shared/budget-groups.ts'
 import { applyUserClassificationRulesWithCount, loadUserClassificationRules } from '../_shared/classification-rules.ts'
-import { dropTransactionsAlreadyImported } from '../_shared/installments.ts'
+import { dropTransactionsAlreadyImported, inferImportedSourceKind, syncImportedInstallmentOrigins } from '../_shared/installments.ts'
 import { inspectSantanderPdf, parseSantanderPdf } from '../_shared/santander.ts'
 
 type ImportPayload = {
@@ -93,7 +93,11 @@ Deno.serve(async (request) => {
   const transactionsByExternalId = new Map(newTransactions.map((item) => [item.external_id, item]))
   const transactions = [...transactionsByExternalId.values()]
   const duplicatesDropped = newTransactions.length - transactions.length
-  const transactionsToInsert = transactions.map(({ ignored: _ignored, ...transaction }) => transaction)
+  const transactionsToInsert = transactions.map(({ ignored: _ignored, ...transaction }) => ({
+    ...transaction,
+    source_kind: inferImportedSourceKind('card', transaction),
+    origin_transaction_id: null,
+  }))
 
   let insertError: { message: string } | null = null
   if (transactionsToInsert.length > 0) {
@@ -105,6 +109,10 @@ Deno.serve(async (request) => {
 
   if (insertError) {
     return json({ error: insertError.message }, 400)
+  }
+
+  if (transactionsToInsert.length > 0) {
+    await syncImportedInstallmentOrigins(supabase, user.id, transactionsToInsert)
   }
 
   const inserted = transactions.length

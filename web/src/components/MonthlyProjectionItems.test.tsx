@@ -18,6 +18,7 @@ const registeredItem: ProjectionLineItem = {
   budgetGroupId: 'wants',
   budgetGroupName: 'Desejos',
   installment: '03/10',
+  sourceKind: 'imported_installment',
   basis: null,
 }
 
@@ -133,7 +134,7 @@ describe('MonthlyProjectionItems', () => {
 
     expect(screen.getByRole('heading', { level: 3, name: 'Lançamentos registrados restantes' })).toBeTruthy()
     expect(screen.getByRole('heading', { level: 3, name: 'Estimativas prováveis' })).toBeTruthy()
-    expect(screen.getByText('Registrado')).toBeTruthy()
+    expect(screen.getByText('Planejado parcelado')).toBeTruthy()
     expect(screen.getByText('Provável')).toBeTruthy()
   })
 

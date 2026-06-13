@@ -15,6 +15,7 @@ export type UserClassificationRule = {
   type: ImportedTransaction['type']
   category: string
   budget_group_id: string | null
+  notes: string | null
   updated_at: string
 }
 
@@ -98,7 +99,7 @@ export async function loadUserClassificationRules(
   const { data, error } = await supabase
     .from('transaction_classification_rules')
     .select(
-      'id, user_id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, updated_at',
+      'id, user_id, match_mode, match_description, match_description_normalized, match_amount, match_institution, match_account, type, category, budget_group_id, notes, updated_at',
     )
     .eq('user_id', userId)
 
@@ -122,6 +123,7 @@ export function applyUserClassificationRule(
     type: nextType,
     category: nextCategory,
     budget_group_id: nextType === 'Receita' ? null : matchedRule.budget_group_id,
+    notes: transaction.notes.trim() === '' ? (matchedRule.notes ?? '') : transaction.notes,
   }
 }
 
@@ -151,6 +153,7 @@ export function applyUserClassificationRulesWithCount(
       classifiedTransaction.type !== transaction.type
       || classifiedTransaction.category !== transaction.category
       || (classifiedTransaction.budget_group_id ?? null) !== (transaction.budget_group_id ?? null)
+      || classifiedTransaction.notes !== transaction.notes
 
     if (changed) {
       classifiedCount += 1

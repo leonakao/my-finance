@@ -33,6 +33,8 @@ describe('TransactionEditModal', () => {
         transaction={baseTransaction}
         onClose={() => {}}
         onSave={onSave}
+        onIgnore={vi.fn(() => Promise.resolve())}
+        onDelete={vi.fn(() => Promise.resolve())}
       />,
     )
 
@@ -43,6 +45,8 @@ describe('TransactionEditModal', () => {
       type: 'Despesa',
       category: 'Outros',
       budgetGroupId: 'group-2',
+      notes: '',
+      recurringUntilMonth: null,
     })
   })
 
@@ -57,6 +61,8 @@ describe('TransactionEditModal', () => {
         transaction={{ ...baseTransaction, budgetGroupId: 'group-1' }}
         onClose={() => {}}
         onSave={onSave}
+        onIgnore={vi.fn(() => Promise.resolve())}
+        onDelete={vi.fn(() => Promise.resolve())}
       />,
     )
 
@@ -67,6 +73,8 @@ describe('TransactionEditModal', () => {
       type: 'Transferência',
       category: 'Outros',
       budgetGroupId: 'group-1',
+      notes: '',
+      recurringUntilMonth: null,
     })
   })
 
@@ -81,6 +89,8 @@ describe('TransactionEditModal', () => {
         transaction={{ ...baseTransaction, category: 'Alimentação' }}
         onClose={() => {}}
         onSave={onSave}
+        onIgnore={vi.fn(() => Promise.resolve())}
+        onDelete={vi.fn(() => Promise.resolve())}
       />,
     )
 
@@ -91,6 +101,37 @@ describe('TransactionEditModal', () => {
       type: 'Receita',
       category: 'Outros',
       budgetGroupId: null,
+      notes: '',
+      recurringUntilMonth: null,
     })
+  })
+
+  it('submits edited notes and recurring limit', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn()
+
+    render(
+      <TransactionEditModal
+        budgetGroups={budgetGroups}
+        saving={false}
+        transaction={baseTransaction}
+        onClose={() => {}}
+        onSave={onSave}
+        onIgnore={vi.fn(() => Promise.resolve())}
+        onDelete={vi.fn(() => Promise.resolve())}
+      />,
+    )
+
+    await user.clear(screen.getByLabelText('Notas'))
+    await user.type(screen.getByLabelText('Notas'), 'Emprestimo com minha mãe')
+    await user.click(screen.getByLabelText('Recorrente'))
+    await user.clear(screen.getByLabelText('Até'))
+    await user.type(screen.getByLabelText('Até'), '2026-12')
+    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+
+    expect(onSave).toHaveBeenCalledWith('tx-1', expect.objectContaining({
+      notes: 'Emprestimo com minha mãe',
+      recurringUntilMonth: '2026-12',
+    }))
   })
 })

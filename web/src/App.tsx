@@ -8,6 +8,7 @@ import { ClassificationRulePrompt } from './components/ClassificationRulePrompt'
 import { ClassificationRulesView } from './components/ClassificationRulesView'
 import { DashboardOverviewView } from './components/DashboardOverviewView'
 import { ImportView } from './components/ImportView'
+import { ManualTransactionModal } from './components/ManualTransactionModal'
 import { MissingConfig } from './components/MissingConfig'
 import { MonthlyView } from './components/MonthlyView'
 import { ReclassificationPromptModal } from './components/ReclassificationPromptModal'
@@ -31,6 +32,7 @@ import type {
   DecoratedTransaction,
   FinancialOverview,
   GroupOption,
+  ManualTransactionPayload,
   MonthData,
   MonthlyProjectionInsight,
   ProjectionExclusion,
@@ -142,6 +144,7 @@ type AuthenticatedAppProps = {
   financialOverview: FinancialOverview
   groupOptions: GroupOption[]
   handleEditTransaction: (transactionId: string) => void
+  openCreateTransaction: () => void
   handleImport: (payload: { kind: 'account' | 'card' | 'santander-card-pdf' | 'santander-account-pdf'; invoice: string; file: File }) => Promise<void>
   handleSignOut: () => Promise<void>
   importLoading: boolean
@@ -161,7 +164,13 @@ type AuthenticatedAppProps = {
   rememberClassification: (matchMode: 'description' | 'description_amount', overrides?: RulePromptOverrides) => Promise<boolean>
   removedPanelExpanded: boolean
   restoreProjectionExclusion: (id: string) => Promise<boolean>
+  createManualTransaction: (payload: ManualTransactionPayload) => Promise<boolean>
   saveTransactionEdit: (transactionId: string, payload: TransactionEditPayload) => Promise<void>
+  ignoreTransaction: (transactionId: string, ignored: boolean) => Promise<void>
+  deleteTransaction: (transactionId: string) => Promise<void>
+  creatingTransaction: boolean
+  creatingTransactionOpen: boolean
+  closeCreateTransaction: () => void
   savingGroupId: string
   savingId: string
   savingProjectionExclusionId: string
@@ -211,6 +220,7 @@ function AuthenticatedApp({
   financialOverview,
   groupOptions,
   handleEditTransaction,
+  openCreateTransaction,
   handleImport,
   handleSignOut,
   importLoading,
@@ -230,7 +240,13 @@ function AuthenticatedApp({
   rememberClassification,
   removedPanelExpanded,
   restoreProjectionExclusion,
+  createManualTransaction,
   saveTransactionEdit,
+  ignoreTransaction,
+  deleteTransaction,
+  creatingTransaction,
+  creatingTransactionOpen,
+  closeCreateTransaction,
   savingGroupId,
   savingId,
   savingProjectionExclusionId,
@@ -267,6 +283,7 @@ function AuthenticatedApp({
         filteredTransactions={filteredTransactions}
         groupOptions={groupOptions}
         handleEditTransaction={handleEditTransaction}
+        onOpenCreateTransaction={openCreateTransaction}
         loading={loading}
         lastCreatedProjectionExclusion={lastCreatedProjectionExclusion}
         monthData={monthData}
@@ -279,6 +296,8 @@ function AuthenticatedApp({
         savingProjectionExclusionId={savingProjectionExclusionId}
         setSelectedMonth={setSelectedMonth}
         setTransactionFilters={setTransactionFilters}
+        onIgnoreTransaction={ignoreTransaction}
+        onDeleteTransaction={deleteTransaction}
         transactionFilters={transactionFilters}
         typeOptions={typeOptions}
         undoLastProjectionExclusion={undoLastProjectionExclusion}
@@ -338,6 +357,23 @@ function AuthenticatedApp({
           transaction={editingTransaction}
           onClose={closeTransactionEditor}
           onSave={saveTransactionEdit}
+          onIgnore={ignoreTransaction}
+          onDelete={deleteTransaction}
+        />
+      ) : null}
+      {currentPath === '/app/mensal' ? (
+        <ManualTransactionModal
+          activeMonth={selectedMonth}
+          budgetGroups={budgetGroups}
+          open={creatingTransactionOpen}
+          saving={creatingTransaction}
+          onClose={closeCreateTransaction}
+          onCreate={async (payload) => {
+            const created = await createManualTransaction(payload)
+            if (created) {
+              closeCreateTransaction()
+            }
+          }}
         />
       ) : null}
       {currentPath === '/app/mensal' ? (
@@ -404,12 +440,14 @@ function App() {
   const [feedback, setFeedback] = useState('')
   const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname || '/')
   const [removedPanelExpanded, setRemovedPanelExpanded] = useState(() => readRemovedPanelExpandedFromSearch(window.location.search))
+  const [creatingTransactionOpen, setCreatingTransactionOpen] = useState(false)
   const [transactionFilters, setTransactionFilters] = useState<TransactionFilters>({
     search: '',
     type: 'all',
     category: 'all',
-    group: 'all',
-  })
+      group: 'all',
+      showIgnored: false,
+    })
 
   const {
     budgetGroups,
@@ -459,11 +497,15 @@ function App() {
 
   const {
     savingId,
+    creatingTransaction,
     editingTransaction,
     promptTransaction,
     openTransactionEditor,
     closeTransactionEditor,
+    createManualTransaction,
     saveTransactionEdit,
+    setTransactionIgnored: ignoreTransaction,
+    deleteTransaction,
     dismissRememberPrompt,
     rememberClassification,
   } = useTransactionEditing(transactions, setTransactions, setError, createRuleFromTransaction)
@@ -641,6 +683,7 @@ function App() {
       financialOverview={financialOverview}
       groupOptions={groupOptions}
       handleEditTransaction={openTransactionEditor}
+      openCreateTransaction={() => setCreatingTransactionOpen(true)}
       handleImport={handleImport}
       handleSignOut={async () => {
         await handleSignOut()
@@ -709,7 +752,13 @@ function App() {
       rememberClassification={rememberClassification}
       removedPanelExpanded={removedPanelExpanded}
       restoreProjectionExclusion={restoreProjectionExclusion}
+      createManualTransaction={createManualTransaction}
       saveTransactionEdit={saveTransactionEdit}
+      ignoreTransaction={ignoreTransaction}
+      deleteTransaction={deleteTransaction}
+      creatingTransaction={creatingTransaction}
+      creatingTransactionOpen={creatingTransactionOpen}
+      closeCreateTransaction={() => setCreatingTransactionOpen(false)}
       savingGroupId={savingGroupId}
       savingId={savingId}
       savingProjectionExclusionId={savingProjectionExclusionId}

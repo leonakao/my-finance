@@ -344,6 +344,7 @@ function buildRegisteredItems(
       installment: transaction.installment === undefined || transaction.installment === ''
         ? null
         : transaction.installment,
+      sourceKind: transaction.sourceKind ?? 'manual',
       basis: null,
     }]
   })

@@ -1,4 +1,5 @@
 export type TransactionType = 'Despesa' | 'Receita' | 'Transferência'
+export type TransactionSourceKind = 'manual' | 'manual_recurring' | 'imported_installment' | 'imported_statement' | 'imported_card'
 
 export type ClassificationRuleMatchMode = 'description' | 'description_amount'
 
@@ -33,6 +34,9 @@ export type Transaction = {
   institution?: string
   notes?: string
   installment?: string
+  originTransactionId?: string | null
+  isIgnored?: boolean
+  sourceKind?: TransactionSourceKind
 }
 
 export type DecoratedTransaction = Transaction & {
@@ -52,12 +56,30 @@ export type TransactionRecord = {
   institution: string | null
   notes: string | null
   installment?: string | null
+  origin_transaction_id?: string | null
+  is_ignored?: boolean | null
+  source_kind?: TransactionSourceKind | null
 }
 
 export type TransactionEditPayload = {
   type: TransactionType
   category: string
   budgetGroupId: string | null
+  notes?: string
+  recurringUntilMonth?: string | null
+  originTransactionId?: string | null
+  isIgnored?: boolean
+  sourceKind?: TransactionSourceKind
+}
+
+export type ManualTransactionPayload = {
+  date: string
+  description: string
+  amount: number
+  type: TransactionType
+  category: string
+  budgetGroupId: string | null
+  notes: string
 }
 
 export type TransactionFilters = {
@@ -65,6 +87,7 @@ export type TransactionFilters = {
   type: TransactionType | 'all'
   category: string
   group: string
+  showIgnored: boolean
 }
 
 export type ClassificationSnapshot = {
@@ -84,6 +107,7 @@ export type ClassificationRule = {
   type: TransactionType
   category: string
   budgetGroupId: string | null
+  notes?: string
   updatedAt?: string
 }
 
@@ -96,6 +120,7 @@ export type ClassificationRulePayload = {
   type: TransactionType
   category: string
   budgetGroupId: string | null
+  notes?: string
 }
 
 export type ClassificationRuleRecord = {
@@ -109,6 +134,7 @@ export type ClassificationRuleRecord = {
   type: TransactionType | null
   category: string | null
   budget_group_id: string | null
+  notes?: string | null
   updated_at: string | null
 }
 
@@ -203,6 +229,7 @@ export type ProjectionLineItem = {
   budgetGroupId: string | null
   budgetGroupName: string
   installment: string | null
+  sourceKind?: TransactionSourceKind
   basis: ProjectionItemBasis | null
 }
 

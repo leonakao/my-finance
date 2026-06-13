@@ -5,7 +5,9 @@ import {
   buildFinancialOverview,
   buildMonthData,
   getCategoryOptionsForType,
+  normalizeClassificationRule,
   normalizeCategoryForType,
+  normalizeTransaction,
   reclassifyTransactionsWithRules,
 } from './transactions'
 
@@ -19,6 +21,53 @@ describe('category catalogs', () => {
 })
 
 describe('reclassifyTransactionsWithRules', () => {
+  it('normalizes transaction origin metadata and ignored flag', () => {
+    expect(
+      normalizeTransaction({
+        id: 'tx-1',
+        date: '2026-06-10',
+        description: 'Pix mae',
+        amount: '200.00',
+        type: 'Despesa',
+        category: 'Outros',
+        budget_group_id: 'group-1',
+        account: 'Conta principal',
+        institution: 'Nubank',
+        notes: null,
+        installment: null,
+        origin_transaction_id: 'anchor-1',
+        is_ignored: true,
+        source_kind: 'manual_recurring',
+      }),
+    ).toMatchObject({
+      originTransactionId: 'anchor-1',
+      isIgnored: true,
+      sourceKind: 'manual_recurring',
+      notes: '',
+    })
+  })
+
+  it('normalizes rule notes', () => {
+    expect(
+      normalizeClassificationRule({
+        id: 'rule-1',
+        match_mode: 'description',
+        match_description: 'Pix mãe',
+        match_description_normalized: 'pix mae',
+        match_amount: null,
+        match_institution: null,
+        match_account: null,
+        type: 'Despesa',
+        category: 'Outros',
+        budget_group_id: null,
+        notes: 'Emprestimo familiar',
+        updated_at: '2026-06-12T10:00:00Z',
+      }),
+    ).toMatchObject({
+      notes: 'Emprestimo familiar',
+    })
+  })
+
   it('reclassifies matching transactions using the current sorted rules', () => {
     const transactions: Transaction[] = [
       {
