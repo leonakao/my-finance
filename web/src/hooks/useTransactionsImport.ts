@@ -44,6 +44,16 @@ function buildImportRequest(kind: ImportKind, invoice: string, file: File, pdfBa
     }
   }
 
+  if (kind === 'infinitepay-account-csv') {
+    return {
+      functionName: 'import-infinitepay-csv',
+      body: {
+        filename: file.name,
+        csvText,
+      },
+    }
+  }
+
   return {
     functionName: 'import-nubank-csv',
     body: {

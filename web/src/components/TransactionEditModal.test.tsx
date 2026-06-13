@@ -1,7 +1,7 @@
 import type { BudgetGroup, Transaction } from '../types'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { TransactionEditModal } from './TransactionEditModal'
 
 const budgetGroups: BudgetGroup[] = [
@@ -21,117 +21,83 @@ const baseTransaction: Transaction = {
   budgetGroupId: null,
 }
 
-describe('TransactionEditModal', () => {
-  it('submits the selected budget group id', async () => {
-    const user = userEvent.setup()
-    const onSave = vi.fn()
+function renderModal(transaction: Transaction, onSave = vi.fn()) {
+  render(
+    <TransactionEditModal
+      budgetGroups={budgetGroups}
+      saving={false}
+      transaction={transaction}
+      onClose={() => {}}
+      onSave={onSave}
+      onIgnore={vi.fn(() => Promise.resolve())}
+      onDelete={vi.fn(() => Promise.resolve())}
+    />,
+  )
 
-    render(
-      <TransactionEditModal
-        budgetGroups={budgetGroups}
-        saving={false}
-        transaction={baseTransaction}
-        onClose={() => {}}
-        onSave={onSave}
-        onIgnore={vi.fn(() => Promise.resolve())}
-        onDelete={vi.fn(() => Promise.resolve())}
-      />,
-    )
+  return { onSave }
+}
 
-    await user.selectOptions(screen.getByLabelText('Grupo'), 'group-2')
-    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+it('submits the selected budget group id', async () => {
+  const user = userEvent.setup()
+  const { onSave } = renderModal(baseTransaction)
 
-    expect(onSave).toHaveBeenCalledWith('tx-1', {
-      type: 'Despesa',
-      category: 'Outros',
-      budgetGroupId: 'group-2',
-      notes: '',
-      recurringUntilMonth: null,
-    })
+  await user.selectOptions(screen.getByLabelText('Grupo'), 'group-2')
+  await user.click(screen.getByRole('button', { name: 'Salvar' }))
+
+  expect(onSave).toHaveBeenCalledWith('tx-1', {
+    type: 'Despesa',
+    category: 'Outros',
+    budgetGroupId: 'group-2',
+    notes: '',
+    recurringUntilMonth: null,
   })
+})
 
-  it('keeps the budget group when type becomes transferência', async () => {
-    const user = userEvent.setup()
-    const onSave = vi.fn()
+it('keeps the budget group when type becomes transferência', async () => {
+  const user = userEvent.setup()
+  const { onSave } = renderModal({ ...baseTransaction, budgetGroupId: 'group-1' })
 
-    render(
-      <TransactionEditModal
-        budgetGroups={budgetGroups}
-        saving={false}
-        transaction={{ ...baseTransaction, budgetGroupId: 'group-1' }}
-        onClose={() => {}}
-        onSave={onSave}
-        onIgnore={vi.fn(() => Promise.resolve())}
-        onDelete={vi.fn(() => Promise.resolve())}
-      />,
-    )
+  await user.selectOptions(screen.getByLabelText('Tipo'), 'Transferência')
+  await user.click(screen.getByRole('button', { name: 'Salvar' }))
 
-    await user.selectOptions(screen.getByLabelText('Tipo'), 'Transferência')
-    await user.click(screen.getByRole('button', { name: 'Salvar' }))
-
-    expect(onSave).toHaveBeenCalledWith('tx-1', {
-      type: 'Transferência',
-      category: 'Outros',
-      budgetGroupId: 'group-1',
-      notes: '',
-      recurringUntilMonth: null,
-    })
+  expect(onSave).toHaveBeenCalledWith('tx-1', {
+    type: 'Transferência',
+    category: 'Outros',
+    budgetGroupId: 'group-1',
+    notes: '',
+    recurringUntilMonth: null,
   })
+})
 
-  it('normalizes the category when the type changes to a different catalog', async () => {
-    const user = userEvent.setup()
-    const onSave = vi.fn()
+it('normalizes the category when the type changes to a different catalog', async () => {
+  const user = userEvent.setup()
+  const { onSave } = renderModal({ ...baseTransaction, category: 'Alimentação' })
 
-    render(
-      <TransactionEditModal
-        budgetGroups={budgetGroups}
-        saving={false}
-        transaction={{ ...baseTransaction, category: 'Alimentação' }}
-        onClose={() => {}}
-        onSave={onSave}
-        onIgnore={vi.fn(() => Promise.resolve())}
-        onDelete={vi.fn(() => Promise.resolve())}
-      />,
-    )
+  await user.selectOptions(screen.getByLabelText('Tipo'), 'Receita')
+  await user.click(screen.getByRole('button', { name: 'Salvar' }))
 
-    await user.selectOptions(screen.getByLabelText('Tipo'), 'Receita')
-    await user.click(screen.getByRole('button', { name: 'Salvar' }))
-
-    expect(onSave).toHaveBeenCalledWith('tx-1', {
-      type: 'Receita',
-      category: 'Outros',
-      budgetGroupId: null,
-      notes: '',
-      recurringUntilMonth: null,
-    })
+  expect(onSave).toHaveBeenCalledWith('tx-1', {
+    type: 'Receita',
+    category: 'Outros',
+    budgetGroupId: null,
+    notes: '',
+    recurringUntilMonth: null,
   })
+})
 
-  it('submits edited notes and recurring limit', async () => {
-    const user = userEvent.setup()
-    const onSave = vi.fn()
+it('submits edited notes and recurring limit', async () => {
+  const user = userEvent.setup()
+  const { onSave } = renderModal(baseTransaction)
 
-    render(
-      <TransactionEditModal
-        budgetGroups={budgetGroups}
-        saving={false}
-        transaction={baseTransaction}
-        onClose={() => {}}
-        onSave={onSave}
-        onIgnore={vi.fn(() => Promise.resolve())}
-        onDelete={vi.fn(() => Promise.resolve())}
-      />,
-    )
+  await user.clear(screen.getByLabelText('Notas'))
+  await user.type(screen.getByLabelText('Notas'), 'Emprestimo com minha mãe')
+  await user.click(screen.getByLabelText('Recorrente'))
+  await user.clear(screen.getByLabelText('Até'))
+  await user.type(screen.getByLabelText('Até'), '2026-12')
+  await user.click(screen.getByRole('button', { name: 'Salvar' }))
 
-    await user.clear(screen.getByLabelText('Notas'))
-    await user.type(screen.getByLabelText('Notas'), 'Emprestimo com minha mãe')
-    await user.click(screen.getByLabelText('Recorrente'))
-    await user.clear(screen.getByLabelText('Até'))
-    await user.type(screen.getByLabelText('Até'), '2026-12')
-    await user.click(screen.getByRole('button', { name: 'Salvar' }))
-
-    expect(onSave).toHaveBeenCalledWith('tx-1', expect.objectContaining({
-      notes: 'Emprestimo com minha mãe',
-      recurringUntilMonth: '2026-12',
-    }))
-  })
+  expect(onSave).toHaveBeenCalledWith('tx-1', expect.objectContaining({
+    notes: 'Emprestimo com minha mãe',
+    recurringUntilMonth: '2026-12',
+  }))
 })

@@ -270,7 +270,7 @@ Importação atual:
 
 - painel de importação de CSV Nubank no frontend
 - upload autenticado de CSV Nubank e PDF Santander (fatura e extrato) no frontend
-- upload autenticado para as Edge Functions `import-nubank-csv` e `import-santander-pdf`
+- upload autenticado para as Edge Functions `import-nubank-csv`, `import-infinitepay-csv`, `import-santander-pdf` e `import-santander-account-pdf`
 - upsert em `transactions` por `user_id, external_id`
 
 ## Supabase versionado
@@ -337,7 +337,9 @@ Depois, no dashboard do Supabase:
 Primeira function implementada:
 
 - `supabase/functions/import-nubank-csv`
+- `supabase/functions/import-infinitepay-csv`
 - `supabase/functions/import-santander-pdf`
+- `supabase/functions/import-santander-account-pdf`
 
 Ela recebe:
 
@@ -359,6 +361,14 @@ No caso do Santander:
 - classifica
 - quando a compra vier com `Parcela` no formato `NN/NN`, expande a compra em uma série mensal completa a partir da data original
 - faz `upsert` em `public.transactions`
+
+No caso do InfinitePay:
+
+- recebe `csvText`
+- valida o cabeçalho `Data,Hora,Tipo de transação,Nome,Detalhe,Valor`
+- classifica `Depósito de vendas` como `Receita` na categoria `Venda`
+- classifica saídas Pix como `Despesa`
+- deduplica por `external_id` na reimportação
 
 ### Smoke test local da function Santander
 
@@ -388,9 +398,24 @@ O teste faz signup de um usuario local, chama `import-nubank-csv` duas vezes e v
 - presenca da serie completa `01/TT` ate `TT/TT`
 - deduplicacao por `external_id` na reimportacao
 
+### Smoke test local da function InfinitePay
+
+Com a stack local do Supabase disponível, rode:
+
+```sh
+sh tools/test_import_infinitepay_csv.sh
+```
+
+Esse teste usa o fixture `inbox/infinitepay-2026-06.csv`, faz signup de um usuário local, chama `import-infinitepay-csv` duas vezes e valida:
+
+- importação integral das 48 linhas do fixture
+- classificação de depósitos de venda como `Receita` / `Venda`
+- deduplicação por `external_id` na reimportação
+
 Arquivo compartilhado de regra:
 
 - `supabase/functions/_shared/nubank.ts`
+- `supabase/functions/_shared/infinitepay.ts`
 - `supabase/functions/_shared/santander.ts`
 
 ## Campos usados no Notion

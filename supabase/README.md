@@ -19,7 +19,7 @@ O repositório agora inclui `.github/workflows/supabase-deploy.yml`.
 Na `main`, ele faz:
 
 1. aplicar migrations com `supabase db push`
-2. deployar as Edge Functions `import-nubank-csv` e `import-santander-pdf`
+2. deployar as Edge Functions `import-nubank-csv`, `import-infinitepay-csv`, `import-santander-pdf` e `import-santander-account-pdf`
 
 Secrets esperados no GitHub:
 

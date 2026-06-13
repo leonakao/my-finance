@@ -56,6 +56,7 @@ jobs:
       matrix:
         function_name:
           - import-nubank-csv
+          - import-infinitepay-csv
           - import-santander-pdf
           - import-santander-account-pdf
     env:

@@ -1,4 +1,4 @@
-/* eslint-disable max-lines-per-function */
+/* eslint-disable max-lines-per-function, complexity */
 import { useMemo, useState, type FormEvent } from 'react'
 import { TYPE_OPTIONS } from '../constants'
 import { getCategoryOptionsForType, normalizeCategoryForType } from '../lib/transactions'

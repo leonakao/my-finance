@@ -1,4 +1,5 @@
 inbox/*
+!inbox/infinitepay-2026-06.csv
 *.pyc
 __pycache__/
 .DS_Store

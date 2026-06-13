@@ -53,6 +53,7 @@ export const DEFAULT_CATEGORY_BY_TYPE = {
 export const IMPORT_OPTIONS: ImportOption[] = [
   { value: 'account', label: 'Nubank conta (CSV)' },
   { value: 'card', label: 'Nubank cartão (CSV)' },
+  { value: 'infinitepay-account-csv', label: 'InfinitePay extrato (CSV)' },
   { value: 'santander-card-pdf', label: 'Santander fatura (PDF)' },
   { value: 'santander-account-pdf', label: 'Santander extrato (PDF)' },
 ]

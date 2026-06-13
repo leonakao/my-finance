@@ -20,8 +20,8 @@ function loadLocalEnv() {
 }
 
 const env = loadLocalEnv()
-const supabaseUrl = env.VITE_SUPABASE_URL
-const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.VITE_SUPABASE_URL ?? env.VITE_SUPABASE_URL
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY
 
 export async function createUserSession() {
   const email = `e2e-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`
@@ -216,7 +216,7 @@ export async function fetchRules(client: TestSupabaseClient) {
 export async function fetchTransactions(client: TestSupabaseClient) {
   const { data, error } = await client
     .from('transactions')
-    .select('id, description, budget_group_id, category, type')
+    .select('id, description, budget_group_id, category, type, source')
     .order('created_at', { ascending: true })
 
   if (error) {

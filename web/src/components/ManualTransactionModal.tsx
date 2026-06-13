@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { useState, type FormEvent } from 'react'
 import { TYPE_OPTIONS } from '../constants'
 import { getCategoryOptionsForType, normalizeCategoryForType } from '../lib/transactions'

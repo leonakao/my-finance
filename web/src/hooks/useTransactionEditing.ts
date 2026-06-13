@@ -1,4 +1,4 @@
-/* eslint-disable max-lines-per-function */
+/* eslint-disable max-lines, max-lines-per-function */
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 import { getSupabaseOrThrow } from '../lib/supabase'
 import {
@@ -39,6 +39,12 @@ async function getAuthenticatedUserId(): Promise<string> {
   }
 
   return user.id
+}
+
+function throwIfTransactionMutationFails(error: { message: string } | null): void {
+  if (error !== null) {
+    throw new Error(error.message)
+  }
 }
 
 export function useTransactionEditing(
@@ -170,6 +176,7 @@ export function useTransactionEditing(
     }
   }
 
+  /* eslint-disable-next-line complexity */
   async function saveTransactionEdit(transactionId: string, payload: TransactionEditPayload) {
     setSavingId(transactionId)
     setError('')
@@ -213,9 +220,7 @@ export function useTransactionEditing(
         const childMonth = child.date?.slice(0, 7) ?? ''
         if (!desiredMonths.has(childMonth)) {
           const { error: deleteError } = await transactionsClient.delete().eq('id', child.id)
-          if (deleteError) {
-            throw deleteError
-          }
+          throwIfTransactionMutationFails(deleteError)
           continue
         }
 
@@ -232,9 +237,7 @@ export function useTransactionEditing(
           })
           .eq('id', child.id)
 
-        if (childUpdateError) {
-          throw childUpdateError
-        }
+        throwIfTransactionMutationFails(childUpdateError)
       }
 
       const existingMonths = new Set(existingFutureChildren.map((transaction) => transaction.date?.slice(0, 7)).filter(Boolean))
@@ -270,9 +273,7 @@ export function useTransactionEditing(
 
         if (insertPayload.length > 0) {
           const { error: insertError } = await transactionsClient.insert(insertPayload)
-          if (insertError) {
-            throw insertError
-          }
+          throwIfTransactionMutationFails(insertError)
         }
       }
     } catch (error) {

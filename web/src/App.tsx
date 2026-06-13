@@ -145,7 +145,7 @@ type AuthenticatedAppProps = {
   groupOptions: GroupOption[]
   handleEditTransaction: (transactionId: string) => void
   openCreateTransaction: () => void
-  handleImport: (payload: { kind: 'account' | 'card' | 'santander-card-pdf' | 'santander-account-pdf'; invoice: string; file: File }) => Promise<void>
+  handleImport: (payload: { kind: 'account' | 'card' | 'santander-card-pdf' | 'santander-account-pdf' | 'infinitepay-account-csv'; invoice: string; file: File }) => Promise<void>
   handleSignOut: () => Promise<void>
   importLoading: boolean
   loading: boolean

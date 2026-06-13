@@ -1,9 +1,10 @@
+/* eslint-disable max-lines */
 export type TransactionType = 'Despesa' | 'Receita' | 'Transferência'
 export type TransactionSourceKind = 'manual' | 'manual_recurring' | 'imported_installment' | 'imported_statement' | 'imported_card'
 
 export type ClassificationRuleMatchMode = 'description' | 'description_amount'
 
-export type ImportKind = 'account' | 'card' | 'santander-card-pdf' | 'santander-account-pdf'
+export type ImportKind = 'account' | 'card' | 'santander-card-pdf' | 'santander-account-pdf' | 'infinitepay-account-csv'
 
 export type BudgetGroup = {
   id: string

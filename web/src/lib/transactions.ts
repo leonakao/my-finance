@@ -110,6 +110,10 @@ function normalizeRuleMatchAmount(value: number | string | null | undefined): nu
   return value === null || value === undefined ? null : Number(value)
 }
 
+function normalizeTransactionText(value: string | null | undefined): string {
+  return value ?? ''
+}
+
 export function normalizeClassificationRule(row: ClassificationRuleRecord): ClassificationRule {
   const type = row.type ?? 'Despesa'
   return {
@@ -266,15 +270,15 @@ export function normalizeTransaction(row: TransactionRecord): Transaction {
   return {
     id: row.id,
     date: row.date,
-    description: row.description ?? '',
+    description: normalizeTransactionText(row.description),
     amount: Number(row.amount ?? 0),
     type,
     category: normalizeCategoryForType(type, row.category ?? 'Outros'),
     budgetGroupId: row.budget_group_id ?? null,
-    account: row.account ?? '',
-    institution: row.institution ?? '',
-    notes: row.notes ?? '',
-    installment: row.installment ?? '',
+    account: normalizeTransactionText(row.account),
+    institution: normalizeTransactionText(row.institution),
+    notes: normalizeTransactionText(row.notes),
+    installment: normalizeTransactionText(row.installment),
     originTransactionId: row.origin_transaction_id ?? null,
     isIgnored: row.is_ignored ?? false,
     sourceKind: row.source_kind ?? 'manual',
@@ -388,7 +392,7 @@ export function filterTransactions(transactions: DecoratedTransaction[], filters
   const searchTerm = filters.search.trim().toLowerCase()
 
   return transactions.filter((transaction) => {
-    if (!filters.showIgnored && transaction.isIgnored) {
+    if (!filters.showIgnored && transaction.isIgnored === true) {
       return false
     }
 

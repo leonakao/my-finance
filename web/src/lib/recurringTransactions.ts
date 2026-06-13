@@ -6,7 +6,7 @@ function padDatePart(value: number): string {
 }
 
 function getDayOfMonth(date: string | null | undefined): number | null {
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  if (date === null || date === undefined || date === '' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return null
   }
 
@@ -25,7 +25,15 @@ export function buildRecurringChildDate(monthKey: string, anchorDate: string | n
 }
 
 export function buildRecurringMonthKeys(anchorDate: string | null | undefined, endMonth: string | null | undefined): string[] {
-  if (!anchorDate || !endMonth || !/^\d{4}-\d{2}$/.test(endMonth)) {
+  if (
+    anchorDate === null
+    || anchorDate === undefined
+    || anchorDate === ''
+    || endMonth === null
+    || endMonth === undefined
+    || endMonth === ''
+    || !/^\d{4}-\d{2}$/.test(endMonth)
+  ) {
     return []
   }
 
@@ -43,14 +51,31 @@ export function buildRecurringMonthKeys(anchorDate: string | null | undefined, e
 }
 
 export function isFutureDerivedTransaction(transaction: Transaction, now = new Date()): boolean {
-  if (!transaction.originTransactionId || !transaction.date) {
+  if (
+    transaction.originTransactionId === null
+    || transaction.originTransactionId === undefined
+    || transaction.originTransactionId === ''
+    || transaction.date === null
+    || transaction.date === undefined
+    || transaction.date === ''
+  ) {
     return false
   }
 
   return transaction.date.slice(0, 7) > getCurrentMonthKey(now)
 }
 
-export function buildRecurringDerivedValues(anchor: Transaction, payload: TransactionEditPayload) {
+export function buildRecurringDerivedValues(
+  anchor: Transaction,
+  payload: TransactionEditPayload,
+): {
+  description: string
+  amount: number
+  type: TransactionEditPayload['type']
+  category: string
+  budgetGroupId: string | null
+  notes: string
+} {
   const nextType = payload.type
 
   return {
