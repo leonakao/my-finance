@@ -139,7 +139,7 @@ export type ClassificationRuleRecord = {
   updated_at: string | null
 }
 
-export type RulePromptOverrides = Partial<Pick<ClassificationRulePayload, 'matchDescription' | 'matchAmount'>>
+export type RulePromptOverrides = Partial<Pick<ClassificationRulePayload, 'matchDescription' | 'matchAmount' | 'matchInstitution' | 'matchAccount'>>
 
 export type ReclassificationCandidate = {
   ruleId: string

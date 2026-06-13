@@ -20,6 +20,8 @@ export function ClassificationRulePrompt({ transaction, onDismiss, onRemember }:
   function rememberByName() {
     void onRemember('description', {
       matchDescription,
+      matchInstitution: null,
+      matchAccount: null,
     })
   }
 
@@ -27,6 +29,8 @@ export function ClassificationRulePrompt({ transaction, onDismiss, onRemember }:
     void onRemember('description_amount', {
       matchDescription,
       matchAmount: Number(matchAmount),
+      matchInstitution: null,
+      matchAccount: null,
     })
   }
 

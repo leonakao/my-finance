@@ -90,8 +90,12 @@ export function useClassificationRuleManagement(
     overrides: RulePromptOverrides = {},
   ) {
     const classificationSnapshot = getClassificationSnapshot(transaction)
-    const matchInstitution = normalizeRuleContextValue(transaction.institution)
-    const matchAccount = normalizeRuleContextValue(transaction.account)
+    const matchInstitution = 'matchInstitution' in overrides
+      ? (overrides.matchInstitution ?? null)
+      : normalizeRuleContextValue(transaction.institution)
+    const matchAccount = 'matchAccount' in overrides
+      ? (overrides.matchAccount ?? null)
+      : normalizeRuleContextValue(transaction.account)
 
     return upsertClassificationRule({
       matchMode,
