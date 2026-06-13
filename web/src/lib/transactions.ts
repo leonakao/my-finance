@@ -385,7 +385,7 @@ export function getAvailableMonths(transactions: Transaction[]): string[] {
 export function getMonthTransactions(transactions: DecoratedTransaction[], activeMonth: string): DecoratedTransaction[] {
   return transactions
     .filter((transaction) => transaction.date?.startsWith(activeMonth) === true)
-    .sort((left, right) => right.amount - left.amount)
+    .sort((left, right) => (right.date ?? '').localeCompare(left.date ?? '') || right.amount - left.amount)
 }
 
 export function filterTransactions(transactions: DecoratedTransaction[], filters: TransactionFilters): DecoratedTransaction[] {
