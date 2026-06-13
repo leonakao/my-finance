@@ -72,3 +72,116 @@ test('shows reclassification CTA after editing a saved rule and updates matching
     budget_group_id: selectableBudgetGroup.id,
   })
 })
+
+test('reclassifica transação com notes nulo sem falhar', async ({ page }) => {
+  const { email, password, supabase, userId } = await createUserSession()
+  const [selectableBudgetGroup] = await getBudgetGroups(supabase)
+  if (!selectableBudgetGroup) {
+    throw new Error('No budget group available for reclassification E2E test')
+  }
+  const matchingTransaction = await seedTransaction(supabase, userId, {
+    description: 'Compra e2e supermercado central',
+    amount: 73.2,
+    notes: '',
+  })
+  await seedClassificationRule(supabase, userId, {
+    match_description: 'supermercado',
+    match_description_normalized: 'supermercado',
+  })
+
+  await signIn(page, email, password)
+  await page.getByRole('link', { name: 'Regras' }).click()
+  await expect(page.getByRole('heading', { name: 'Regras', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Editar' }).first().click()
+  await page.getByLabel('Categoria').last().selectOption('Alimentação')
+  await page.getByLabel('Grupo').last().selectOption(selectableBudgetGroup.id)
+  await page.getByRole('button', { name: 'Salvar regra' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Reclassificar transações existentes?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Reclassificar' }).click()
+  await expect(page.getByText(/reclassificada/)).toBeVisible()
+
+  const updatedTransaction = await fetchTransaction(supabase, matchingTransaction.id)
+  expect(updatedTransaction).toMatchObject({
+    type: 'Despesa',
+    category: 'Alimentação',
+    budget_group_id: selectableBudgetGroup.id,
+  })
+})
+
+test('aplica notes da regra em transação sem notes', async ({ page }) => {
+  const { email, password, supabase, userId } = await createUserSession()
+  const [selectableBudgetGroup] = await getBudgetGroups(supabase)
+  if (!selectableBudgetGroup) {
+    throw new Error('No budget group available for reclassification E2E test')
+  }
+  const matchingTransaction = await seedTransaction(supabase, userId, {
+    description: 'Compra e2e supermercado central',
+    amount: 73.2,
+    notes: '',
+  })
+  await seedClassificationRule(supabase, userId, {
+    match_description: 'supermercado',
+    match_description_normalized: 'supermercado',
+  })
+
+  await signIn(page, email, password)
+  await page.getByRole('link', { name: 'Regras' }).click()
+  await expect(page.getByRole('heading', { name: 'Regras', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Editar' }).first().click()
+  await page.getByLabel('Categoria').last().selectOption('Alimentação')
+  await page.getByLabel('Grupo').last().selectOption(selectableBudgetGroup.id)
+  await page.getByLabel('Notas').last().fill('Nota da regra')
+  await page.getByRole('button', { name: 'Salvar regra' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Reclassificar transações existentes?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Reclassificar' }).click()
+  await expect(page.getByText(/reclassificada/)).toBeVisible()
+
+  const updatedTransaction = await fetchTransaction(supabase, matchingTransaction.id)
+  expect(updatedTransaction).toMatchObject({
+    category: 'Alimentação',
+    budget_group_id: selectableBudgetGroup.id,
+    notes: 'Nota da regra',
+  })
+})
+
+test('preserva notes existentes da transação na reclassificação', async ({ page }) => {
+  const { email, password, supabase, userId } = await createUserSession()
+  const [selectableBudgetGroup] = await getBudgetGroups(supabase)
+  if (!selectableBudgetGroup) {
+    throw new Error('No budget group available for reclassification E2E test')
+  }
+  const matchingTransaction = await seedTransaction(supabase, userId, {
+    description: 'Compra e2e supermercado central',
+    amount: 73.2,
+    notes: 'Nota existente',
+  })
+  await seedClassificationRule(supabase, userId, {
+    match_description: 'supermercado',
+    match_description_normalized: 'supermercado',
+    notes: 'Nota da regra',
+  })
+
+  await signIn(page, email, password)
+  await page.getByRole('link', { name: 'Regras' }).click()
+  await expect(page.getByRole('heading', { name: 'Regras', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Editar' }).first().click()
+  await page.getByLabel('Categoria').last().selectOption('Alimentação')
+  await page.getByLabel('Grupo').last().selectOption(selectableBudgetGroup.id)
+  await page.getByRole('button', { name: 'Salvar regra' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Reclassificar transações existentes?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Reclassificar' }).click()
+  await expect(page.getByText(/reclassificada/)).toBeVisible()
+
+  const updatedTransaction = await fetchTransaction(supabase, matchingTransaction.id)
+  expect(updatedTransaction).toMatchObject({
+    category: 'Alimentação',
+    budget_group_id: selectableBudgetGroup.id,
+    notes: 'Nota existente',
+  })
+})

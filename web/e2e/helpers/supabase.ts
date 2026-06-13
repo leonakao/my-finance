@@ -189,7 +189,7 @@ export async function seedClassificationRule(client: TestSupabaseClient, userId:
 export async function fetchTransaction(client: TestSupabaseClient, transactionId: string) {
   const { data, error } = await client
     .from('transactions')
-    .select('id, budget_group_id, category, type')
+    .select('id, budget_group_id, category, type, notes')
     .eq('id', transactionId)
     .single()
 
