@@ -18,6 +18,11 @@ describe('category catalogs', () => {
     expect(normalizeCategoryForType('Despesa', 'Pets')).toBe('Pets')
     expect(normalizeCategoryForType('Despesa', 'Cuidados pessoais')).toBe('Cuidados pessoais')
   })
+
+  it('includes emprestimo in the receita catalog', () => {
+    expect(getCategoryOptionsForType('Receita')).toContain('Emprestimo')
+    expect(normalizeCategoryForType('Receita', 'Emprestimo')).toBe('Emprestimo')
+  })
 })
 
 describe('reclassifyTransactionsWithRules', () => {

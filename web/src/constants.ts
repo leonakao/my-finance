@@ -29,6 +29,7 @@ export const CATEGORY_OPTIONS_BY_TYPE = {
   Receita: [
     'Salário',
     'Freelance',
+    'Emprestimo',
     'Reembolso',
     'Rendimentos',
     'Venda',

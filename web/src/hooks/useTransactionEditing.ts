@@ -15,6 +15,8 @@ import {
 import { normalizeTransaction } from '../lib/transactions'
 import type { ManualTransactionPayload, RulePromptOverrides, Transaction, TransactionEditPayload } from '../types'
 
+const TRANSACTION_SELECT_COLUMNS = 'id, date, description, amount, type, category, budget_group_id, account, institution, notes, installment, origin_transaction_id, is_ignored, source_kind'
+
 function buildTransactionPatch(payload: TransactionEditPayload): TransactionEditPayload {
   const normalizedType = payload.type
   const normalizedCategory = normalizeCategoryForType(normalizedType, payload.category)
@@ -156,7 +158,7 @@ export function useTransactionEditing(
       const { data, error } = await getSupabaseOrThrow()
         .from('transactions')
         .insert(databasePayload)
-        .select('id, date, description, amount, type, category, budget_group_id, account, institution, notes, installment, origin_transaction_id, is_ignored, source_kind')
+        .select(TRANSACTION_SELECT_COLUMNS)
         .single()
 
       if (error) {
@@ -200,9 +202,29 @@ export function useTransactionEditing(
     }
 
     const transactionsClient = getSupabaseOrThrow().from('transactions')
-    const { error: updateError } = await transactionsClient.update(databasePatch).eq('id', transactionId)
+    const { data: updatedTransaction, error: updateError } = await transactionsClient
+      .update(databasePatch)
+      .eq('id', transactionId)
+      .select(TRANSACTION_SELECT_COLUMNS)
+      .single()
     if (updateError) {
       setError(updateError.message)
+      setSavingId('')
+      return
+    }
+
+    if (!updatedTransaction) {
+      setError('Falha ao salvar a transação.')
+      setSavingId('')
+      return
+    }
+
+    const normalizedUpdatedTransaction = normalizeTransaction(updatedTransaction)
+    if (
+      nextPatch.budgetGroupId !== null
+      && normalizedUpdatedTransaction.budgetGroupId !== nextPatch.budgetGroupId
+    ) {
+      setError('O grupo selecionado não foi persistido. Tente salvar novamente.')
       setSavingId('')
       return
     }
@@ -294,13 +316,7 @@ export function useTransactionEditing(
         })
         .map((transaction) => {
           if (transaction.id === transactionId) {
-            return {
-              ...transaction,
-              type: nextPatch.type,
-              category: nextPatch.category,
-              budgetGroupId: nextPatch.budgetGroupId,
-              notes: nextNotes,
-            }
+            return normalizedUpdatedTransaction
           }
 
           if (transaction.originTransactionId !== transactionId || !isFutureDerivedTransaction(transaction)) {

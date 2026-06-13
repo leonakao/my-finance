@@ -4,6 +4,8 @@ import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 const updateEqSpy = vi.fn()
+const updateSelectSpy = vi.fn()
+const updateSingleSpy = vi.fn()
 const updateSpy = vi.fn()
 const insertSpy = vi.fn()
 const deleteEqSpy = vi.fn()
@@ -30,8 +32,34 @@ describe('useTransactionEditing', () => {
       delete: deleteSpy,
     })
     updateSpy.mockReturnValue({ eq: updateEqSpy })
+    updateEqSpy.mockImplementation(() => ({
+      error: null,
+      select: updateSelectSpy,
+    }))
+    updateSelectSpy.mockReturnValue({ single: updateSingleSpy })
+    updateSingleSpy.mockImplementation(async () => {
+      const payload = updateSpy.mock.calls.at(-1)?.[0] ?? {}
+      return {
+        data: {
+          id: 'tx-1',
+          date: null,
+          description: 'Compra teste',
+          amount: 10,
+          type: payload.type ?? 'Despesa',
+          category: payload.category ?? 'Outros',
+          budget_group_id: payload.budget_group_id ?? null,
+          account: '',
+          institution: '',
+          notes: payload.notes ?? '',
+          installment: '',
+          origin_transaction_id: null,
+          is_ignored: false,
+          source_kind: 'manual',
+        },
+        error: null,
+      }
+    })
     deleteSpy.mockReturnValue({ eq: deleteEqSpy })
-    updateEqSpy.mockResolvedValue({ error: null })
     deleteEqSpy.mockResolvedValue({ error: null })
     insertSpy.mockResolvedValue({ error: null })
     getUserSpy.mockResolvedValue({
@@ -76,6 +104,45 @@ describe('useTransactionEditing', () => {
       notes: '',
     })
     expect(updateEqSpy).toHaveBeenCalledWith('id', 'tx-1')
+  })
+
+  it('updates local state from the saved row returned by supabase', async () => {
+    const transactions: Transaction[] = [
+      {
+        id: 'tx-1',
+        description: 'Compra teste',
+        amount: 10,
+        type: 'Despesa',
+        category: 'Outros',
+        budgetGroupId: null,
+      },
+    ]
+    const setTransactions = vi.fn()
+    const setError = vi.fn()
+    const createRuleFromTransaction = vi.fn()
+
+    mockTransactionsClient()
+
+    const { result } = renderHook(() =>
+      useTransactionEditing(transactions, setTransactions, setError, createRuleFromTransaction),
+    )
+
+    await act(async () => {
+      await result.current.saveTransactionEdit('tx-1', {
+        type: 'Despesa',
+        category: 'Outros',
+        budgetGroupId: 'group-2',
+      })
+    })
+
+    const updater = setTransactions.mock.calls.at(-1)?.[0]
+    expect(typeof updater).toBe('function')
+    expect(updater(transactions)).toMatchObject([
+      {
+        id: 'tx-1',
+        budgetGroupId: 'group-2',
+      },
+    ])
   })
 
   it('creates a manual transaction and prepends it to local state', async () => {
